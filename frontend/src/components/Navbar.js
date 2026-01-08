@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiMenu, FiX, FiUser, FiLogOut, FiHome, FiMap, FiShoppingBag, FiPackage, FiCpu, FiBell } from 'react-icons/fi';
+import { 
+  FiMenu, FiX, FiUser, FiLogOut, FiSearch, FiShoppingCart, FiHeart, 
+  FiMessageSquare, FiBell, FiChevronDown, FiGrid, FiShoppingBag, 
+  FiUsers, FiTag, FiPackage, FiSettings, FiBarChart2, FiMap, FiCpu,
+  FiHome, FiTrendingUp, FiPercent, FiShield, FiHelpCircle
+} from 'react-icons/fi';
+import cartService from '../services/cartService';
+import wishlistService from '../services/wishlistService';
+import messagingService from '../services/messagingService';
+import notificationService from '../services/notificationService';
+import NotificationCenter from './NotificationCenter';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -10,6 +20,83 @@ const Navbar = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cartCount, setCartCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const categoriesRef = useRef(null);
+  const userMenuRef = useRef(null);
+
+  // Categories list
+  const categories = [
+    { name: 'Vegetables', icon: '🥬', path: '/marketplace?category=VEGETABLES' },
+    { name: 'Fruits', icon: '🍎', path: '/marketplace?category=FRUITS' },
+    { name: 'Grains', icon: '🌾', path: '/marketplace?category=GRAINS' },
+    { name: 'Dairy', icon: '🥛', path: '/marketplace?category=DAIRY' },
+    { name: 'Spices', icon: '🌶️', path: '/marketplace?category=SPICES' },
+    { name: 'Pulses', icon: '🫘', path: '/marketplace?category=PULSES' },
+    { name: 'Organic', icon: '🌿', path: '/marketplace?category=ORGANIC' },
+    { name: 'Seeds', icon: '🌱', path: '/marketplace?category=SEEDS' }
+  ];
+
+  // Get user role
+  const getUserRole = () => {
+    if (!user?.roles) return null;
+    if (user.roles.includes('ADMIN')) return 'ADMIN';
+    if (user.roles.includes('FARMER')) return 'FARMER';
+    return 'BUYER';
+  };
+
+  const userRole = getUserRole();
+
+  // Fetch counts
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCounts();
+    }
+  }, [isAuthenticated, location.pathname]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
+        setCategoriesOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchCounts = async () => {
+    try {
+      const [cartData, wishlistData, unreadData, notifData] = await Promise.all([
+        cartService.getCartCount().catch(() => ({ count: 0 })),
+        wishlistService.getWishlistCount().catch(() => 0),
+        messagingService.getUnreadCount().catch(() => 0),
+        notificationService.getUnreadCount().catch(() => ({ data: 0 }))
+      ]);
+      setCartCount(cartData.count || 0);
+      setWishlistCount(wishlistData || 0);
+      setUnreadMessages(unreadData || 0);
+      setNotificationCount(notifData.data || 0);
+    } catch (err) {
+      console.error('Error fetching counts:', err);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -21,154 +108,353 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { path: '/dashboard', label: 'Dashboard', icon: FiHome },
-    { path: '/farms', label: 'Farms', icon: FiMap },
-    { path: '/marketplace', label: 'Marketplace', icon: FiShoppingBag },
-    { path: '/orders', label: 'Orders', icon: FiPackage },
-    { path: '/devices', label: 'IoT Devices', icon: FiCpu },
-  ];
-
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  // Dynamic dashboard link based on role
+  const getDashboardLink = () => {
+    switch(userRole) {
+      case 'ADMIN': return '/admin/dashboard';
+      case 'FARMER': return '/farmer/dashboard';
+      default: return '/buyer/dashboard';
+    }
+  };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        {/* Logo */}
-        <Link to="/" className="navbar-logo">
-          <span className="logo-icon">🌾</span>
-          <span className="logo-text">AgriLink</span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        {isAuthenticated && (
-          <div className="navbar-links">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`navbar-link ${isActive(link.path) ? 'active' : ''}`}
-              >
-                <link.icon className="navbar-link-icon" />
-                {link.label}
-              </Link>
-            ))}
+    <>
+      <nav className="navbar">
+        {/* Top Bar - Announcement */}
+        <div className="navbar-topbar">
+          <div className="topbar-content">
+            <span>🎉 Free delivery on orders over ₹500 | Use code: FRESH20 for 20% off</span>
           </div>
-        )}
+        </div>
 
-        {/* User Menu / Auth Buttons */}
-        <div className="navbar-right">
-          {isAuthenticated ? (
-            <>
-              {/* Notifications */}
-              <button className="navbar-icon-btn">
-                <FiBell />
-                <span className="notification-badge">3</span>
-              </button>
+        {/* Main Navbar */}
+        <div className="navbar-main">
+          <div className="navbar-container">
+            {/* Left: Logo */}
+            <Link to="/" className="navbar-logo">
+              <span className="logo-icon">🌾</span>
+              <span className="logo-text">AgriLink</span>
+            </Link>
 
-              {/* User Menu */}
-              <div className="user-menu-container">
+            {/* Center: Navigation */}
+            <div className="navbar-center">
+              {/* Categories Dropdown */}
+              <div className="nav-dropdown" ref={categoriesRef}>
                 <button 
-                  className="user-menu-btn"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className={`nav-dropdown-btn ${categoriesOpen ? 'active' : ''}`}
+                  onClick={() => setCategoriesOpen(!categoriesOpen)}
                 >
-                  <div className="user-avatar">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <span className="user-name">{user?.email?.split('@')[0] || 'User'}</span>
+                  <FiGrid className="nav-icon" />
+                  Categories
+                  <FiChevronDown className={`chevron ${categoriesOpen ? 'rotated' : ''}`} />
                 </button>
                 
-                {userMenuOpen && (
-                  <div className="user-menu-dropdown">
-                    <div className="user-menu-header">
-                      <div className="user-avatar large">
-                        {user?.email?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                      <div className="user-info">
-                        <span className="user-email">{user?.email}</span>
-                        <span className="user-role">{user?.roles?.join(', ') || 'User'}</span>
-                      </div>
+                {categoriesOpen && (
+                  <div className="nav-dropdown-menu categories-menu">
+                    <div className="categories-grid">
+                      {categories.map((cat) => (
+                        <Link 
+                          key={cat.name} 
+                          to={cat.path} 
+                          className="category-item"
+                          onClick={() => setCategoriesOpen(false)}
+                        >
+                          <span className="category-icon">{cat.icon}</span>
+                          <span className="category-name">{cat.name}</span>
+                        </Link>
+                      ))}
                     </div>
-                    <div className="user-menu-divider"></div>
-                    <Link to="/profile" className="user-menu-item" onClick={() => setUserMenuOpen(false)}>
-                      <FiUser />
-                      Profile
-                    </Link>
-                    <button className="user-menu-item logout" onClick={handleLogout}>
-                      <FiLogOut />
-                      Logout
-                    </button>
+                    <div className="dropdown-footer">
+                      <Link to="/marketplace" onClick={() => setCategoriesOpen(false)}>
+                        View All Categories →
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
-            </>
-          ) : (
-            <div className="auth-buttons">
-              <Link to="/login" className="btn btn-outline">Login</Link>
-              <Link to="/register" className="btn btn-primary">Sign Up</Link>
-            </div>
-          )}
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            className="mobile-menu-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <FiX /> : <FiMenu />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="mobile-menu">
-          {isAuthenticated ? (
-            <>
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`mobile-menu-link ${isActive(link.path) ? 'active' : ''}`}
-                  onClick={closeMobileMenu}
-                >
-                  <link.icon />
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mobile-menu-divider"></div>
-              <Link to="/profile" className="mobile-menu-link" onClick={closeMobileMenu}>
-                <FiUser />
-                Profile
+              {/* Nav Links */}
+              <Link to="/marketplace" className="nav-link">
+                <FiShoppingBag className="nav-icon" />
+                Marketplace
               </Link>
-              <button className="mobile-menu-link logout" onClick={handleLogout}>
-                <FiLogOut />
-                Logout
+
+              <Link to="/farmers" className="nav-link">
+                <FiUsers className="nav-icon" />
+                Farmers
+              </Link>
+
+              <Link to="/deals" className="nav-link highlight">
+                <FiPercent className="nav-icon" />
+                Today's Deals
+              </Link>
+            </div>
+
+            {/* Right: Search + Account */}
+            <div className="navbar-right">
+              {/* Search Bar */}
+              <form className="search-form" onSubmit={handleSearch}>
+                <div className="search-input-wrapper">
+                  <FiSearch className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search products, farmers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
+              </form>
+
+              {isAuthenticated ? (
+                <>
+                  {/* Wishlist */}
+                  <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist">
+                    <FiHeart />
+                    {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
+                  </Link>
+
+                  {/* Cart */}
+                  <Link to="/cart" className="navbar-icon-btn" title="Cart">
+                    <FiShoppingCart />
+                    {cartCount > 0 && <span className="badge">{cartCount}</span>}
+                  </Link>
+
+                  {/* Messages */}
+                  <Link to="/messages" className="navbar-icon-btn" title="Messages">
+                    <FiMessageSquare />
+                    {unreadMessages > 0 && <span className="badge">{unreadMessages}</span>}
+                  </Link>
+
+                  {/* Notifications */}
+                  <button 
+                    className="navbar-icon-btn"
+                    onClick={() => setShowNotifications(true)}
+                    title="Notifications"
+                  >
+                    <FiBell />
+                    {notificationCount > 0 && (
+                      <span className="badge">{notificationCount > 9 ? '9+' : notificationCount}</span>
+                    )}
+                  </button>
+
+                  {/* User Menu */}
+                  <div className="user-menu-container" ref={userMenuRef}>
+                    <button 
+                      className="user-menu-btn"
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    >
+                      <div className="user-avatar">
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div className="user-btn-text">
+                        <span className="user-greeting">Hello,</span>
+                        <span className="user-name">{user?.email?.split('@')[0] || 'User'}</span>
+                      </div>
+                      <FiChevronDown className={`chevron ${userMenuOpen ? 'rotated' : ''}`} />
+                    </button>
+                    
+                    {userMenuOpen && (
+                      <div className="user-dropdown-menu">
+                        <div className="user-dropdown-header">
+                          <div className="user-avatar large">
+                            {user?.email?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <div className="user-info">
+                            <span className="user-email">{user?.email}</span>
+                            <span className={`user-role ${userRole?.toLowerCase()}`}>
+                              {userRole || 'User'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="dropdown-divider"></div>
+                        
+                        <Link to={getDashboardLink()} className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <FiHome />
+                          My Dashboard
+                        </Link>
+                        
+                        <Link to="/orders" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <FiPackage />
+                          My Orders
+                        </Link>
+                        
+                        <Link to="/wishlist" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <FiHeart />
+                          Wishlist
+                        </Link>
+
+                        {userRole === 'FARMER' && (
+                          <>
+                            <div className="dropdown-divider"></div>
+                            <Link to="/farms" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiMap />
+                              My Farms
+                            </Link>
+                            <Link to="/devices" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiCpu />
+                              IoT Devices
+                            </Link>
+                            <Link to="/analytics" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiBarChart2 />
+                              Analytics
+                            </Link>
+                          </>
+                        )}
+
+                        {userRole === 'ADMIN' && (
+                          <>
+                            <div className="dropdown-divider"></div>
+                            <Link to="/admin/dashboard" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiShield />
+                              Admin Panel
+                            </Link>
+                            <Link to="/admin/users" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiUsers />
+                              Manage Users
+                            </Link>
+                          </>
+                        )}
+
+                        <div className="dropdown-divider"></div>
+                        
+                        <Link to="/profile" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <FiUser />
+                          Account Settings
+                        </Link>
+                        
+                        <Link to="/help" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                          <FiHelpCircle />
+                          Help & Support
+                        </Link>
+                        
+                        <div className="dropdown-divider"></div>
+                        
+                        <button className="dropdown-item logout" onClick={handleLogout}>
+                          <FiLogOut />
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="auth-buttons">
+                  <Link to="/login" className="btn-login">Login</Link>
+                  <Link to="/register" className="btn-register">Sign Up</Link>
+                </div>
+              )}
+
+              {/* Mobile Menu Toggle */}
+              <button 
+                className="mobile-menu-btn"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <FiX /> : <FiMenu />}
               </button>
-            </>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+          {/* Mobile Search */}
+          <form className="mobile-search" onSubmit={handleSearch}>
+            <FiSearch />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </form>
+
+          <div className="mobile-nav-links">
+            <Link to="/" className="mobile-nav-link" onClick={closeMobileMenu}>
+              <FiHome /> Home
+            </Link>
+            <Link to="/marketplace" className="mobile-nav-link" onClick={closeMobileMenu}>
+              <FiShoppingBag /> Marketplace
+            </Link>
+            <Link to="/farmers" className="mobile-nav-link" onClick={closeMobileMenu}>
+              <FiUsers /> Farmers
+            </Link>
+            <Link to="/deals" className="mobile-nav-link highlight" onClick={closeMobileMenu}>
+              <FiPercent /> Today's Deals
+            </Link>
+            
+            {/* Mobile Categories */}
+            <div className="mobile-categories">
+              <span className="mobile-section-title">Categories</span>
+              <div className="mobile-categories-grid">
+                {categories.map((cat) => (
+                  <Link 
+                    key={cat.name} 
+                    to={cat.path} 
+                    className="mobile-category"
+                    onClick={closeMobileMenu}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {isAuthenticated ? (
+            <div className="mobile-user-section">
+              <div className="mobile-user-info">
+                <div className="user-avatar">{user?.email?.charAt(0).toUpperCase()}</div>
+                <div>
+                  <span className="user-name">{user?.email?.split('@')[0]}</span>
+                  <span className="user-role">{userRole}</span>
+                </div>
+              </div>
+              
+              <div className="mobile-user-links">
+                <Link to={getDashboardLink()} onClick={closeMobileMenu}>
+                  <FiHome /> Dashboard
+                </Link>
+                <Link to="/orders" onClick={closeMobileMenu}>
+                  <FiPackage /> Orders
+                </Link>
+                <Link to="/profile" onClick={closeMobileMenu}>
+                  <FiUser /> Profile
+                </Link>
+                <button onClick={handleLogout}>
+                  <FiLogOut /> Logout
+                </button>
+              </div>
+            </div>
           ) : (
-            <>
-              <Link to="/login" className="mobile-menu-link" onClick={closeMobileMenu}>
+            <div className="mobile-auth">
+              <Link to="/login" className="mobile-login" onClick={closeMobileMenu}>
                 Login
               </Link>
-              <Link to="/register" className="mobile-menu-link" onClick={closeMobileMenu}>
-                Sign Up
+              <Link to="/register" className="mobile-register" onClick={closeMobileMenu}>
+                Create Account
               </Link>
-            </>
+            </div>
           )}
         </div>
-      )}
 
-      {/* Overlay for dropdowns */}
-      {(userMenuOpen || mobileMenuOpen) && (
-        <div 
-          className="navbar-overlay"
-          onClick={() => {
-            setUserMenuOpen(false);
-            setMobileMenuOpen(false);
-          }}
-        ></div>
-      )}
-    </nav>
+        {/* Overlay */}
+        {mobileMenuOpen && (
+          <div className="mobile-overlay" onClick={closeMobileMenu}></div>
+        )}
+      </nav>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={showNotifications} 
+        onClose={() => {
+          setShowNotifications(false);
+          fetchCounts();
+        }} 
+      />
+    </>
   );
 };
 

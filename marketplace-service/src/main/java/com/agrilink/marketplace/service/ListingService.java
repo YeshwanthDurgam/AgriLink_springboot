@@ -234,8 +234,10 @@ public class ListingService {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Only active listings
-            predicates.add(cb.equal(root.get("status"), Listing.ListingStatus.ACTIVE));
+            // Only active listings by default (unless availableOnly is false)
+            if (!Boolean.FALSE.equals(criteria.getAvailableOnly())) {
+                predicates.add(cb.equal(root.get("status"), Listing.ListingStatus.ACTIVE));
+            }
 
             if (criteria.getKeyword() != null && !criteria.getKeyword().isEmpty()) {
                 String keyword = "%" + criteria.getKeyword().toLowerCase() + "%";
@@ -249,9 +251,17 @@ public class ListingService {
             if (criteria.getCategoryId() != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), criteria.getCategoryId()));
             }
+            
+            if (criteria.getCategoryIds() != null && !criteria.getCategoryIds().isEmpty()) {
+                predicates.add(root.get("category").get("id").in(criteria.getCategoryIds()));
+            }
 
             if (criteria.getCropType() != null) {
                 predicates.add(cb.equal(root.get("cropType"), criteria.getCropType()));
+            }
+            
+            if (criteria.getCropTypes() != null && !criteria.getCropTypes().isEmpty()) {
+                predicates.add(root.get("cropType").in(criteria.getCropTypes()));
             }
 
             if (criteria.getMinPrice() != null) {
@@ -273,9 +283,51 @@ public class ListingService {
             if (criteria.getQualityGrade() != null) {
                 predicates.add(cb.equal(root.get("qualityGrade"), criteria.getQualityGrade()));
             }
+            
+            if (criteria.getQualityGrades() != null && !criteria.getQualityGrades().isEmpty()) {
+                predicates.add(root.get("qualityGrade").in(criteria.getQualityGrades()));
+            }
 
             if (criteria.getSellerId() != null) {
                 predicates.add(cb.equal(root.get("sellerId"), criteria.getSellerId()));
+            }
+            
+            // Additional filters
+            if (criteria.getMinQuantity() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("quantity"), criteria.getMinQuantity()));
+            }
+            
+            if (criteria.getMaxQuantity() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("quantity"), criteria.getMaxQuantity()));
+            }
+            
+            if (criteria.getMinRating() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("averageRating"), java.math.BigDecimal.valueOf(criteria.getMinRating())));
+            }
+            
+            if (Boolean.TRUE.equals(criteria.getHasImages())) {
+                predicates.add(cb.isNotEmpty(root.get("images")));
+            }
+            
+            // Location-based search using Haversine formula approximation
+            // Note: For precise distance calculations, consider using PostGIS
+            if (criteria.getLatitude() != null && criteria.getLongitude() != null && criteria.getRadiusKm() != null) {
+                // Approximate bounding box for performance
+                double lat = criteria.getLatitude().doubleValue();
+                double lon = criteria.getLongitude().doubleValue();
+                double radiusKm = criteria.getRadiusKm();
+                
+                // 1 degree latitude ≈ 111 km
+                double latDelta = radiusKm / 111.0;
+                // 1 degree longitude varies, approximate for the latitude
+                double lonDelta = radiusKm / (111.0 * Math.cos(Math.toRadians(lat)));
+                
+                predicates.add(cb.between(root.get("latitude"), 
+                        java.math.BigDecimal.valueOf(lat - latDelta), 
+                        java.math.BigDecimal.valueOf(lat + latDelta)));
+                predicates.add(cb.between(root.get("longitude"), 
+                        java.math.BigDecimal.valueOf(lon - lonDelta), 
+                        java.math.BigDecimal.valueOf(lon + lonDelta)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

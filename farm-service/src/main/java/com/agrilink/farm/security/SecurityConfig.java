@@ -40,8 +40,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers("/error").permitAll()
+                    .requestMatchers("/api/v1/weather/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/farms/**").authenticated()
                     .requestMatchers("/api/v1/farms/**").hasRole("FARMER")
+                    .requestMatchers("/api/v1/export/**").authenticated()
+                    .requestMatchers("/api/v1/analytics/**").authenticated()
                     .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

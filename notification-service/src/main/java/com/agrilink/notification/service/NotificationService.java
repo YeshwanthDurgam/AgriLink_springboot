@@ -8,6 +8,7 @@ import com.agrilink.notification.entity.NotificationTemplate;
 import com.agrilink.notification.repository.NotificationPreferencesRepository;
 import com.agrilink.notification.repository.NotificationRepository;
 import com.agrilink.notification.repository.NotificationTemplateRepository;
+import com.agrilink.notification.websocket.NotificationWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +36,7 @@ public class NotificationService {
     private final NotificationPreferencesRepository preferencesRepository;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final NotificationWebSocketHandler webSocketHandler;
 
     /**
      * Send a notification.
@@ -66,8 +68,12 @@ public class NotificationService {
 
         // Send via appropriate channel
         sendViaChannel(notification, request.getEmail(), request.getPhone());
+        
+        // Push via WebSocket for real-time delivery
+        NotificationDto dto = mapToDto(notification);
+        webSocketHandler.sendNotificationToUser(request.getUserId(), dto);
 
-        return mapToDto(notification);
+        return dto;
     }
 
     /**

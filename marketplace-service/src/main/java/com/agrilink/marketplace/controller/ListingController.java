@@ -60,19 +60,29 @@ public class ListingController {
     }
 
     /**
-     * Search listings.
+     * Search listings with advanced filters.
      * GET /api/v1/listings/search
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedResponse<ListingDto>>> searchListings(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) List<UUID> categoryIds,
             @RequestParam(required = false) String cropType,
+            @RequestParam(required = false) List<String> cropTypes,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) Boolean organicOnly,
             @RequestParam(required = false) String qualityGrade,
+            @RequestParam(required = false) List<String> qualityGrades,
+            @RequestParam(required = false) BigDecimal minQuantity,
+            @RequestParam(required = false) BigDecimal maxQuantity,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Boolean hasImages,
+            @RequestParam(required = false) BigDecimal latitude,
+            @RequestParam(required = false) BigDecimal longitude,
+            @RequestParam(required = false) Double radiusKm,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -81,12 +91,22 @@ public class ListingController {
         ListingSearchCriteria criteria = ListingSearchCriteria.builder()
                 .keyword(keyword)
                 .categoryId(categoryId)
+                .categoryIds(categoryIds)
                 .cropType(cropType)
+                .cropTypes(cropTypes)
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .location(location)
                 .organicOnly(organicOnly)
                 .qualityGrade(qualityGrade)
+                .qualityGrades(qualityGrades)
+                .minQuantity(minQuantity)
+                .maxQuantity(maxQuantity)
+                .minRating(minRating)
+                .hasImages(hasImages)
+                .latitude(latitude)
+                .longitude(longitude)
+                .radiusKm(radiusKm)
                 .build();
 
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();

@@ -19,9 +19,14 @@ public class ReviewDto {
 
     private UUID id;
     private UUID listingId;
+    private String listingTitle;
     private UUID reviewerId;
+    private String reviewerName;
     private UUID sellerId;
-    private int rating;
+    private Integer rating;
+    private String title;
     private String comment;
+    private Boolean isVerifiedPurchase;
+    private Integer helpfulCount;
     private LocalDateTime createdAt;
 }

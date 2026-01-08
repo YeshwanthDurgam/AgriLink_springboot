@@ -28,7 +28,7 @@ public interface TelemetryRepository extends JpaRepository<Telemetry, UUID> {
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
 
-    @Query("SELECT t FROM Telemetry t WHERE t.device.id = :deviceId AND t.metricType = :metricType AND t.recordedAt BETWEEN :start AND :end ORDER BY t.recordedAt DESC")
+    @Query("SELECT t FROM Telemetry t WHERE t.device.id = :deviceId AND t.metricType = :metricType AND t.recordedAt BETWEEN :start AND :end ORDER BY t.recordedAt ASC")
     List<Telemetry> findByDeviceIdAndMetricTypeAndTimeRange(
             @Param("deviceId") UUID deviceId,
             @Param("metricType") Telemetry.MetricType metricType,
@@ -58,4 +58,14 @@ public interface TelemetryRepository extends JpaRepository<Telemetry, UUID> {
             @Param("metricType") Telemetry.MetricType metricType,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+    
+    @Query("SELECT t FROM Telemetry t WHERE t.device.farmerId = :farmerId AND t.metricType = :metricType AND t.recordedAt BETWEEN :start AND :end ORDER BY t.recordedAt ASC")
+    List<Telemetry> findByFarmerIdAndMetricTypeAndTimeRange(
+            @Param("farmerId") UUID farmerId,
+            @Param("metricType") Telemetry.MetricType metricType,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+    
+    @Query("SELECT t FROM Telemetry t WHERE t.device.farmerId = :farmerId ORDER BY t.recordedAt DESC")
+    List<Telemetry> findLatestByFarmerId(@Param("farmerId") UUID farmerId, Pageable pageable);
 }

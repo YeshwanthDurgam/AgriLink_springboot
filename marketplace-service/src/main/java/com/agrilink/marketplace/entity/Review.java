@@ -12,7 +12,9 @@ import java.util.UUID;
  * Entity representing a review for a listing/seller.
  */
 @Entity
-@Table(name = "reviews")
+@Table(name = "reviews", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"listing_id", "reviewer_id", "order_id"})
+})
 @Getter
 @Setter
 @Builder
@@ -34,11 +36,25 @@ public class Review {
     @Column(name = "seller_id", nullable = false)
     private UUID sellerId;
 
+    @Column(name = "order_id")
+    private UUID orderId;
+
     @Column(nullable = false)
-    private int rating;
+    private Integer rating;
+
+    @Column(length = 255)
+    private String title;
 
     @Column(columnDefinition = "TEXT")
     private String comment;
+
+    @Column(name = "is_verified_purchase")
+    @Builder.Default
+    private Boolean isVerifiedPurchase = false;
+
+    @Column(name = "helpful_count")
+    @Builder.Default
+    private Integer helpfulCount = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

@@ -20,11 +20,15 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     Page<Review> findByListingId(UUID listingId, Pageable pageable);
 
+    Page<Review> findByListingIdOrderByCreatedAtDesc(UUID listingId, Pageable pageable);
+
     Page<Review> findBySellerId(UUID sellerId, Pageable pageable);
 
     List<Review> findByReviewerId(UUID reviewerId);
 
     Optional<Review> findByListingIdAndReviewerId(UUID listingId, UUID reviewerId);
+
+    Optional<Review> findByListingIdAndReviewerIdAndOrderId(UUID listingId, UUID reviewerId, UUID orderId);
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.sellerId = :sellerId")
     Double getAverageRatingBySeller(@Param("sellerId") UUID sellerId);
@@ -35,5 +39,13 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     @Query("SELECT COUNT(r) FROM Review r WHERE r.sellerId = :sellerId")
     long countBySellerId(@Param("sellerId") UUID sellerId);
 
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.listing.id = :listingId")
+    long countByListingId(@Param("listingId") UUID listingId);
+
     boolean existsByListingIdAndReviewerId(UUID listingId, UUID reviewerId);
+
+    boolean existsByListingIdAndReviewerIdAndOrderId(UUID listingId, UUID reviewerId, UUID orderId);
+
+    @Query("SELECT r.rating, COUNT(r) FROM Review r WHERE r.listing.id = :listingId GROUP BY r.rating")
+    List<Object[]> getRatingDistributionByListing(@Param("listingId") UUID listingId);
 }

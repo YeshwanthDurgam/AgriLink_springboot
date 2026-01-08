@@ -28,9 +28,13 @@ const Farms = () => {
       });
       
       if (response.success) {
-        setFarms(response.data.content || []);
-        setTotalPages(response.data.totalPages || 0);
-        setTotalElements(response.data.totalElements || 0);
+        // Backend returns ApiResponse with data as array (not paginated)
+        const farmsData = Array.isArray(response.data) ? response.data : (response.data?.content || []);
+        setFarms(farmsData);
+        // For non-paginated response, calculate pages from array length
+        const total = farmsData.length;
+        setTotalPages(Math.ceil(total / pageSize) || 1);
+        setTotalElements(total);
       }
     } catch (error) {
       console.error('Error fetching farms:', error);
