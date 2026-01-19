@@ -11,6 +11,27 @@ export const useAuth = () => {
   return context;
 };
 
+/**
+ * Get the appropriate dashboard route based on user roles
+ * @param {Object} user - User object with roles
+ * @returns {string} - Dashboard route
+ */
+const getDashboardRoute = (user) => {
+  if (!user || !user.roles) return '/dashboard';
+  
+  const roles = user.roles;
+  
+  if (roles.includes('ADMIN')) {
+    return '/admin/dashboard';
+  } else if (roles.includes('FARMER')) {
+    return '/farmer/dashboard';
+  } else if (roles.includes('CUSTOMER') || roles.includes('BUYER')) {
+    return '/buyer/dashboard';
+  }
+  
+  return '/dashboard';
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,10 +48,15 @@ export const AuthProvider = ({ children }) => {
             setUser(storedUser);
           } else {
             // If we have a token but no user, fetch user data
-            const response = await AuthService.getCurrentUser();
-            if (response.success) {
-              setUser(response.data);
-              localStorage.setItem('user', JSON.stringify(response.data));
+            try {
+              const response = await AuthService.getCurrentUser();
+              if (response.success) {
+                setUser(response.data);
+                localStorage.setItem('user', JSON.stringify(response.data));
+              }
+            } catch (err) {
+              console.error('Failed to fetch user data:', err);
+              AuthService.logout();
             }
           }
         }
@@ -56,8 +82,10 @@ export const AuthProvider = ({ children }) => {
         if (userResponse.success) {
           setUser(userResponse.data);
           localStorage.setItem('user', JSON.stringify(userResponse.data));
+          const dashboardRoute = getDashboardRoute(userResponse.data);
+          return { success: true, redirectTo: dashboardRoute };
         }
-        return { success: true };
+        return { success: true, redirectTo: '/dashboard' };
       }
       return { success: false, message: response.message };
     } catch (err) {
@@ -107,6 +135,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     clearError,
+    getDashboardRoute: () => getDashboardRoute(user),
   };
 
   return (

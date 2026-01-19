@@ -6,6 +6,7 @@ import com.agrilink.marketplace.dto.CreateListingRequest;
 import com.agrilink.marketplace.dto.ListingDto;
 import com.agrilink.marketplace.dto.ListingSearchCriteria;
 import com.agrilink.marketplace.service.ListingService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,16 +36,29 @@ public class ListingController {
     private final ListingService listingService;
 
     /**
+     * Helper method to get seller ID from JWT token stored in request attribute.
+     */
+    private UUID getSellerIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (userIdStr != null) {
+            return UUID.fromString(userIdStr);
+        }
+        // Fallback to generating UUID from email (for backward compatibility)
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    }
+
+    /**
      * Create a new listing.
      * POST /api/v1/listings
      */
     @PostMapping
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<ListingDto>> createListing(
+            HttpServletRequest request,
             Authentication authentication,
-            @Valid @RequestBody CreateListingRequest request) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        ListingDto listing = listingService.createListing(sellerId, request);
+            @Valid @RequestBody CreateListingRequest createRequest) {
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
+        ListingDto listing = listingService.createListing(sellerId, createRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Listing created successfully", listing));
     }
@@ -174,10 +188,11 @@ public class ListingController {
     @GetMapping("/my")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<PagedResponse<ListingDto>>> getMyListings(
+            HttpServletRequest request,
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<ListingDto> listings = listingService.getListingsBySeller(sellerId, pageable);
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(listings)));
@@ -190,11 +205,12 @@ public class ListingController {
     @PutMapping("/{listingId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<ListingDto>> updateListing(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID listingId,
-            @Valid @RequestBody CreateListingRequest request) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        ListingDto listing = listingService.updateListing(listingId, sellerId, request);
+            @Valid @RequestBody CreateListingRequest updateRequest) {
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
+        ListingDto listing = listingService.updateListing(listingId, sellerId, updateRequest);
         return ResponseEntity.ok(ApiResponse.success("Listing updated successfully", listing));
     }
 
@@ -205,9 +221,10 @@ public class ListingController {
     @PostMapping("/{listingId}/publish")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<ListingDto>> publishListing(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID listingId) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
         ListingDto listing = listingService.publishListing(listingId, sellerId);
         return ResponseEntity.ok(ApiResponse.success("Listing published successfully", listing));
     }
@@ -219,10 +236,21 @@ public class ListingController {
     @DeleteMapping("/{listingId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<Void>> deleteListing(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID listingId) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
         listingService.deleteListing(listingId, sellerId);
         return ResponseEntity.ok(ApiResponse.success("Listing deleted successfully"));
+    }
+
+    /**
+     * Get all sellers (farmers) with their product statistics.
+     * GET /api/v1/listings/sellers
+     */
+    @GetMapping("/sellers")
+    public ResponseEntity<ApiResponse<List<com.agrilink.marketplace.dto.SellerDto>>> getSellers() {
+        List<com.agrilink.marketplace.dto.SellerDto> sellers = listingService.getSellers();
+        return ResponseEntity.ok(ApiResponse.success(sellers));
     }
 }

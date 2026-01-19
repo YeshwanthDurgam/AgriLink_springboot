@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,7 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final CategoryRepository categoryRepository;
     private final ReviewRepository reviewRepository;
+    private final UserServiceClient userServiceClient;
 
     /**
      * Create a new listing.
@@ -377,6 +380,79 @@ public class ListingService {
                 .imageUrl(image.getImageUrl())
                 .primary(image.isPrimary())
                 .sortOrder(image.getSortOrder())
+                .build();
+    }
+
+    /**
+     * Get all sellers (farmers) with aggregate product data.
+     */
+    @Transactional(readOnly = true)
+    public List<SellerDto> getSellers() {
+        log.info("Fetching all sellers with product data");
+        
+        List<UUID> sellerIds = listingRepository.findDistinctSellerIds();
+        
+        // Fetch user profiles from user-service
+        List<UserPublicProfileDto> profiles = userServiceClient.getPublicProfiles(sellerIds);
+        Map<UUID, UserPublicProfileDto> profileMap = profiles.stream()
+                .filter(p -> p.getUserId() != null)
+                .collect(Collectors.toMap(UserPublicProfileDto::getUserId, Function.identity(), (a, b) -> a));
+        
+        return sellerIds.stream()
+                .map(sellerId -> mapToSellerDto(sellerId, profileMap.get(sellerId)))
+                .collect(Collectors.toList());
+    }
+
+    private SellerDto mapToSellerDto(UUID sellerId, UserPublicProfileDto profile) {
+        int productCount = listingRepository.countActiveListingsBySeller(sellerId);
+        Double avgRating = listingRepository.getAverageRatingBySeller(sellerId);
+        Integer reviewCount = listingRepository.getTotalReviewsBySeller(sellerId);
+        String location = listingRepository.getLocationBySeller(sellerId);
+        
+        // Get sample listings to extract category specialties
+        List<Listing> listings = listingRepository.findBySellerIdAndStatus(sellerId, Listing.ListingStatus.ACTIVE);
+        String[] specialties = listings.stream()
+                .filter(l -> l.getCategory() != null)
+                .map(l -> l.getCategory().getName())
+                .distinct()
+                .limit(3)
+                .toArray(String[]::new);
+        
+        // Use real name from user-service, fallback to default
+        String sellerName = profile != null && profile.getFullName() != null && !profile.getFullName().isEmpty()
+                ? profile.getFullName()
+                : "Farmer " + sellerId.toString().substring(0, 8);
+        
+        String avatar = profile != null && profile.getProfilePictureUrl() != null
+                ? profile.getProfilePictureUrl()
+                : "https://randomuser.me/api/portraits/men/32.jpg";
+        
+        // Build location from profile if available
+        if (location == null && profile != null) {
+            if (profile.getCity() != null && profile.getState() != null) {
+                location = profile.getCity() + ", " + profile.getState();
+            } else if (profile.getCity() != null) {
+                location = profile.getCity();
+            } else if (profile.getState() != null) {
+                location = profile.getState();
+            }
+        }
+        
+        return SellerDto.builder()
+                .id(sellerId)
+                .name(sellerName)
+                .farmName("Farm")
+                .location(location != null ? location : "India")
+                .avatar(avatar)
+                .coverImage("https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400")
+                .rating(avgRating != null ? avgRating : 0.0)
+                .reviewCount(reviewCount != null ? reviewCount : 0)
+                .followers(0)
+                .products(productCount)
+                .verified(true)
+                .specialties(specialties)
+                .joinedYear(2024)
+                .description("Quality farm products available on AgriLink.")
                 .build();
     }
 }

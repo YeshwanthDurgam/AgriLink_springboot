@@ -68,7 +68,9 @@ const Login = () => {
 
     if (result.success) {
       toast.success('Login successful! Welcome back.');
-      navigate(from, { replace: true });
+      // Use role-based redirect if available, otherwise use the from location
+      const redirectTo = result.redirectTo || from;
+      navigate(redirectTo, { replace: true });
     } else {
       toast.error(result.message || 'Login failed. Please try again.');
     }
@@ -153,8 +155,24 @@ const Login = () => {
 
         <div className="demo-credentials">
           <p><strong>Demo Credentials:</strong></p>
-          <p>Email: test@example.com</p>
-          <p>Password: Password123!</p>
+          <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+            <button 
+              type="button" 
+              className="btn btn-outline" 
+              style={{flex: 1, padding: '8px'}}
+              onClick={() => setFormData({email: 'farmer1@agrilink.com', password: 'Farmer@123'})}
+            >
+              Farmer Login
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-outline" 
+              style={{flex: 1, padding: '8px'}}
+              onClick={() => setFormData({email: 'customer@agrilink.com', password: 'Customer@123'})}
+            >
+              Customer Login
+            </button>
+          </div>
         </div>
       </div>
 

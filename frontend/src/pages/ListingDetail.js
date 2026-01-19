@@ -133,7 +133,8 @@ const ListingDetail = () => {
 
     setActionLoading('cart');
     try {
-      await cartService.addToCart(listing.id, listing.sellerId, quantity, listing.pricePerUnit);
+      const price = listing.pricePerUnit || listing.price;
+      await cartService.addToCart(listing.id, listing.sellerId, quantity, price);
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 3000);
     } catch (err) {
@@ -152,7 +153,8 @@ const ListingDetail = () => {
 
     setActionLoading('buy');
     try {
-      await cartService.addToCart(listing.id, listing.sellerId, quantity, listing.pricePerUnit);
+      const price = listing.pricePerUnit || listing.price;
+      await cartService.addToCart(listing.id, listing.sellerId, quantity, price);
       navigate('/checkout');
     } catch (err) {
       console.error('Error:', err);
@@ -235,9 +237,9 @@ const ListingDetail = () => {
       <nav className="breadcrumb">
         <Link to="/marketplace">Marketplace</Link>
         <span>/</span>
-        {listing.category && (
+        {listing.categoryName && (
           <>
-            <Link to={`/marketplace?category=${listing.category.id}`}>{listing.category.name}</Link>
+            <Link to={`/marketplace?category=${listing.categoryId}`}>{listing.categoryName}</Link>
             <span>/</span>
           </>
         )}
@@ -301,12 +303,12 @@ const ListingDetail = () => {
             </button>
           </div>
 
-          {listing.category && (
-            <span className="listing-category">{listing.category.name}</span>
+          {listing.categoryName && (
+            <span className="listing-category">{listing.categoryName}</span>
           )}
 
           <div className="listing-price">
-            <span className="price">${listing.pricePerUnit?.toFixed(2)}</span>
+            <span className="price">{listing.currency === 'INR' ? '₹' : '$'}{listing.pricePerUnit?.toFixed(2)}</span>
             <span className="unit">per {listing.quantityUnit || 'unit'}</span>
           </div>
 
@@ -341,7 +343,7 @@ const ListingDetail = () => {
                 </button>
               </div>
               <span className="subtotal">
-                Subtotal: ${(quantity * listing.pricePerUnit).toFixed(2)}
+                Subtotal: {listing.currency === 'INR' ? '₹' : '$'}{(quantity * listing.pricePerUnit).toFixed(2)}
               </span>
             </div>
           )}

@@ -6,6 +6,7 @@ import com.agrilink.iot.dto.DeviceDto;
 import com.agrilink.iot.dto.RegisterDeviceRequest;
 import com.agrilink.iot.entity.Device;
 import com.agrilink.iot.service.DeviceService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,10 +42,11 @@ public class DeviceController {
     @PostMapping
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<DeviceDto>> registerDevice(
+            HttpServletRequest request,
             Authentication authentication,
-            @Valid @RequestBody RegisterDeviceRequest request) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        DeviceDto device = deviceService.registerDevice(farmerId, request);
+            @Valid @RequestBody RegisterDeviceRequest registerRequest) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        DeviceDto device = deviceService.registerDevice(farmerId, registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Device registered successfully", device));
     }
@@ -54,8 +57,10 @@ public class DeviceController {
      */
     @GetMapping
     @PreAuthorize("hasRole('FARMER')")
-    public ResponseEntity<ApiResponse<List<DeviceDto>>> getMyDevices(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<List<DeviceDto>>> getMyDevices(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         List<DeviceDto> devices = deviceService.getDevicesByFarmer(farmerId);
         return ResponseEntity.ok(ApiResponse.success(devices));
     }
@@ -67,10 +72,11 @@ public class DeviceController {
     @GetMapping("/paged")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<PagedResponse<DeviceDto>>> getMyDevicesPaged(
+            HttpServletRequest request,
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<DeviceDto> devices = deviceService.getDevicesByFarmer(farmerId, pageable);
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(devices)));
@@ -83,9 +89,10 @@ public class DeviceController {
     @GetMapping("/{deviceId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<DeviceDto>> getDevice(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID deviceId) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         DeviceDto device = deviceService.getDevice(deviceId, farmerId);
         return ResponseEntity.ok(ApiResponse.success(device));
     }
@@ -97,10 +104,11 @@ public class DeviceController {
     @PatchMapping("/{deviceId}/status")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<DeviceDto>> updateDeviceStatus(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID deviceId,
             @RequestParam Device.DeviceStatus status) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         DeviceDto device = deviceService.updateDeviceStatus(deviceId, farmerId, status);
         return ResponseEntity.ok(ApiResponse.success("Device status updated", device));
     }
@@ -112,10 +120,19 @@ public class DeviceController {
     @DeleteMapping("/{deviceId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<Void>> deleteDevice(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID deviceId) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         deviceService.deleteDevice(deviceId, farmerId);
         return ResponseEntity.ok(ApiResponse.success("Device decommissioned"));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

@@ -37,6 +37,7 @@ CREATE TABLE user_roles (
 INSERT INTO roles (name, description) VALUES 
     ('FARMER', 'Farmer role - can manage farms and create listings'),
     ('BUYER', 'Buyer role - can browse and purchase products'),
+    ('CUSTOMER', 'Customer role - can browse and purchase products'),
     ('ADMIN', 'Administrator role - full system access');
 
 -- Create indexes

@@ -401,7 +401,7 @@ const Checkout = () => {
                     <span className="item-name">{item.listingTitle || 'Product'}</span>
                     <span className="item-qty">× {item.quantity}</span>
                   </div>
-                  <span className="item-price">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                  <span className="item-price">₹{(item.quantity * item.unitPrice).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -410,7 +410,7 @@ const Checkout = () => {
 
             <div className="summary-row">
               <span>Subtotal</span>
-              <span>${cart.totalAmount?.toFixed(2)}</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
             </div>
             <div className="summary-row">
               <span>Shipping</span>
@@ -425,7 +425,7 @@ const Checkout = () => {
 
             <div className="summary-row total">
               <span>Total</span>
-              <span>${cart.totalAmount?.toFixed(2)}</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
             </div>
 
             <button 

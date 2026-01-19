@@ -52,4 +52,19 @@ public interface ListingRepository extends JpaRepository<Listing, UUID>, JpaSpec
 
     @Query("SELECT COUNT(l) FROM Listing l WHERE l.sellerId = :sellerId AND l.status = :status")
     long countBySellerAndStatus(@Param("sellerId") UUID sellerId, @Param("status") Listing.ListingStatus status);
+
+    @Query("SELECT DISTINCT l.sellerId FROM Listing l WHERE l.status = 'ACTIVE'")
+    List<UUID> findDistinctSellerIds();
+
+    @Query("SELECT COUNT(l) FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE'")
+    int countActiveListingsBySeller(@Param("sellerId") UUID sellerId);
+
+    @Query("SELECT AVG(l.averageRating) FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE' AND l.averageRating > 0")
+    Double getAverageRatingBySeller(@Param("sellerId") UUID sellerId);
+
+    @Query("SELECT SUM(l.reviewCount) FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE'")
+    Integer getTotalReviewsBySeller(@Param("sellerId") UUID sellerId);
+
+    @Query("SELECT l.location FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE' ORDER BY l.createdAt DESC LIMIT 1")
+    String getLocationBySeller(@Param("sellerId") UUID sellerId);
 }

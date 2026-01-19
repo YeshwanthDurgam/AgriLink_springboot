@@ -25,6 +25,11 @@ spring:
 jwt:
   secret: ${JWT_SECRET:agrilink-secret-key-for-jwt-token-generation-min-256-bits}
 
+# Inter-service communication
+user:
+  service:
+    url: ${USER_SERVICE_URL:http://localhost:8082}
+
 logging:
   level:
     com.agrilink: DEBUG

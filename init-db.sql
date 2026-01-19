@@ -1,3 +1,7 @@
+-- =====================================================
+-- AgriLink Database Initialization Script
+-- =====================================================
+
 -- Create databases for each service
 CREATE DATABASE agrilink_auth;
 CREATE DATABASE agrilink_user;
@@ -15,3 +19,30 @@ GRANT ALL PRIVILEGES ON DATABASE agrilink_marketplace TO agrilink;
 GRANT ALL PRIVILEGES ON DATABASE agrilink_order TO agrilink;
 GRANT ALL PRIVILEGES ON DATABASE agrilink_iot TO agrilink;
 GRANT ALL PRIVILEGES ON DATABASE agrilink_notification TO agrilink;
+
+-- Enable UUID extension for all databases
+\c agrilink_auth
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_user
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_farm
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_marketplace
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_order
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_iot
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c agrilink_notification
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =====================================================
+-- NOTE: Run seed-data.sql after Spring Boot creates 
+-- the tables to populate with sample data.
+-- =====================================================

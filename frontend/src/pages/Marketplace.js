@@ -11,7 +11,7 @@ const Marketplace = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
-    category: '',
+    categoryId: '',
     minPrice: '',
     maxPrice: '',
     sortBy: 'createdAt,desc'
@@ -91,7 +91,7 @@ const Marketplace = () => {
 
   const clearFilters = () => {
     setFilters({
-      category: '',
+      categoryId: '',
       minPrice: '',
       maxPrice: '',
       sortBy: 'createdAt,desc'
@@ -156,12 +156,12 @@ const Marketplace = () => {
           <div className="filter-group">
             <label>Category</label>
             <select
-              value={filters.category}
-              onChange={(e) => handleFilterChange('category', e.target.value)}
+              value={filters.categoryId}
+              onChange={(e) => handleFilterChange('categoryId', e.target.value)}
             >
               <option value="">All Categories</option>
               {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -228,13 +228,18 @@ const Marketplace = () => {
                 <div className="listing-image">
                   {listing.imageUrl ? (
                     <img src={listing.imageUrl} alt={listing.title} />
+                  ) : listing.images && listing.images.length > 0 ? (
+                    <img src={listing.images[0]?.imageUrl || listing.images[0]} alt={listing.title} />
                   ) : (
                     <div className="no-image">
                       <FiShoppingBag />
                     </div>
                   )}
-                  {listing.category && (
-                    <span className="category-badge">{listing.category}</span>
+                  {listing.categoryName && (
+                    <span className="category-badge">{listing.categoryName}</span>
+                  )}
+                  {listing.isOrganic && (
+                    <span className="organic-badge">Organic</span>
                   )}
                 </div>
 
@@ -246,18 +251,18 @@ const Marketplace = () => {
                   </p>
                   
                   <div className="listing-meta">
-                    {listing.farmName && (
-                      <span className="farm-name">From: {listing.farmName}</span>
+                    {listing.farmerName && (
+                      <span className="farm-name">By: {listing.farmerName}</span>
                     )}
                     <span className="quantity">
-                      {listing.quantity} {listing.unit || 'units'} available
+                      {listing.quantity} {listing.unit || listing.quantityUnit || 'kg'} available
                     </span>
                   </div>
 
                   <div className="listing-footer">
                     <span className="price">
-                      {formatPrice(listing.price)}
-                      <span className="unit">/{listing.unit || 'unit'}</span>
+                      ₹{listing.price || listing.pricePerUnit}
+                      <span className="unit">/{listing.unit || listing.quantityUnit || 'kg'}</span>
                     </span>
                     <Link to={`/marketplace/${listing.id}`} className="view-btn">
                       <FiShoppingCart /> View

@@ -26,128 +26,23 @@ const Farmers = () => {
   const fetchFarmers = async () => {
     try {
       setLoading(true);
-      // Try to fetch real farmers data
-      const response = await api.get('/user-service/api/v1/farmers', {
-        params: {
-          sort: sortBy,
-          location: filterLocation && filterLocation !== 'All Locations' ? filterLocation : undefined,
-          category: filterCategory && filterCategory !== 'All Categories' ? filterCategory : undefined
-        }
-      }).catch(() => null);
+      // Fetch real farmers data from marketplace service sellers endpoint
+      const response = await api.get('/marketplace-service/api/v1/listings/sellers');
 
-      if (response?.data?.data) {
+      if (response?.data?.data && Array.isArray(response.data.data)) {
         setFarmers(response.data.data);
+      } else if (response?.data && Array.isArray(response.data)) {
+        setFarmers(response.data);
       } else {
-        // Use mock data
-        setFarmers(getMockFarmers());
+        console.warn('No farmers data returned from API');
+        setFarmers([]);
       }
     } catch (err) {
       console.error('Error fetching farmers:', err);
-      setFarmers(getMockFarmers());
+      setFarmers([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getMockFarmers = () => {
-    return [
-      {
-        id: '1',
-        name: 'Rajesh Kumar',
-        farmName: 'Green Valley Farms',
-        location: 'Maharashtra',
-        avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
-        rating: 4.8,
-        reviewCount: 156,
-        followers: 2340,
-        products: 45,
-        verified: true,
-        specialties: ['Organic Vegetables', 'Fruits'],
-        joinedYear: 2019,
-        description: 'Growing fresh organic vegetables with sustainable farming practices.'
-      },
-      {
-        id: '2',
-        name: 'Priya Sharma',
-        farmName: 'Sunrise Organic Farm',
-        location: 'Punjab',
-        avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400',
-        rating: 4.9,
-        reviewCount: 234,
-        followers: 3450,
-        products: 67,
-        verified: true,
-        specialties: ['Grains', 'Dairy'],
-        joinedYear: 2018,
-        description: 'Traditional Punjab farming with modern organic techniques.'
-      },
-      {
-        id: '3',
-        name: 'Amit Patel',
-        farmName: 'Fresh Fields',
-        location: 'Gujarat',
-        avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=400',
-        rating: 4.7,
-        reviewCount: 189,
-        followers: 1890,
-        products: 38,
-        verified: true,
-        specialties: ['Spices', 'Pulses'],
-        joinedYear: 2020,
-        description: 'Premium quality spices directly from our family farm.'
-      },
-      {
-        id: '4',
-        name: 'Lakshmi Reddy',
-        farmName: 'Golden Harvest',
-        location: 'Karnataka',
-        avatar: 'https://randomuser.me/api/portraits/women/4.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400',
-        rating: 4.6,
-        reviewCount: 145,
-        followers: 1567,
-        products: 52,
-        verified: false,
-        specialties: ['Fruits', 'Vegetables'],
-        joinedYear: 2021,
-        description: 'Fresh fruits and vegetables from the hills of Karnataka.'
-      },
-      {
-        id: '5',
-        name: 'Suresh Yadav',
-        farmName: 'Nature\'s Best Farm',
-        location: 'Rajasthan',
-        avatar: 'https://randomuser.me/api/portraits/men/5.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1595855759920-86582396756a?w=400',
-        rating: 4.5,
-        reviewCount: 98,
-        followers: 890,
-        products: 28,
-        verified: true,
-        specialties: ['Organic', 'Grains'],
-        joinedYear: 2020,
-        description: 'Desert farming with water-efficient organic methods.'
-      },
-      {
-        id: '6',
-        name: 'Meena Devi',
-        farmName: 'Green Roots',
-        location: 'Tamil Nadu',
-        avatar: 'https://randomuser.me/api/portraits/women/6.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1499529112087-3cb3b73cec95?w=400',
-        rating: 4.8,
-        reviewCount: 210,
-        followers: 2100,
-        products: 61,
-        verified: true,
-        specialties: ['Vegetables', 'Spices'],
-        joinedYear: 2019,
-        description: 'Traditional South Indian farming with a focus on quality.'
-      }
-    ];
   };
 
   const handleFollow = async (farmerId) => {

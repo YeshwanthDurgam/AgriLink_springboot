@@ -4,6 +4,7 @@ import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.farm.dto.CreateFieldRequest;
 import com.agrilink.farm.dto.FieldDto;
 import com.agrilink.farm.service.FieldService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,11 +36,12 @@ public class FieldController {
     @PostMapping
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<FieldDto>> createField(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID farmId,
-            @Valid @RequestBody CreateFieldRequest request) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        FieldDto field = fieldService.createField(farmId, farmerId, request);
+            @Valid @RequestBody CreateFieldRequest createRequest) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        FieldDto field = fieldService.createField(farmId, farmerId, createRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Field created successfully", field));
     }
@@ -74,9 +77,17 @@ public class FieldController {
     public ResponseEntity<ApiResponse<FieldDto>> updateField(
             @PathVariable UUID farmId,
             @PathVariable UUID fieldId,
-            @Valid @RequestBody CreateFieldRequest request) {
-        FieldDto field = fieldService.updateField(fieldId, request);
+            @Valid @RequestBody CreateFieldRequest createRequest) {
+        FieldDto field = fieldService.updateField(fieldId, createRequest);
         return ResponseEntity.ok(ApiResponse.success("Field updated successfully", field));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 
     /**

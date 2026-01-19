@@ -4,11 +4,13 @@ import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.user.dto.UpdateProfileRequest;
 import com.agrilink.user.dto.UserProfileDto;
 import com.agrilink.user.service.UserProfileService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,14 +27,26 @@ public class UserProfileController {
     private final UserProfileService userProfileService;
 
     /**
+     * Helper method to get user ID from JWT token stored in request attribute.
+     */
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        // Fallback to generating UUID from email (for backward compatibility)
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    }
+
+    /**
      * Get current user's profile.
      * GET /api/v1/users/profile
      */
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(Authentication authentication) {
-        // In a real implementation, you'd get the userId from a token claim or user service
-        // For now, we'll create a profile based on the email
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = getUserIdFromRequest(request, authentication);
         UserProfileDto profile = userProfileService.getOrCreateProfile(userId);
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
@@ -43,10 +57,11 @@ public class UserProfileController {
      */
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateProfile(
+            HttpServletRequest request,
             Authentication authentication,
-            @Valid @RequestBody UpdateProfileRequest request) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        UserProfileDto profile = userProfileService.updateProfile(userId, request);
+            @Valid @RequestBody UpdateProfileRequest updateRequest) {
+        UUID userId = getUserIdFromRequest(request, authentication);
+        UserProfileDto profile = userProfileService.updateProfile(userId, updateRequest);
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", profile));
     }
 

@@ -16,12 +16,17 @@ const AuthService = {
    */
   login: async (credentials) => {
     const response = await authApi.post('/auth/login', credentials);
-    if (response.data.success && response.data.data.token) {
+    if (response.data.success && response.data.data?.token) {
       localStorage.setItem('token', response.data.data.token);
-      // Fetch user details after login
-      const userResponse = await authApi.get('/auth/me');
-      if (userResponse.data.success) {
-        localStorage.setItem('user', JSON.stringify(userResponse.data.data));
+      // Store user data from login response
+      if (response.data.data.email && response.data.data.roles) {
+        const userData = {
+          email: response.data.data.email,
+          roles: Array.isArray(response.data.data.roles) 
+            ? response.data.data.roles 
+            : Array.from(response.data.data.roles)
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
       }
     }
     return response.data;
@@ -39,16 +44,42 @@ const AuthService = {
    * Get current user from API
    */
   getCurrentUser: async () => {
-    const response = await authApi.get('/auth/me');
-    return response.data;
+    try {
+      const response = await authApi.get('/auth/me');
+      if (response.data.success && response.data.data) {
+        // Normalize roles to array
+        const userData = response.data.data;
+        if (userData.roles && !Array.isArray(userData.roles)) {
+          userData.roles = Array.from(userData.roles);
+        }
+        return { success: true, data: userData };
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      return { success: false, message: 'Failed to get user data' };
+    }
   },
 
   /**
    * Get stored user from localStorage
    */
   getStoredUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    try {
+      const user = localStorage.getItem('user');
+      if (user) {
+        const parsed = JSON.parse(user);
+        // Normalize roles to array
+        if (parsed.roles && !Array.isArray(parsed.roles)) {
+          parsed.roles = Array.from(parsed.roles);
+        }
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      console.error('Error parsing stored user:', e);
+      return null;
+    }
   },
 
   /**
@@ -70,7 +101,7 @@ const AuthService = {
    */
   refreshToken: async () => {
     const response = await authApi.post('/auth/refresh');
-    if (response.data.success && response.data.data.token) {
+    if (response.data.success && response.data.data?.token) {
       localStorage.setItem('token', response.data.data.token);
     }
     return response.data;

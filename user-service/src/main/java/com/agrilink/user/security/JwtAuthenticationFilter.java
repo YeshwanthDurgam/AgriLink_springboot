@@ -40,6 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 String email = jwtTokenProvider.getEmailFromToken(jwt);
                 String roles = jwtTokenProvider.getRolesFromToken(jwt);
+                String userId = jwtTokenProvider.getUserIdFromToken(jwt);
 
                 List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
                         .map(SimpleGrantedAuthority::new)
@@ -50,6 +51,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                
+                // Store userId in request attribute for controllers to access
+                if (StringUtils.hasText(userId)) {
+                    request.setAttribute("userId", userId);
+                }
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context", ex);

@@ -1,12 +1,14 @@
 package com.agrilink.order.controller;
 
 import com.agrilink.order.service.SalesExportService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -29,8 +31,8 @@ public class SalesExportController {
      * GET /api/v1/export/orders
      */
     @GetMapping("/orders")
-    public ResponseEntity<byte[]> exportOrders(Authentication authentication) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportOrders(HttpServletRequest request, Authentication authentication) {
+        UUID sellerId = getUserIdFromRequest(request, authentication);
         byte[] data = salesExportService.exportOrdersAsCsv(sellerId);
         
         return ResponseEntity.ok()
@@ -44,8 +46,8 @@ public class SalesExportController {
      * GET /api/v1/export/order-items
      */
     @GetMapping("/order-items")
-    public ResponseEntity<byte[]> exportOrderItems(Authentication authentication) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportOrderItems(HttpServletRequest request, Authentication authentication) {
+        UUID sellerId = getUserIdFromRequest(request, authentication);
         byte[] data = salesExportService.exportOrderItemsAsCsv(sellerId);
         
         return ResponseEntity.ok()
@@ -59,8 +61,8 @@ public class SalesExportController {
      * GET /api/v1/export/sales-analytics
      */
     @GetMapping("/sales-analytics")
-    public ResponseEntity<byte[]> exportSalesAnalytics(Authentication authentication) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportSalesAnalytics(HttpServletRequest request, Authentication authentication) {
+        UUID sellerId = getUserIdFromRequest(request, authentication);
         byte[] data = salesExportService.exportSalesAnalyticsAsCsv(sellerId);
         
         return ResponseEntity.ok()
@@ -71,5 +73,13 @@ public class SalesExportController {
 
     private String getDateSuffix() {
         return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

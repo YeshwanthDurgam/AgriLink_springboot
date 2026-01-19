@@ -4,6 +4,7 @@ import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.farm.dto.CreateFarmRequest;
 import com.agrilink.farm.dto.FarmDto;
 import com.agrilink.farm.service.FarmService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,10 +36,11 @@ public class FarmController {
     @PostMapping
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<FarmDto>> createFarm(
+            HttpServletRequest request,
             Authentication authentication,
-            @Valid @RequestBody CreateFarmRequest request) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        FarmDto farm = farmService.createFarm(farmerId, request);
+            @Valid @RequestBody CreateFarmRequest createRequest) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        FarmDto farm = farmService.createFarm(farmerId, createRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Farm created successfully", farm));
     }
@@ -47,8 +50,10 @@ public class FarmController {
      * GET /api/v1/farms
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<FarmDto>>> getFarms(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<List<FarmDto>>> getFarms(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         List<FarmDto> farms = farmService.getFarmsByFarmer(farmerId);
         return ResponseEntity.ok(ApiResponse.success(farms));
     }
@@ -59,9 +64,10 @@ public class FarmController {
      */
     @GetMapping("/{farmId}")
     public ResponseEntity<ApiResponse<FarmDto>> getFarm(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID farmId) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         FarmDto farm = farmService.getFarm(farmId, farmerId);
         return ResponseEntity.ok(ApiResponse.success(farm));
     }
@@ -73,11 +79,12 @@ public class FarmController {
     @PutMapping("/{farmId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<FarmDto>> updateFarm(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID farmId,
-            @Valid @RequestBody CreateFarmRequest request) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        FarmDto farm = farmService.updateFarm(farmId, farmerId, request);
+            @Valid @RequestBody CreateFarmRequest createRequest) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        FarmDto farm = farmService.updateFarm(farmId, farmerId, createRequest);
         return ResponseEntity.ok(ApiResponse.success("Farm updated successfully", farm));
     }
 
@@ -88,10 +95,19 @@ public class FarmController {
     @DeleteMapping("/{farmId}")
     @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<Void>> deleteFarm(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID farmId) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         farmService.deleteFarm(farmId, farmerId);
         return ResponseEntity.ok(ApiResponse.success("Farm deleted successfully"));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

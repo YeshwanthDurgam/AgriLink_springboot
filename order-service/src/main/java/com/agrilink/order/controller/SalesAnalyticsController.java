@@ -2,10 +2,12 @@ package com.agrilink.order.controller;
 
 import com.agrilink.order.dto.SalesAnalyticsDto;
 import com.agrilink.order.service.SalesAnalyticsService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -27,8 +29,10 @@ public class SalesAnalyticsController {
      * Get sales analytics for the authenticated seller.
      */
     @GetMapping("/sales")
-    public ResponseEntity<Map<String, Object>> getSalesAnalytics(Authentication authentication) {
-        UUID sellerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<Map<String, Object>> getSalesAnalytics(
+            HttpServletRequest request, 
+            Authentication authentication) {
+        UUID sellerId = getUserIdFromRequest(request, authentication);
         log.info("Getting sales analytics for seller: {}", sellerId);
         
         SalesAnalyticsDto analytics = salesAnalyticsService.getSalesAnalytics(sellerId);
@@ -38,5 +42,13 @@ public class SalesAnalyticsController {
         response.put("data", analytics);
         
         return ResponseEntity.ok(response);
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

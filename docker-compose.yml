@@ -93,11 +93,14 @@ services:
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
       JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      USER_SERVICE_URL: http://user-service:8082
     ports:
       - "8084:8084"
     depends_on:
       postgres:
         condition: service_healthy
+      user-service:
+        condition: service_started
     networks:
       - agrilink-network
 

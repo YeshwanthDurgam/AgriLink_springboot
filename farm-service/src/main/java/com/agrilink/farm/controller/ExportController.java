@@ -1,12 +1,14 @@
 package com.agrilink.farm.controller;
 
 import com.agrilink.farm.service.ExportService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -29,8 +31,8 @@ public class ExportController {
      * GET /api/v1/export/farms
      */
     @GetMapping("/farms")
-    public ResponseEntity<byte[]> exportFarms(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportFarms(HttpServletRequest request, Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         byte[] data = exportService.exportFarmsAsCsv(farmerId);
         
         return ResponseEntity.ok()
@@ -44,8 +46,8 @@ public class ExportController {
      * GET /api/v1/export/fields
      */
     @GetMapping("/fields")
-    public ResponseEntity<byte[]> exportFields(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportFields(HttpServletRequest request, Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         byte[] data = exportService.exportFieldsAsCsv(farmerId);
         
         return ResponseEntity.ok()
@@ -59,8 +61,8 @@ public class ExportController {
      * GET /api/v1/export/crops
      */
     @GetMapping("/crops")
-    public ResponseEntity<byte[]> exportCropPlans(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportCropPlans(HttpServletRequest request, Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         byte[] data = exportService.exportCropPlansAsCsv(farmerId);
         
         return ResponseEntity.ok()
@@ -74,8 +76,8 @@ public class ExportController {
      * GET /api/v1/export/analytics
      */
     @GetMapping("/analytics")
-    public ResponseEntity<byte[]> exportAnalytics(Authentication authentication) {
-        UUID farmerId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<byte[]> exportAnalytics(HttpServletRequest request, Authentication authentication) {
+        UUID farmerId = getUserIdFromRequest(request, authentication);
         byte[] data = exportService.exportAnalyticsSummaryAsCsv(farmerId);
         
         return ResponseEntity.ok()
@@ -86,5 +88,13 @@ public class ExportController {
 
     private String getDateSuffix() {
         return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

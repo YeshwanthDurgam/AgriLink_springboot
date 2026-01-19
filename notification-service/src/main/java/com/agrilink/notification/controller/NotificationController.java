@@ -4,6 +4,7 @@ import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.common.dto.PagedResponse;
 import com.agrilink.notification.dto.*;
 import com.agrilink.notification.service.NotificationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,10 +62,11 @@ public class NotificationController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<NotificationDto>>> getMyNotifications(
+            HttpServletRequest request,
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID userId = getUserIdFromRequest(request, authentication);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<NotificationDto> notifications = notificationService.getUserNotifications(userId, pageable);
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(notifications)));
@@ -74,8 +77,10 @@ public class NotificationController {
      * GET /api/v1/notifications/unread
      */
     @GetMapping("/unread")
-    public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(Authentication authentication) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = getUserIdFromRequest(request, authentication);
         List<NotificationDto> notifications = notificationService.getUnreadNotifications(userId);
         return ResponseEntity.ok(ApiResponse.success(notifications));
     }
@@ -85,8 +90,10 @@ public class NotificationController {
      * GET /api/v1/notifications/count
      */
     @GetMapping("/count")
-    public ResponseEntity<ApiResponse<Long>> getUnreadCount(Authentication authentication) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = getUserIdFromRequest(request, authentication);
         long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.success(count));
     }
@@ -97,9 +104,10 @@ public class NotificationController {
      */
     @PostMapping("/{notificationId}/read")
     public ResponseEntity<ApiResponse<NotificationDto>> markAsRead(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID notificationId) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+        UUID userId = getUserIdFromRequest(request, authentication);
         NotificationDto notification = notificationService.markAsRead(notificationId, userId);
         return ResponseEntity.ok(ApiResponse.success("Notification marked as read", notification));
     }
@@ -109,8 +117,10 @@ public class NotificationController {
      * POST /api/v1/notifications/read-all
      */
     @PostMapping("/read-all")
-    public ResponseEntity<ApiResponse<Void>> markAllAsRead(Authentication authentication) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = getUserIdFromRequest(request, authentication);
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.success("All notifications marked as read"));
     }
@@ -120,8 +130,10 @@ public class NotificationController {
      * GET /api/v1/notifications/preferences
      */
     @GetMapping("/preferences")
-    public ResponseEntity<ApiResponse<NotificationPreferencesDto>> getPreferences(Authentication authentication) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    public ResponseEntity<ApiResponse<NotificationPreferencesDto>> getPreferences(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = getUserIdFromRequest(request, authentication);
         NotificationPreferencesDto preferences = notificationService.getPreferences(userId);
         return ResponseEntity.ok(ApiResponse.success(preferences));
     }
@@ -132,10 +144,19 @@ public class NotificationController {
      */
     @PutMapping("/preferences")
     public ResponseEntity<ApiResponse<NotificationPreferencesDto>> updatePreferences(
+            HttpServletRequest request,
             Authentication authentication,
-            @RequestBody UpdatePreferencesRequest request) {
-        UUID userId = UUID.nameUUIDFromBytes(authentication.getName().getBytes());
-        NotificationPreferencesDto preferences = notificationService.updatePreferences(userId, request);
+            @RequestBody UpdatePreferencesRequest updateRequest) {
+        UUID userId = getUserIdFromRequest(request, authentication);
+        NotificationPreferencesDto preferences = notificationService.updatePreferences(userId, updateRequest);
         return ResponseEntity.ok(ApiResponse.success("Preferences updated", preferences));
+    }
+
+    private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
+        return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

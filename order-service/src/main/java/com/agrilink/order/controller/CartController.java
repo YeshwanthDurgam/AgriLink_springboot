@@ -2,11 +2,13 @@ package com.agrilink.order.controller;
 
 import com.agrilink.order.dto.*;
 import com.agrilink.order.service.CartService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -27,8 +29,10 @@ public class CartController {
      * Get current user's cart
      */
     @GetMapping
-    public ResponseEntity<CartDto> getCart(Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+    public ResponseEntity<CartDto> getCart(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = extractUserId(request, authentication);
         return ResponseEntity.ok(cartService.getCart(userId));
     }
 
@@ -37,10 +41,11 @@ public class CartController {
      */
     @PostMapping("/items")
     public ResponseEntity<CartDto> addToCart(
+            HttpServletRequest request,
             Authentication authentication,
-            @Valid @RequestBody AddToCartRequest request) {
-        UUID userId = extractUserId(authentication);
-        return ResponseEntity.ok(cartService.addToCart(userId, request));
+            @Valid @RequestBody AddToCartRequest addRequest) {
+        UUID userId = extractUserId(request, authentication);
+        return ResponseEntity.ok(cartService.addToCart(userId, addRequest));
     }
 
     /**
@@ -48,11 +53,12 @@ public class CartController {
      */
     @PutMapping("/items/{listingId}")
     public ResponseEntity<CartDto> updateCartItem(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID listingId,
-            @Valid @RequestBody UpdateCartItemRequest request) {
-        UUID userId = extractUserId(authentication);
-        return ResponseEntity.ok(cartService.updateCartItem(userId, listingId, request));
+            @Valid @RequestBody UpdateCartItemRequest updateRequest) {
+        UUID userId = extractUserId(request, authentication);
+        return ResponseEntity.ok(cartService.updateCartItem(userId, listingId, updateRequest));
     }
 
     /**
@@ -60,9 +66,10 @@ public class CartController {
      */
     @DeleteMapping("/items/{listingId}")
     public ResponseEntity<CartDto> removeFromCart(
+            HttpServletRequest request,
             Authentication authentication,
             @PathVariable UUID listingId) {
-        UUID userId = extractUserId(authentication);
+        UUID userId = extractUserId(request, authentication);
         return ResponseEntity.ok(cartService.removeFromCart(userId, listingId));
     }
 
@@ -70,8 +77,10 @@ public class CartController {
      * Clear cart
      */
     @DeleteMapping
-    public ResponseEntity<Void> clearCart(Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+    public ResponseEntity<Void> clearCart(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = extractUserId(request, authentication);
         cartService.clearCart(userId);
         return ResponseEntity.noContent().build();
     }
@@ -80,16 +89,22 @@ public class CartController {
      * Get cart item count
      */
     @GetMapping("/count")
-    public ResponseEntity<Map<String, Integer>> getCartCount(Authentication authentication) {
-        UUID userId = extractUserId(authentication);
+    public ResponseEntity<Map<String, Integer>> getCartCount(
+            HttpServletRequest request,
+            Authentication authentication) {
+        UUID userId = extractUserId(request, authentication);
         int count = cartService.getCartItemCount(userId);
         return ResponseEntity.ok(Map.of("count", count));
     }
 
     /**
-     * Extract user ID from JWT token (email) - generates deterministic UUID
+     * Extract user ID from JWT token stored in request attribute.
      */
-    private UUID extractUserId(Authentication authentication) {
+    private UUID extractUserId(HttpServletRequest request, Authentication authentication) {
+        String userIdStr = (String) request.getAttribute("userId");
+        if (StringUtils.hasText(userIdStr)) {
+            return UUID.fromString(userIdStr);
+        }
         return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
     }
 }

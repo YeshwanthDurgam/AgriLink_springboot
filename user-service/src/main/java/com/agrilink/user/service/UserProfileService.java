@@ -1,5 +1,6 @@
 package com.agrilink.user.service;
 
+import com.agrilink.user.dto.PublicProfileDto;
 import com.agrilink.user.dto.UpdateProfileRequest;
 import com.agrilink.user.dto.UserProfileDto;
 import com.agrilink.user.entity.UserProfile;
@@ -10,7 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for user profile operations.
@@ -117,6 +120,78 @@ public class UserProfileService {
                 .bio(profile.getBio())
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * Get public profile information (limited data for public viewing).
+     */
+    @Transactional(readOnly = true)
+    public PublicProfileDto getPublicProfile(UUID userId) {
+        log.info("Getting public profile for user: {}", userId);
+        
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElse(null);
+        
+        if (profile == null) {
+            // Return a default profile for unknown users
+            return PublicProfileDto.builder()
+                    .userId(userId)
+                    .firstName("Farmer")
+                    .lastName("")
+                    .fullName("Farmer")
+                    .city("")
+                    .state("")
+                    .profilePictureUrl("https://randomuser.me/api/portraits/men/32.jpg")
+                    .build();
+        }
+
+        return mapToPublicDto(profile);
+    }
+
+    /**
+     * Get public profiles for multiple users.
+     */
+    @Transactional(readOnly = true)
+    public List<PublicProfileDto> getPublicProfiles(List<UUID> userIds) {
+        log.info("Getting public profiles for {} users", userIds.size());
+        
+        List<UserProfile> profiles = userProfileRepository.findByUserIdIn(userIds);
+        
+        return userIds.stream()
+                .map(userId -> profiles.stream()
+                        .filter(p -> p.getUserId().equals(userId))
+                        .findFirst()
+                        .map(this::mapToPublicDto)
+                        .orElse(PublicProfileDto.builder()
+                                .userId(userId)
+                                .firstName("Farmer")
+                                .lastName("")
+                                .fullName("Farmer")
+                                .profilePictureUrl("https://randomuser.me/api/portraits/men/32.jpg")
+                                .build()))
+                .collect(Collectors.toList());
+    }
+
+    private PublicProfileDto mapToPublicDto(UserProfile profile) {
+        String fullName = "";
+        if (profile.getFirstName() != null) {
+            fullName = profile.getFirstName();
+            if (profile.getLastName() != null) {
+                fullName += " " + profile.getLastName();
+            }
+        }
+        
+        return PublicProfileDto.builder()
+                .userId(profile.getUserId())
+                .firstName(profile.getFirstName())
+                .lastName(profile.getLastName())
+                .fullName(fullName.trim().isEmpty() ? "Farmer" : fullName.trim())
+                .city(profile.getCity())
+                .state(profile.getState())
+                .profilePictureUrl(profile.getProfilePictureUrl() != null 
+                        ? profile.getProfilePictureUrl() 
+                        : "https://randomuser.me/api/portraits/men/32.jpg")
                 .build();
     }
 }

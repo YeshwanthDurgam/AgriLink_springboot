@@ -64,6 +64,20 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String generateToken(String email, String roles, java.util.UUID userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("roles", roles)
+                .claim("userId", userId.toString())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     public String getEmailFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -82,6 +96,16 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.get("roles", String.class);
+    }
+
+    public String getUserIdFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("userId", String.class);
     }
 
     public boolean validateToken(String token) {

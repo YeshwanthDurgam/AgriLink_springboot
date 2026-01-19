@@ -91,7 +91,6 @@ public class AuthService {
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtTokenProvider.generateToken(authentication);
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getEmail()));
@@ -99,6 +98,9 @@ public class AuthService {
         Set<String> roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toSet());
+
+        String rolesString = roles.stream().map(r -> "ROLE_" + r).collect(java.util.stream.Collectors.joining(","));
+        String token = jwtTokenProvider.generateToken(user.getEmail(), rolesString, user.getId());
 
         log.info("User logged in successfully: {}", request.getEmail());
 

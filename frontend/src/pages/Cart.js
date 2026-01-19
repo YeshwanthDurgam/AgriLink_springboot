@@ -130,7 +130,7 @@ const Cart = () => {
                   <Link to={`/marketplace/listing/${item.listingId}`} className="item-title">
                     {item.listingTitle || 'Product'}
                   </Link>
-                  <div className="item-price">${item.unitPrice?.toFixed(2)} per unit</div>
+                  <div className="item-price">₹{item.unitPrice?.toFixed(2)} per unit</div>
                 </div>
 
                 <div className="item-quantity">
@@ -152,7 +152,7 @@ const Cart = () => {
                 </div>
 
                 <div className="item-subtotal">
-                  ${item.subtotal?.toFixed(2) || (item.quantity * item.unitPrice).toFixed(2)}
+                  ₹{item.subtotal?.toFixed(2) || (item.quantity * item.unitPrice).toFixed(2)}
                 </div>
 
                 <button 
@@ -171,7 +171,7 @@ const Cart = () => {
             <h3>Order Summary</h3>
             <div className="summary-row">
               <span>Items ({cart.totalItems})</span>
-              <span>${cart.totalAmount?.toFixed(2)}</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
             </div>
             <div className="summary-row">
               <span>Shipping</span>
@@ -180,7 +180,7 @@ const Cart = () => {
             <div className="summary-divider"></div>
             <div className="summary-row total">
               <span>Subtotal</span>
-              <span>${cart.totalAmount?.toFixed(2)}</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
             </div>
             <button onClick={handleCheckout} className="btn btn-primary btn-checkout">
               Proceed to Checkout

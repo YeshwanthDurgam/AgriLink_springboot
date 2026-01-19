@@ -166,11 +166,19 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         try {
             // Simple extraction - in production, validate the JWT properly
             if (token != null && !token.isEmpty()) {
-                // Extract email from JWT and convert to UUID
+                // Extract userId from JWT claims (preferred) or fallback to email-based UUID
                 String[] parts = token.split("\\.");
                 if (parts.length == 3) {
                     String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
                     Map<String, Object> claims = objectMapper.readValue(payload, Map.class);
+                    
+                    // Try to get userId from claims first
+                    String userId = (String) claims.get("userId");
+                    if (userId != null && !userId.isEmpty()) {
+                        return UUID.fromString(userId);
+                    }
+                    
+                    // Fallback to email-based UUID for backward compatibility
                     String email = (String) claims.get("sub");
                     if (email != null) {
                         return UUID.nameUUIDFromBytes(email.getBytes());

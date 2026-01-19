@@ -29,6 +29,9 @@ import Deals from './pages/Deals';
 import BuyerDashboard from './pages/BuyerDashboard';
 import FarmerDashboard from './pages/FarmerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import CreateListing from './pages/CreateListing';
+import FarmerProducts from './pages/FarmerProducts';
+import EditListing from './pages/EditListing';
 
 import './App.css';
 
@@ -93,6 +96,21 @@ function App() {
               <Route path="/marketplace/listing/:id" element={
                 <PrivateRoute>
                   <ListingDetail />
+                </PrivateRoute>
+              } />
+              <Route path="/marketplace/create" element={
+                <PrivateRoute>
+                  <CreateListing />
+                </PrivateRoute>
+              } />
+              <Route path="/marketplace/edit/:id" element={
+                <PrivateRoute>
+                  <EditListing />
+                </PrivateRoute>
+              } />
+              <Route path="/farmer/products" element={
+                <PrivateRoute>
+                  <FarmerProducts />
                 </PrivateRoute>
               } />
               <Route path="/cart" element={

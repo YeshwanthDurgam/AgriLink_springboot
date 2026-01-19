@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FiMap, FiPackage, FiDollarSign, FiTrendingUp, FiPlus, FiArrowRight } from 'react-icons/fi';
 import FarmService from '../services/farmService';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, getDashboardRoute } = useAuth();
   const [stats, setStats] = useState({
     totalFarms: 0,
     totalCrops: 0,
@@ -15,10 +15,24 @@ const Dashboard = () => {
   });
   const [recentFarms, setRecentFarms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [redirectPath, setRedirectPath] = useState('/dashboard');
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    // Check if we should redirect to a role-specific dashboard
+    const dashboardRoute = getDashboardRoute();
+    if (dashboardRoute && dashboardRoute !== '/dashboard') {
+      setShouldRedirect(true);
+      setRedirectPath(dashboardRoute);
+    } else {
+      fetchDashboardData();
+    }
+  }, [getDashboardRoute]);
+
+  // Redirect to role-specific dashboard
+  if (shouldRedirect) {
+    return <Navigate to={redirectPath} replace />;
+  }
 
   const fetchDashboardData = async () => {
     try {
