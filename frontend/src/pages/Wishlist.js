@@ -49,8 +49,17 @@ const Wishlist = () => {
   const handleMoveToCart = async (item) => {
     setActionLoading(prev => ({ ...prev, [item.listingId]: 'moving' }));
     try {
-      // Add to cart
-      await cartService.addToCart(item.listingId, item.sellerId, 1, item.price);
+      // Add to cart with all required fields
+      await cartService.addToCart({
+        listingId: item.listingId,
+        sellerId: item.sellerId,
+        quantity: 1,
+        unitPrice: item.price,
+        listingTitle: item.listingTitle,
+        listingImageUrl: item.listingImageUrl || null,
+        unit: item.unit || 'kg',
+        availableQuantity: item.availableQuantity || null
+      });
       // Remove from wishlist
       await wishlistService.removeFromWishlist(item.listingId);
       setItems(prev => prev.filter(i => i.listingId !== item.listingId));

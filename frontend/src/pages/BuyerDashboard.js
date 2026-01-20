@@ -16,12 +16,12 @@ const BuyerDashboard = () => {
     totalOrders: 0,
     pendingOrders: 0,
     wishlistItems: 0,
-    savedFarmers: 0,
+    followingFarmers: 0,
     walletBalance: 0,
     totalSpent: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [savedFarmers, setSavedFarmers] = useState([]);
+  const [followingFarmers, setFollowingFarmers] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,31 +45,31 @@ const BuyerDashboard = () => {
       const farmers = farmersRes.data?.data || [];
 
       setStats({
-        totalOrders: orders.length || 12,
-        pendingOrders: orders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length || 2,
-        wishlistItems: wishlist.length || 8,
-        savedFarmers: farmers.length || 5,
+        totalOrders: orders.length,
+        pendingOrders: orders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length,
+        wishlistItems: wishlist.length,
+        followingFarmers: farmers.length,
         walletBalance: 2450,
         totalSpent: 15680
       });
 
-      setRecentOrders(orders.slice(0, 4) || getMockOrders());
-      setSavedFarmers(farmers.slice(0, 4) || getMockFarmers());
+      setRecentOrders(orders.slice(0, 4));
+      setFollowingFarmers(farmers.slice(0, 4));
       setRecommendations(getMockRecommendations());
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      // Use mock data
+      // Use empty data on error
       setStats({
-        totalOrders: 12,
-        pendingOrders: 2,
-        wishlistItems: 8,
-        savedFarmers: 5,
-        walletBalance: 2450,
-        totalSpent: 15680
+        totalOrders: 0,
+        pendingOrders: 0,
+        wishlistItems: 0,
+        followingFarmers: 0,
+        walletBalance: 0,
+        totalSpent: 0
       });
-      setRecentOrders(getMockOrders());
-      setSavedFarmers(getMockFarmers());
-      setRecommendations(getMockRecommendations());
+      setRecentOrders([]);
+      setFollowingFarmers([]);
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
@@ -82,12 +82,7 @@ const BuyerDashboard = () => {
     { id: '4', orderNumber: 'ORD-2024-004', status: 'PENDING', total: 199, itemCount: 1, date: '2024-01-22' }
   ];
 
-  const getMockFarmers = () => [
-    { id: '1', name: 'Rajesh Kumar', farmName: 'Green Valley', avatar: 'https://randomuser.me/api/portraits/men/1.jpg', rating: 4.8, products: 45 },
-    { id: '2', name: 'Priya Sharma', farmName: 'Sunrise Organic', avatar: 'https://randomuser.me/api/portraits/women/2.jpg', rating: 4.9, products: 67 },
-    { id: '3', name: 'Amit Patel', farmName: 'Fresh Fields', avatar: 'https://randomuser.me/api/portraits/men/3.jpg', rating: 4.7, products: 38 },
-    { id: '4', name: 'Lakshmi Reddy', farmName: 'Golden Harvest', avatar: 'https://randomuser.me/api/portraits/women/4.jpg', rating: 4.6, products: 52 }
-  ];
+
 
   const getMockRecommendations = () => [
     { id: '1', title: 'Organic Tomatoes', price: 49, originalPrice: 80, image: 'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=150', farmer: 'Green Valley' },
@@ -110,7 +105,7 @@ const BuyerDashboard = () => {
   const menuItems = [
     { icon: FiPackage, label: 'My Orders', path: '/orders', count: stats.totalOrders },
     { icon: FiHeart, label: 'Wishlist', path: '/wishlist', count: stats.wishlistItems },
-    { icon: FiUsers, label: 'Saved Farmers', path: '/farmers/saved', count: stats.savedFarmers },
+    { icon: FiUsers, label: 'Following Farmers', path: '/farmers?following=true', count: stats.followingFarmers },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', badge: true },
     { icon: FiUser, label: 'My Profile', path: '/profile' },
     { icon: FiAlertCircle, label: 'Report Issue', path: '/report' },
@@ -228,29 +223,31 @@ const BuyerDashboard = () => {
             </div>
           </section>
 
-          {/* Saved Farmers */}
+          {/* Following Farmers */}
+          {followingFarmers.length > 0 && (
           <section className="dashboard-section">
             <div className="section-header">
-              <h2>Your Favorite Farmers</h2>
-              <Link to="/farmers" className="view-all">View All <FiChevronRight /></Link>
+              <h2>Following Farmers</h2>
+              <Link to="/farmers?following=true" className="view-all">View All <FiChevronRight /></Link>
             </div>
             
             <div className="farmers-grid">
-              {savedFarmers.map((farmer) => (
-                <div key={farmer.id} className="farmer-card" onClick={() => navigate(`/marketplace?farmer=${farmer.id}`)}>
-                  <img src={farmer.avatar} alt={farmer.name} className="farmer-avatar" />
+              {followingFarmers.map((farmer) => (
+                <div key={farmer.farmerId || farmer.id} className="farmer-card" onClick={() => navigate(`/farmers/${farmer.farmerId || farmer.id}`)}>
+                  <img src={farmer.profilePictureUrl || farmer.avatar || 'https://randomuser.me/api/portraits/men/32.jpg'} alt={farmer.farmerName || farmer.name} className="farmer-avatar" />
                   <div className="farmer-info">
-                    <span className="farmer-name">{farmer.name}</span>
-                    <span className="farm-name">{farmer.farmName}</span>
+                    <span className="farmer-name">{farmer.farmerName || farmer.name || 'Farmer'}</span>
+                    <span className="farm-name">{farmer.farmName || farmer.location || ''}</span>
                   </div>
                   <div className="farmer-stats">
-                    <span className="farmer-rating"><FiStar /> {farmer.rating}</span>
-                    <span className="farmer-products">{farmer.products} products</span>
+                    <span className="farmer-rating"><FiStar /> {farmer.rating > 0 ? farmer.rating.toFixed(1) : 'Not rated'}</span>
+                    <span className="farmer-products">{farmer.productCount || farmer.products || 0} products</span>
                   </div>
                 </div>
               ))}
             </div>
           </section>
+          )}
 
           {/* Recommendations */}
           <section className="dashboard-section">

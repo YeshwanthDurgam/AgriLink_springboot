@@ -229,6 +229,36 @@
   color: #9ca3af;
 }
 
+/* Empty Categories State */
+.empty-categories {
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  border-radius: 16px;
+}
+
+.empty-categories p {
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.browse-all-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.browse-all-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
 /* Product Carousel Section */
 .product-carousel-section {
   padding: 50px 0;

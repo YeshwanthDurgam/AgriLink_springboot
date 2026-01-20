@@ -3,9 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   FiMenu, FiX, FiUser, FiLogOut, FiSearch, FiShoppingCart, FiHeart, 
-  FiMessageSquare, FiBell, FiChevronDown, FiGrid, FiShoppingBag, 
-  FiUsers, FiTag, FiPackage, FiSettings, FiBarChart2, FiMap, FiCpu,
-  FiHome, FiTrendingUp, FiPercent, FiShield, FiHelpCircle
+  FiMessageSquare, FiBell, FiChevronDown, FiShoppingBag, 
+  FiUsers, FiPackage, FiBarChart2, FiMap, FiCpu,
+  FiHome, FiPercent, FiShield, FiHelpCircle
 } from 'react-icons/fi';
 import cartService from '../services/cartService';
 import wishlistService from '../services/wishlistService';
@@ -20,27 +20,13 @@ const Navbar = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const categoriesRef = useRef(null);
   const userMenuRef = useRef(null);
-
-  // Categories list
-  const categories = [
-    { name: 'Vegetables', icon: '🥬', path: '/marketplace?category=VEGETABLES' },
-    { name: 'Fruits', icon: '🍎', path: '/marketplace?category=FRUITS' },
-    { name: 'Grains', icon: '🌾', path: '/marketplace?category=GRAINS' },
-    { name: 'Dairy', icon: '🥛', path: '/marketplace?category=DAIRY' },
-    { name: 'Spices', icon: '🌶️', path: '/marketplace?category=SPICES' },
-    { name: 'Pulses', icon: '🫘', path: '/marketplace?category=PULSES' },
-    { name: 'Organic', icon: '🌿', path: '/marketplace?category=ORGANIC' },
-    { name: 'Seeds', icon: '🌱', path: '/marketplace?category=SEEDS' }
-  ];
 
   // Get user role
   const getUserRole = () => {
@@ -62,9 +48,6 @@ const Navbar = () => {
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
-        setCategoriesOpen(false);
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
@@ -138,42 +121,6 @@ const Navbar = () => {
 
             {/* Center: Navigation */}
             <div className="navbar-center">
-              {/* Categories Dropdown */}
-              <div className="nav-dropdown" ref={categoriesRef}>
-                <button 
-                  className={`nav-dropdown-btn ${categoriesOpen ? 'active' : ''}`}
-                  onClick={() => setCategoriesOpen(!categoriesOpen)}
-                >
-                  <FiGrid className="nav-icon" />
-                  Categories
-                  <FiChevronDown className={`chevron ${categoriesOpen ? 'rotated' : ''}`} />
-                </button>
-                
-                {categoriesOpen && (
-                  <div className="nav-dropdown-menu categories-menu">
-                    <div className="categories-grid">
-                      {categories.map((cat) => (
-                        <Link 
-                          key={cat.name} 
-                          to={cat.path} 
-                          className="category-item"
-                          onClick={() => setCategoriesOpen(false)}
-                        >
-                          <span className="category-icon">{cat.icon}</span>
-                          <span className="category-name">{cat.name}</span>
-                        </Link>
-                      ))}
-                    </div>
-                    <div className="dropdown-footer">
-                      <Link to="/marketplace" onClick={() => setCategoriesOpen(false)}>
-                        View All Categories →
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Nav Links */}
               <Link to="/marketplace" className="nav-link">
                 <FiShoppingBag className="nav-icon" />
                 Marketplace
@@ -383,24 +330,6 @@ const Navbar = () => {
             <Link to="/deals" className="mobile-nav-link highlight" onClick={closeMobileMenu}>
               <FiPercent /> Today's Deals
             </Link>
-            
-            {/* Mobile Categories */}
-            <div className="mobile-categories">
-              <span className="mobile-section-title">Categories</span>
-              <div className="mobile-categories-grid">
-                {categories.map((cat) => (
-                  <Link 
-                    key={cat.name} 
-                    to={cat.path} 
-                    className="mobile-category"
-                    onClick={closeMobileMenu}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.name}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
           </div>
 
           {isAuthenticated ? (

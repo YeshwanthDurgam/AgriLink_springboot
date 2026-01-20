@@ -23,6 +23,8 @@ public class ListingDto {
 
     private UUID id;
     private UUID sellerId;
+    private String sellerName;
+    private String sellerFarmName;
     private UUID farmId;
     private UUID categoryId;
     private String categoryName;

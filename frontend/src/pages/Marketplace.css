@@ -420,6 +420,60 @@
   color: #666;
 }
 
+/* Wishlist Icon Button */
+.wishlist-icon-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.wishlist-icon-btn:hover {
+  transform: scale(1.1);
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.wishlist-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  color: #999;
+  transition: all 0.2s ease;
+}
+
+.wishlist-icon-btn:hover svg {
+  color: #ef4444;
+}
+
+.wishlist-icon-btn.active svg,
+.wishlist-icon-btn svg.filled {
+  color: #ef4444;
+  fill: #ef4444;
+}
+
+.wishlist-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Move organic badge when wishlist button is present */
+.listing-image .organic-badge {
+  right: auto;
+  left: 0.75rem;
+  top: 2.75rem;
+}
+
 @media (max-width: 768px) {
   .marketplace-page {
     padding: 1rem;

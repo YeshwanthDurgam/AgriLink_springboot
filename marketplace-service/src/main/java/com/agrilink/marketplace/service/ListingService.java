@@ -338,12 +338,31 @@ public class ListingService {
     }
 
     private ListingDto mapToDto(Listing listing) {
+        // Fetch seller profile for single listing
+        UserPublicProfileDto profile = null;
+        try {
+            profile = userServiceClient.getPublicProfile(listing.getSellerId());
+        } catch (Exception e) {
+            log.warn("Failed to fetch seller profile for listing {}: {}", listing.getId(), e.getMessage());
+        }
+        return mapToDto(listing, profile);
+    }
+
+    private ListingDto mapToDto(Listing listing, UserPublicProfileDto sellerProfile) {
         Double avgRating = reviewRepository.getAverageRatingByListing(listing.getId());
         long reviewCount = listing.getReviews() != null ? listing.getReviews().size() : 0;
+
+        // Get seller name from profile
+        String sellerName = null;
+        if (sellerProfile != null && sellerProfile.getFullName() != null && !sellerProfile.getFullName().isEmpty()) {
+            sellerName = sellerProfile.getFullName();
+        }
 
         return ListingDto.builder()
                 .id(listing.getId())
                 .sellerId(listing.getSellerId())
+                .sellerName(sellerName)
+                .sellerFarmName(null) // Farm name would come from farm-service if needed
                 .farmId(listing.getFarmId())
                 .categoryId(listing.getCategory() != null ? listing.getCategory().getId() : null)
                 .categoryName(listing.getCategory() != null ? listing.getCategory().getName() : null)
@@ -398,12 +417,15 @@ public class ListingService {
                 .filter(p -> p.getUserId() != null)
                 .collect(Collectors.toMap(UserPublicProfileDto::getUserId, Function.identity(), (a, b) -> a));
         
+        // Fetch follower counts from user-service
+        Map<UUID, Long> followerCounts = userServiceClient.getFollowerCounts(sellerIds);
+        
         return sellerIds.stream()
-                .map(sellerId -> mapToSellerDto(sellerId, profileMap.get(sellerId)))
+                .map(sellerId -> mapToSellerDto(sellerId, profileMap.get(sellerId), followerCounts.getOrDefault(sellerId, 0L)))
                 .collect(Collectors.toList());
     }
 
-    private SellerDto mapToSellerDto(UUID sellerId, UserPublicProfileDto profile) {
+    private SellerDto mapToSellerDto(UUID sellerId, UserPublicProfileDto profile, Long followerCount) {
         int productCount = listingRepository.countActiveListingsBySeller(sellerId);
         Double avgRating = listingRepository.getAverageRatingBySeller(sellerId);
         Integer reviewCount = listingRepository.getTotalReviewsBySeller(sellerId);
@@ -447,7 +469,7 @@ public class ListingService {
                 .coverImage("https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400")
                 .rating(avgRating != null ? avgRating : 0.0)
                 .reviewCount(reviewCount != null ? reviewCount : 0)
-                .followers(0)
+                .followers(followerCount != null ? followerCount.intValue() : 0)
                 .products(productCount)
                 .verified(true)
                 .specialties(specialties)

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, FiUsers, FiPackage, FiAward, FiShield, FiTruck, FiCheckCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { marketplaceApi, farmApi } from '../services/api';
+import { marketplaceApi, farmApi, authApi } from '../services/api';
 import './Home.css';
 
 const Home = () => {
@@ -56,16 +56,17 @@ const Home = () => {
     try {
       setLoading(true);
       
-      // Fetch categories
+      // Fetch categories from backend only - backend handles filtering and product counts
       const categoriesRes = await marketplaceApi.get('/categories').catch(() => null);
-      if (categoriesRes?.data?.data) {
-        setCategories(categoriesRes.data.data.map((cat, idx) => ({
+      if (categoriesRes?.data?.data && Array.isArray(categoriesRes.data.data)) {
+        // Use backend data directly - do not override productCount
+        setCategories(categoriesRes.data.data.map((cat) => ({
           ...cat,
-          icon: getCategoryIcon(cat.name),
-          productCount: cat.productCount || Math.floor(Math.random() * 500) + 100
+          icon: getCategoryIcon(cat.name)
         })));
       } else {
-        setCategories(getMockCategories());
+        // No categories from backend - set empty array
+        setCategories([]);
       }
       
       // Fetch products by category
@@ -83,17 +84,28 @@ const Home = () => {
       setDairyProducts(dairy?.data?.data?.content || getMockProducts('Dairy'));
       setGrains(grainsData?.data?.data?.content || getMockProducts('Grains'));
       
-      // Set statistics - always use these values for now since we have real data
+      // Fetch real farmer count from auth-service
+      let farmerCount = 0;
+      try {
+        const farmersResponse = await authApi.get('/auth/farmers/ids');
+        const farmerIds = farmersResponse?.data?.data || farmersResponse?.data || [];
+        farmerCount = Array.isArray(farmerIds) ? farmerIds.length : 0;
+      } catch (farmerErr) {
+        console.warn('Could not fetch farmer count:', farmerErr);
+        farmerCount = 0;
+      }
+
+      // Set statistics with real farmer count
       setStatistics({
-        totalFarmers: 2,
+        totalFarmers: farmerCount,
         totalProducts: 100,
         totalOrders: 5,
         satisfactionRate: 98.5
       });
     } catch (err) {
       console.error('Error fetching home data:', err);
-      // Fallback to mock data on error
-      setCategories(getMockCategories());
+      // Set empty categories on error - no mock data
+      setCategories([]);
       setFeaturedProducts(getMockProducts('Featured'));
       setFreshVegetables(getMockProducts('Vegetables'));
       setOrganicFruits(getMockProducts('Fruits'));
@@ -126,17 +138,6 @@ const Home = () => {
     return icons[name] || '🌾';
   };
 
-  const getMockCategories = () => [
-    { id: 1, name: 'Vegetables', icon: '🥬', productCount: 2450 },
-    { id: 2, name: 'Fruits', icon: '🍎', productCount: 1890 },
-    { id: 3, name: 'Grains', icon: '🌾', productCount: 980 },
-    { id: 4, name: 'Dairy', icon: '🥛', productCount: 560 },
-    { id: 5, name: 'Spices', icon: '🌶️', productCount: 780 },
-    { id: 6, name: 'Pulses', icon: '🫘', productCount: 420 },
-    { id: 7, name: 'Organic', icon: '🌿', productCount: 1250 },
-    { id: 8, name: 'Seeds', icon: '🌱', productCount: 340 }
-  ];
-
   const getMockProducts = (category) => {
     const products = [];
     for (let i = 1; i <= 10; i++) {
@@ -157,11 +158,11 @@ const Home = () => {
     return products;
   };
 
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/marketplace?category=${categoryName.toUpperCase()}`);
+  const handleCategoryClick = (categoryId) => {
+    navigate(`/marketplace?categoryId=${categoryId}`);
   };
 
-  const handleAddToCart = async (e, productId) => {
+  const handleAddToCart = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
@@ -169,11 +170,22 @@ const Home = () => {
       return;
     }
     try {
-      const { orderApi } = await import('../services/api');
-      await orderApi.post('/cart/items', { listingId: productId, quantity: 1 });
-      // Show success toast
+      const cartService = (await import('../services/cartService')).default;
+      await cartService.addToCart({
+        listingId: product.id,
+        sellerId: product.sellerId,
+        quantity: 1,
+        unitPrice: product.pricePerUnit || product.price,
+        listingTitle: product.title,
+        listingImageUrl: product.images?.[0]?.imageUrl || product.imageUrl || null,
+        unit: product.quantityUnit || product.unit || 'kg',
+        availableQuantity: product.quantity ? parseInt(product.quantity) : null
+      });
+      // Show success feedback
+      alert('Added to cart!');
     } catch (err) {
       console.error('Error adding to cart:', err);
+      alert('Failed to add to cart. Please try again.');
     }
   };
 
@@ -185,9 +197,11 @@ const Home = () => {
       return;
     }
     try {
-      await marketplaceApi.post('/wishlist', { listingId: productId });
+      await marketplaceApi.post(`/wishlist/${productId}`);
+      alert('Added to wishlist!');
     } catch (err) {
       console.error('Error adding to wishlist:', err);
+      alert('Failed to add to wishlist. Please try again.');
     }
   };
 
@@ -234,19 +248,25 @@ const Home = () => {
             <h2>Shop by Category</h2>
             <Link to="/marketplace" className="view-all">View All Categories →</Link>
           </div>
-          <div className="categories-grid">
-            {categories.map((category) => (
-              <div 
-                key={category.id} 
-                className="category-card"
-                onClick={() => handleCategoryClick(category.name)}
-              >
-                <div className="category-icon">{category.icon}</div>
-                <h3>{category.name}</h3>
-                <span className="product-count">{category.productCount} Products</span>
-              </div>
-            ))}
-          </div>
+          {categories.length > 0 ? (
+            <div className="categories-grid">
+              {categories.map((category) => (
+                <div 
+                  key={category.id} 
+                  className="category-card"
+                  onClick={() => handleCategoryClick(category.id)}
+                >
+                  <div className="category-icon">{category.icon}</div>
+                  <h3>{category.name}</h3>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-categories">
+              <p>No categories available at the moment. Please check back later.</p>
+              <Link to="/marketplace" className="browse-all-btn">Browse All Products</Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -506,7 +526,7 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
   const imageUrl = product.images?.[0]?.imageUrl || product.imageUrl || 'https://via.placeholder.com/200';
   const price = product.pricePerUnit || product.price || 0;
   const unit = product.quantityUnit || product.unit || 'kg';
-  const sellerName = product.location || product.farmerName || 'Local Farmer';
+  const sellerName = product.sellerName || product.farmerName || product.location || 'Local Farmer';
   const rating = product.averageRating || product.rating || 4.5;
   const reviewCount = product.reviewCount || 0;
   const discount = product.discount || 0;
@@ -548,7 +568,7 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
         
         <button 
           className="add-to-cart-btn"
-          onClick={(e) => onAddToCart(e, product.id)}
+          onClick={(e) => onAddToCart(e, product)}
         >
           <FiShoppingCart /> Add to Cart
         </button>

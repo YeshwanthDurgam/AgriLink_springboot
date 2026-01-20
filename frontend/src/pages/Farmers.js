@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiSearch, FiMapPin, FiStar, FiHeart, FiMessageSquare, FiFilter, FiChevronDown, FiUsers, FiPackage, FiAward, FiCheck } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { authApi, userApi, marketplaceApi } from '../services/api';
+import { toast } from 'react-toastify';
 import './Farmers.css';
 
 const Farmers = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const showFollowingOnly = searchParams.get('following') === 'true';
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,23 +23,119 @@ const Farmers = () => {
   const categories = ['All Categories', 'Vegetables', 'Fruits', 'Grains', 'Dairy', 'Organic', 'Spices'];
 
   useEffect(() => {
-    fetchFarmers();
-  }, [sortBy, filterLocation, filterCategory]);
+    if (showFollowingOnly && isAuthenticated) {
+      fetchFollowedFarmersOnly();
+    } else {
+      fetchFarmers();
+    }
+    if (isAuthenticated) {
+      fetchFollowedFarmers();
+    }
+  }, [sortBy, filterLocation, filterCategory, isAuthenticated, showFollowingOnly]);
+
+  const fetchFollowedFarmers = async () => {
+    try {
+      const response = await userApi.get('/farmers/followed/ids');
+      const ids = response?.data?.data || [];
+      setFollowedFarmers(ids);
+    } catch (err) {
+      console.warn('Could not fetch followed farmers:', err);
+    }
+  };
+
+  // Fetch ONLY followed farmers (for /farmers?following=true)
+  const fetchFollowedFarmersOnly = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch followed farmers data from user-service
+      const response = await userApi.get('/farmers/followed');
+      const followedData = response?.data?.data || [];
+      
+      if (followedData.length === 0) {
+        setFarmers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Also fetch sellers data to get aggregated stats
+      let sellersMap = {};
+      try {
+        const sellersResponse = await marketplaceApi.get('/listings/sellers');
+        const sellers = sellersResponse?.data?.data || [];
+        sellers.forEach(seller => {
+          sellersMap[seller.id] = seller;
+        });
+      } catch (err) {
+        console.warn('Could not fetch seller stats:', err);
+      }
+
+      // Map the followed farmers data with seller stats
+      const farmersList = followedData.map(follow => {
+        const sellerStats = sellersMap[follow.farmerId] || {};
+        return {
+          id: follow.farmerId,
+          name: sellerStats.name || follow.farmerName || 'Farmer',
+          farmName: sellerStats.farmName || follow.farmName || 'Local Farm',
+          location: sellerStats.location || follow.location || 'India',
+          avatar: sellerStats.avatar || follow.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(follow.farmerName || 'Farmer')}&background=2d6a4f&color=fff`,
+          coverImage: sellerStats.coverImage || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
+          rating: sellerStats.rating || 0,
+          reviewCount: sellerStats.reviewCount || 0,
+          followers: sellerStats.followers || 0,
+          products: sellerStats.products || 0,
+          specialties: sellerStats.specialties || [],
+          isVerified: sellerStats.verified !== false,
+          joinedDate: follow.followedAt,
+          description: sellerStats.description || ''
+        };
+      });
+
+      setFarmers(farmersList);
+      // All displayed farmers are followed when in following mode
+      setFollowedFarmers(farmersList.map(f => f.id));
+    } catch (err) {
+      console.error('Error fetching followed farmers:', err);
+      setFarmers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchFarmers = async () => {
     try {
       setLoading(true);
-      // Fetch real farmers data from marketplace service sellers endpoint
-      const response = await api.get('/marketplace-service/api/v1/listings/sellers');
-
-      if (response?.data?.data && Array.isArray(response.data.data)) {
-        setFarmers(response.data.data);
-      } else if (response?.data && Array.isArray(response.data)) {
-        setFarmers(response.data);
-      } else {
-        console.warn('No farmers data returned from API');
-        setFarmers([]);
+      
+      // Fetch sellers from marketplace-service (has aggregated product/rating/follower data)
+      const sellersResponse = await marketplaceApi.get('/listings/sellers');
+      
+      let farmersList = [];
+      if (sellersResponse?.data?.data && Array.isArray(sellersResponse.data.data)) {
+        farmersList = sellersResponse.data.data;
+      } else if (Array.isArray(sellersResponse?.data)) {
+        farmersList = sellersResponse.data;
       }
+
+      // Map sellers to farmer format
+      farmersList = farmersList.map(seller => ({
+        id: seller.id,
+        name: seller.name || 'Farmer',
+        farmName: seller.farmName || 'Local Farm',
+        email: seller.email,
+        location: seller.location || 'India',
+        avatar: seller.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(seller.name || 'Farmer')}&background=2d6a4f&color=fff`,
+        coverImage: seller.coverImage || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
+        rating: seller.rating || 0,
+        reviewCount: seller.reviewCount || 0,
+        followers: seller.followers || 0,
+        products: seller.products || 0,
+        specialties: seller.specialties || [],
+        isVerified: seller.verified !== false,
+        joinedDate: seller.joinedYear ? `${seller.joinedYear}` : null,
+        description: seller.description || ''
+      }));
+
+      setFarmers(farmersList);
     } catch (err) {
       console.error('Error fetching farmers:', err);
       setFarmers([]);
@@ -50,16 +149,26 @@ const Farmers = () => {
       navigate('/login');
       return;
     }
+    
+    // Farmers cannot follow other farmers
+    if (user?.roles?.includes('FARMER')) {
+      toast.warning('Farmers cannot follow other farmers');
+      return;
+    }
+    
     try {
       if (followedFarmers.includes(farmerId)) {
+        await userApi.delete(`/farmers/${farmerId}/follow`);
         setFollowedFarmers(prev => prev.filter(id => id !== farmerId));
-        await api.delete(`/user-service/api/v1/farmers/${farmerId}/follow`).catch(() => {});
+        toast.success('Unfollowed farmer');
       } else {
+        await userApi.post(`/farmers/${farmerId}/follow`);
         setFollowedFarmers(prev => [...prev, farmerId]);
-        await api.post(`/user-service/api/v1/farmers/${farmerId}/follow`).catch(() => {});
+        toast.success('Now following farmer!');
       }
     } catch (err) {
       console.error('Error following farmer:', err);
+      toast.error(err.response?.data?.message || 'Failed to update follow status');
     }
   };
 
@@ -82,8 +191,8 @@ const Farmers = () => {
       {/* Hero Section */}
       <section className="farmers-hero">
         <div className="hero-content">
-          <h1>Meet Our Farmers</h1>
-          <p>Connect directly with local farmers and support sustainable agriculture</p>
+          <h1>{showFollowingOnly ? 'Farmers You Follow' : 'Meet Our Farmers'}</h1>
+          <p>{showFollowingOnly ? 'Your favorite farmers and their products' : 'Connect directly with local farmers and support sustainable agriculture'}</p>
           <div className="hero-stats">
             <div className="hero-stat">
               <FiUsers />
@@ -246,8 +355,8 @@ const FarmerCard = ({ farmer, isFollowed, onFollow, onMessage }) => {
           <div className="farmer-stats">
             <div className="stat">
               <FiStar className="star" />
-              <span>{farmer.rating}</span>
-              <span className="count">({farmer.reviewCount})</span>
+              <span>{farmer.rating > 0 ? farmer.rating.toFixed(1) : 'Not rated'}</span>
+              {farmer.reviewCount > 0 && <span className="count">({farmer.reviewCount})</span>}
             </div>
             <div className="stat">
               <FiUsers />
@@ -268,8 +377,8 @@ const FarmerCard = ({ farmer, isFollowed, onFollow, onMessage }) => {
           <p className="farmer-description">{farmer.description}</p>
 
           <div className="farmer-actions">
-            <Link to={`/marketplace?farmer=${farmer.id}`} className="view-products-btn">
-              View Products
+            <Link to={`/farmers/${farmer.id}`} className="view-products-btn">
+              View Profile
             </Link>
             <button className="message-btn" onClick={() => onMessage(farmer.id)}>
               <FiMessageSquare />

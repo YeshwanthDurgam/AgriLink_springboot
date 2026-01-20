@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiClock, FiPercent, FiShoppingCart, FiHeart, FiStar, FiTrendingUp, FiZap, FiGift } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiStar, FiTrendingUp, FiZap, FiGift } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { marketplaceApi } from '../services/api';
+import cartService from '../services/cartService';
 import './Deals.css';
 
 const Deals = () => {
@@ -37,8 +38,8 @@ const Deals = () => {
   const fetchDeals = async () => {
     try {
       setLoading(true);
-      // Try to fetch real deals
-      const response = await api.get('/marketplace-service/api/v1/listings/deals').catch(() => null);
+      // Try to fetch real deals from marketplace
+      const response = await marketplaceApi.get('/listings/deals').catch(() => null);
       
       if (response?.data?.data) {
         setFlashDeals(response.data.data.flash || []);
@@ -155,15 +156,26 @@ const Deals = () => {
     }));
   };
 
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (deal) => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
     try {
-      await api.post('/order-service/api/v1/cart/items', { listingId: productId, quantity: 1 });
+      await cartService.addToCart({
+        listingId: deal.id,
+        sellerId: deal.sellerId || deal.farmerId,
+        quantity: 1,
+        unitPrice: deal.price,
+        listingTitle: deal.title,
+        listingImageUrl: deal.image || deal.imageUrl || null,
+        unit: deal.unit || 'kg',
+        availableQuantity: deal.stock || null
+      });
+      alert('Added to cart!');
     } catch (err) {
       console.error('Error adding to cart:', err);
+      alert('Failed to add to cart. Please try again.');
     }
   };
 
@@ -173,9 +185,11 @@ const Deals = () => {
       return;
     }
     try {
-      await api.post('/marketplace-service/api/v1/wishlist', { listingId: productId });
+      await marketplaceApi.post(`/wishlist/${productId}`);
+      alert('Added to wishlist!');
     } catch (err) {
       console.error('Error adding to wishlist:', err);
+      alert('Failed to add to wishlist. Please try again.');
     }
   };
 
@@ -419,7 +433,7 @@ const DealCard = ({ deal, isFlash, onAddToCart, onAddToWishlist }) => {
           className="add-to-cart-btn"
           onClick={(e) => {
             e.stopPropagation();
-            onAddToCart(deal.id);
+            onAddToCart(deal);
           }}
         >
           <FiShoppingCart /> Add to Cart

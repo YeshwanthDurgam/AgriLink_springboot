@@ -14,13 +14,18 @@ const cartService = {
 
   /**
    * Add item to cart
+   * @param {Object} item - Cart item with listingId, sellerId, quantity, unitPrice, listingTitle, listingImageUrl, unit, availableQuantity
    */
-  addToCart: async (listingId, sellerId, quantity, unitPrice) => {
+  addToCart: async (item) => {
     const response = await orderApi.post('/cart/items', {
-      listingId,
-      sellerId,
-      quantity,
-      unitPrice
+      listingId: item.listingId,
+      sellerId: item.sellerId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      listingTitle: item.listingTitle,
+      listingImageUrl: item.listingImageUrl || null,
+      unit: item.unit || 'kg',
+      availableQuantity: item.availableQuantity || null
     });
     return response.data;
   },

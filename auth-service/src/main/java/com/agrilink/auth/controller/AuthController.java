@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 /**
  * REST Controller for authentication endpoints.
  * Handles user registration, login, and current user info.
@@ -53,5 +56,29 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserDto>> getCurrentUser() {
         UserDto user = authService.getCurrentUser();
         return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    /**
+     * Get all farmers (public endpoint).
+     * Returns all users with FARMER role who are enabled (can login).
+     * GET /api/v1/auth/farmers
+     */
+    @GetMapping("/farmers")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getFarmers() {
+        log.info("Fetching all farmers");
+        List<UserDto> farmers = authService.getFarmers();
+        return ResponseEntity.ok(ApiResponse.success(farmers));
+    }
+
+    /**
+     * Get all farmer IDs (public endpoint).
+     * Returns IDs of all users with FARMER role who are enabled.
+     * GET /api/v1/auth/farmers/ids
+     */
+    @GetMapping("/farmers/ids")
+    public ResponseEntity<ApiResponse<List<UUID>>> getFarmerIds() {
+        log.info("Fetching all farmer IDs");
+        List<UUID> farmerIds = authService.getFarmerIds();
+        return ResponseEntity.ok(ApiResponse.success(farmerIds));
     }
 }

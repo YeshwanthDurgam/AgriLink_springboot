@@ -67,4 +67,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID>, JpaSpec
 
     @Query("SELECT l.location FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE' ORDER BY l.createdAt DESC LIMIT 1")
     String getLocationBySeller(@Param("sellerId") UUID sellerId);
+
+    @Query("SELECT COUNT(l) FROM Listing l WHERE l.category.id = :categoryId AND l.status = 'ACTIVE'")
+    Long countActiveListingsByCategory(@Param("categoryId") UUID categoryId);
 }

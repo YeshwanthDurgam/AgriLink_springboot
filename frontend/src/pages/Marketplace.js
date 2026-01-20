@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FiShoppingBag, FiSearch, FiFilter, FiGrid, FiList, FiShoppingCart } from 'react-icons/fi';
+import { FiShoppingBag, FiSearch, FiFilter, FiGrid, FiList, FiShoppingCart, FiHeart } from 'react-icons/fi';
 import marketplaceService from '../services/marketplaceService';
+import wishlistService from '../services/wishlistService';
+import { useAuth } from '../context/AuthContext';
 import './Marketplace.css';
 
 const Marketplace = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [searchQuery, setSearchQuery] = useState('');
+  const [wishlistIds, setWishlistIds] = useState([]);
+  const [wishlistLoading, setWishlistLoading] = useState({});
+  
+  // Initialize search and filters from URL params
+  const initialCategoryId = searchParams.get('categoryId') || '';
+  const initialSearch = searchParams.get('search') || '';
+  
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [filters, setFilters] = useState({
-    categoryId: '',
+    categoryId: initialCategoryId,
     minPrice: '',
     maxPrice: '',
     sortBy: 'createdAt,desc'
@@ -23,11 +35,53 @@ const Marketplace = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    if (user) {
+      fetchWishlistIds();
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchListings();
   }, [page, filters]);
+
+  const fetchWishlistIds = async () => {
+    try {
+      const ids = await wishlistService.getWishlistIds();
+      setWishlistIds(Array.isArray(ids) ? ids : []);
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+      setWishlistIds([]);
+    }
+  };
+
+  const handleToggleWishlist = async (e, listingId) => {
+    e.preventDefault(); // Prevent navigating to listing detail
+    e.stopPropagation();
+    
+    if (!user) {
+      navigate('/login', { state: { from: '/marketplace' } });
+      return;
+    }
+
+    setWishlistLoading(prev => ({ ...prev, [listingId]: true }));
+    try {
+      const isInWishlist = wishlistIds.includes(listingId);
+      if (isInWishlist) {
+        await wishlistService.removeFromWishlist(listingId);
+        setWishlistIds(prev => prev.filter(id => id !== listingId));
+        toast.success('Removed from wishlist');
+      } else {
+        await wishlistService.addToWishlist(listingId);
+        setWishlistIds(prev => [...prev, listingId]);
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      toast.error('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [listingId]: false }));
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -35,15 +89,8 @@ const Marketplace = () => {
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      // Set default categories
-      setCategories([
-        { id: 1, name: 'Vegetables' },
-        { id: 2, name: 'Fruits' },
-        { id: 3, name: 'Grains' },
-        { id: 4, name: 'Dairy' },
-        { id: 5, name: 'Meat' },
-        { id: 6, name: 'Organic' }
-      ]);
+      // No fallback - only use real data from backend
+      setCategories([]);
     }
   };
 
@@ -81,12 +128,29 @@ const Marketplace = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(0);
+    // Update URL with search query
+    if (searchQuery) {
+      searchParams.set('search', searchQuery);
+    } else {
+      searchParams.delete('search');
+    }
+    setSearchParams(searchParams);
     fetchListings();
   };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(0);
+    
+    // Update URL when category changes
+    if (key === 'categoryId') {
+      if (value) {
+        searchParams.set('categoryId', value);
+      } else {
+        searchParams.delete('categoryId');
+      }
+      setSearchParams(searchParams);
+    }
   };
 
   const clearFilters = () => {
@@ -97,14 +161,9 @@ const Marketplace = () => {
       sortBy: 'createdAt,desc'
     });
     setSearchQuery('');
+    // Clear URL params
+    setSearchParams({});
     setPage(0);
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price || 0);
   };
 
   return (
@@ -241,6 +300,14 @@ const Marketplace = () => {
                   {listing.isOrganic && (
                     <span className="organic-badge">Organic</span>
                   )}
+                  <button 
+                    className={`wishlist-icon-btn ${wishlistIds.includes(listing.id) ? 'active' : ''}`}
+                    onClick={(e) => handleToggleWishlist(e, listing.id)}
+                    disabled={wishlistLoading[listing.id]}
+                    title={wishlistIds.includes(listing.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  >
+                    <FiHeart className={wishlistIds.includes(listing.id) ? 'filled' : ''} />
+                  </button>
                 </div>
 
                 <div className="listing-content">
@@ -251,8 +318,8 @@ const Marketplace = () => {
                   </p>
                   
                   <div className="listing-meta">
-                    {listing.farmerName && (
-                      <span className="farm-name">By: {listing.farmerName}</span>
+                    {(listing.sellerName || listing.farmerName) && (
+                      <span className="farm-name">By: {listing.sellerName || listing.farmerName}</span>
                     )}
                     <span className="quantity">
                       {listing.quantity} {listing.unit || listing.quantityUnit || 'kg'} available

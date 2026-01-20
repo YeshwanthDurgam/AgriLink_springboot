@@ -25,6 +25,7 @@ import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Farmers from './pages/Farmers';
+import FarmerProfile from './pages/FarmerProfile';
 import Deals from './pages/Deals';
 import BuyerDashboard from './pages/BuyerDashboard';
 import FarmerDashboard from './pages/FarmerDashboard';
@@ -50,6 +51,7 @@ function App() {
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/marketplace/:id" element={<ListingDetail />} />
               <Route path="/farmers" element={<Farmers />} />
+              <Route path="/farmers/:farmerId" element={<FarmerProfile />} />
               <Route path="/deals" element={<Deals />} />
               
               {/* Protected Routes */}

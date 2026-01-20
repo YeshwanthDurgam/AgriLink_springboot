@@ -39,6 +39,7 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/api/v1/users/public/**").permitAll()
+                    .requestMatchers("/api/v1/farmers/*/followers/count").permitAll()
                     .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

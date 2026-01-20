@@ -533,11 +533,19 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  gap: 1rem;
 }
 
 .reviews-header h2 {
   margin: 0;
   color: #333;
+}
+
+.review-info-text {
+  font-size: 0.875rem;
+  color: #888;
+  font-style: italic;
+  margin-left: auto;
 }
 
 /* Contact Seller Button */

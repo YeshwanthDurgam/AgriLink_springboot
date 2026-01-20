@@ -62,34 +62,69 @@ const ListingDetail = () => {
   const fetchReviews = async () => {
     try {
       const data = await reviewService.getListingReviews(id);
-      setReviews(data.content || data || []);
+      // Ensure reviews is always an array
+      let reviewsArray = [];
+      if (Array.isArray(data)) {
+        reviewsArray = data;
+      } else if (data?.content && Array.isArray(data.content)) {
+        reviewsArray = data.content;
+      } else if (data?.data && Array.isArray(data.data)) {
+        reviewsArray = data.data;
+      } else if (data?.data?.content && Array.isArray(data.data.content)) {
+        reviewsArray = data.data.content;
+      }
+      setReviews(reviewsArray);
       
       // Also fetch rating summary
       const ratingData = await reviewService.getListingRating(id);
-      setListingRating(ratingData);
+      setListingRating(ratingData?.data || ratingData || null);
     } catch (err) {
       console.error('Error fetching reviews:', err);
+      setReviews([]);
     }
   };
 
+  // Check if the user is a customer (not a farmer or admin)
+  const isCustomer = () => {
+    if (!user || !user.roles) return false;
+    // Customers are users who are NOT farmers and NOT admins
+    return !user.roles.includes('FARMER') && !user.roles.includes('ADMIN');
+  };
+
   const checkCanReview = async () => {
-    if (!user) return;
+    if (!user) {
+      setCanReview(false);
+      return;
+    }
+    // Only customers can review - farmers cannot review products
+    if (!isCustomer()) {
+      setCanReview(false);
+      return;
+    }
     try {
       const result = await reviewService.canReview(id);
-      setCanReview(result);
+      // Handle both direct boolean and wrapped response { success: true, data: true }
+      if (typeof result === 'boolean') {
+        setCanReview(result);
+      } else if (result?.success && result?.data !== undefined) {
+        setCanReview(result.data === true);
+      } else if (result?.data !== undefined) {
+        setCanReview(result.data === true);
+      } else {
+        setCanReview(!!result);
+      }
     } catch (err) {
       console.error('Error checking review eligibility:', err);
+      setCanReview(false);
     }
   };
 
   const handleReviewSubmit = async (reviewData) => {
     try {
-      await reviewService.createReview({
-        ...reviewData,
-        listingId: id
-      });
+      await reviewService.createReview(id, reviewData);
       setShowReviewForm(false);
       fetchReviews();
+      fetchListing(); // Refresh listing to update average rating
       setCanReview(false);
     } catch (err) {
       throw err;
@@ -134,7 +169,17 @@ const ListingDetail = () => {
     setActionLoading('cart');
     try {
       const price = listing.pricePerUnit || listing.price;
-      await cartService.addToCart(listing.id, listing.sellerId, quantity, price);
+      const imageUrl = listing.images?.[0]?.imageUrl || listing.imageUrl || null;
+      await cartService.addToCart({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        quantity: quantity,
+        unitPrice: price,
+        listingTitle: listing.title,
+        listingImageUrl: imageUrl,
+        unit: listing.quantityUnit || listing.unit || 'kg',
+        availableQuantity: listing.quantity ? parseInt(listing.quantity) : null
+      });
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 3000);
     } catch (err) {
@@ -154,7 +199,17 @@ const ListingDetail = () => {
     setActionLoading('buy');
     try {
       const price = listing.pricePerUnit || listing.price;
-      await cartService.addToCart(listing.id, listing.sellerId, quantity, price);
+      const imageUrl = listing.images?.[0]?.imageUrl || listing.imageUrl || null;
+      await cartService.addToCart({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        quantity: quantity,
+        unitPrice: price,
+        listingTitle: listing.title,
+        listingImageUrl: imageUrl,
+        unit: listing.quantityUnit || listing.unit || 'kg',
+        availableQuantity: listing.quantity ? parseInt(listing.quantity) : null
+      });
       navigate('/checkout');
     } catch (err) {
       console.error('Error:', err);
@@ -373,7 +428,7 @@ const ListingDetail = () => {
               <div className="seller-avatar">👨‍🌾</div>
               <div className="seller-text">
                 <span className="seller-label">Sold by</span>
-                <span className="seller-id">Farm #{listing.farmId?.slice(0, 8) || 'N/A'}</span>
+                <span className="seller-id">{listing.sellerName || listing.farmerName || 'Farm N/A'}</span>
               </div>
               <button 
                 className="btn btn-outline btn-sm contact-seller-btn"
@@ -407,6 +462,9 @@ const ListingDetail = () => {
       <div className="reviews-section">
         <div className="reviews-header">
           <h2>Customer Reviews</h2>
+          {user && !isCustomer() && (
+            <span className="review-info-text">Only customers can write reviews</span>
+          )}
           {canReview && !showReviewForm && (
             <button 
               className="btn btn-primary"

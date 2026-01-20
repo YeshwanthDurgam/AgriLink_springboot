@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -121,6 +123,29 @@ public class AuthService {
         return mapToUserDto(user);
     }
 
+    /**
+     * Get all farmers (users with FARMER role who are enabled).
+     * Uses same criteria as login - if a farmer can log in, they will be returned.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<UserDto> getFarmers() {
+        log.info("Fetching all enabled farmers");
+        java.util.List<User> farmers = userRepository.findByRoleNameAndEnabled("FARMER");
+        log.info("Found {} farmers", farmers.size());
+        return farmers.stream()
+                .map(this::mapToUserDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get all farmer IDs (users with FARMER role who are enabled).
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<java.util.UUID> getFarmerIds() {
+        log.info("Fetching all enabled farmer IDs");
+        return userRepository.findIdsByRoleNameAndEnabled("FARMER");
+    }
+
     private UserDto mapToUserDto(User user) {
         return UserDto.builder()
                 .id(user.getId())
@@ -133,4 +158,5 @@ public class AuthService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+
 }

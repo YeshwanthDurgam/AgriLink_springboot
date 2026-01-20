@@ -107,4 +107,40 @@ public class UserServiceClient {
                         : "https://randomuser.me/api/portraits/men/32.jpg")
                 .build();
     }
+
+    /**
+     * Get follower count for a farmer from user-service.
+     */
+    public Long getFollowerCount(UUID farmerId) {
+        try {
+            Map<String, Object> response = userServiceWebClient
+                    .get()
+                    .uri("/api/v1/farmers/{farmerId}/followers/count", farmerId)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .timeout(TIMEOUT)
+                    .block();
+
+            if (response != null && response.get("data") != null) {
+                Object data = response.get("data");
+                if (data instanceof Number) {
+                    return ((Number) data).longValue();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch follower count for farmer {}: {}", farmerId, e.getMessage());
+        }
+        return 0L;
+    }
+
+    /**
+     * Get follower counts for multiple farmers (batch).
+     */
+    public Map<UUID, Long> getFollowerCounts(List<UUID> farmerIds) {
+        Map<UUID, Long> counts = new HashMap<>();
+        for (UUID farmerId : farmerIds) {
+            counts.put(farmerId, getFollowerCount(farmerId));
+        }
+        return counts;
+    }
 }

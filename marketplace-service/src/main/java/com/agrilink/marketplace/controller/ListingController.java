@@ -90,6 +90,7 @@ public class ListingController {
             @RequestParam(required = false) Boolean organicOnly,
             @RequestParam(required = false) String qualityGrade,
             @RequestParam(required = false) List<String> qualityGrades,
+            @RequestParam(required = false) UUID sellerId,
             @RequestParam(required = false) BigDecimal minQuantity,
             @RequestParam(required = false) BigDecimal maxQuantity,
             @RequestParam(required = false) Double minRating,
@@ -114,6 +115,7 @@ public class ListingController {
                 .organicOnly(organicOnly)
                 .qualityGrade(qualityGrade)
                 .qualityGrades(qualityGrades)
+                .sellerId(sellerId)
                 .minQuantity(minQuantity)
                 .maxQuantity(maxQuantity)
                 .minRating(minRating)

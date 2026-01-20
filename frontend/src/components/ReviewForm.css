@@ -129,6 +129,63 @@
   font-size: 0.9rem;
 }
 
+/* Form Header */
+.review-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.review-form-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.review-form-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.review-form-header .close-btn:hover {
+  color: #333;
+}
+
+/* Required asterisk */
+.required {
+  color: #c62828;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #eee;
+  border-color: #ccc;
+}
+
 .submit-btn {
   background: #2d5a27;
   color: white;

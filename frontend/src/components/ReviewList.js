@@ -100,17 +100,42 @@ const ReviewCard = ({ review, onHelpful }) => {
   );
 };
 
-const ReviewList = ({ listingId, sellerId }) => {
-  const [reviews, setReviews] = useState([]);
-  const [ratingSummary, setRatingSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ReviewList = ({ listingId, sellerId, reviews: propReviews, ratingData, onHelpful, currentUserId }) => {
+  // Ensure propReviews is always an array
+  const ensureArray = (data) => {
+    if (Array.isArray(data)) return data;
+    if (data?.content && Array.isArray(data.content)) return data.content;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    return [];
+  };
+
+  const [reviews, setReviews] = useState(ensureArray(propReviews));
+  const [ratingSummary, setRatingSummary] = useState(ratingData || null);
+  const [loading, setLoading] = useState(!propReviews);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Update state when props change
   useEffect(() => {
-    fetchReviews();
-    if (listingId) {
-      fetchRatingSummary();
+    if (propReviews !== undefined) {
+      setReviews(ensureArray(propReviews));
+      setLoading(false);
+    }
+  }, [propReviews]);
+
+  useEffect(() => {
+    if (ratingData) {
+      setRatingSummary(ratingData);
+    }
+  }, [ratingData]);
+
+  useEffect(() => {
+    // Only fetch if no props were passed
+    if (!propReviews && (listingId || sellerId)) {
+      fetchReviews();
+      if (listingId) {
+        fetchRatingSummary();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId, sellerId, page]);
@@ -128,6 +153,9 @@ const ReviewList = ({ listingId, sellerId }) => {
       if (response?.success && response.data) {
         setReviews(response.data.content || []);
         setTotalPages(response.data.totalPages || 0);
+      } else if (response?.content) {
+        setReviews(response.content || []);
+        setTotalPages(response.totalPages || 0);
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -141,6 +169,8 @@ const ReviewList = ({ listingId, sellerId }) => {
       const response = await reviewService.getListingRating(listingId);
       if (response?.success && response.data) {
         setRatingSummary(response.data);
+      } else if (response) {
+        setRatingSummary(response);
       }
     } catch (error) {
       console.error('Error fetching rating summary:', error);
@@ -148,10 +178,14 @@ const ReviewList = ({ listingId, sellerId }) => {
   };
 
   const handleHelpful = async (reviewId) => {
-    await reviewService.markHelpful(reviewId);
+    if (onHelpful) {
+      await onHelpful(reviewId);
+    } else {
+      await reviewService.markHelpful(reviewId);
+    }
   };
 
-  if (loading && reviews.length === 0) {
+  if (loading && (!Array.isArray(reviews) || reviews.length === 0)) {
     return <div className="reviews-loading">Loading reviews...</div>;
   }
 
@@ -173,7 +207,7 @@ const ReviewList = ({ listingId, sellerId }) => {
 
       <div className="reviews-list">
         <h3>Customer Reviews</h3>
-        {reviews.length === 0 ? (
+        {!Array.isArray(reviews) || reviews.length === 0 ? (
           <p className="no-reviews">No reviews yet. Be the first to review!</p>
         ) : (
           reviews.map(review => (

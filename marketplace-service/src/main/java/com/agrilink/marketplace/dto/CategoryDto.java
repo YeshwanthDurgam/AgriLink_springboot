@@ -23,4 +23,5 @@ public class CategoryDto {
     private UUID parentId;
     private List<CategoryDto> children;
     private boolean active;
+    private Long productCount;
 }

@@ -267,3 +267,138 @@
     justify-content: center;
   }
 }
+
+/* Followed Farmers Section */
+.followed-farmers-section {
+  grid-column: 1 / -1;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.followed-farmers-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  color: #1a1a2e;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.followed-farmers-section h3 svg {
+  color: #e74c3c;
+}
+
+.no-followed {
+  text-align: center;
+  padding: 2rem;
+  color: #888;
+}
+
+.no-followed svg {
+  color: #ccc;
+  margin-bottom: 1rem;
+}
+
+.no-followed p {
+  margin: 0 0 1rem;
+}
+
+.browse-farmers-btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: #2d6a4f;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.browse-farmers-btn:hover {
+  background: #1b4d3e;
+}
+
+.followed-farmers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.followed-farmer-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.followed-farmer-card:hover {
+  background: #f0f0f0;
+}
+
+.followed-farmer-card .farmer-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.farmer-avatar-small {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2d6a4f, #40916c);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.farmer-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.farmer-name-link {
+  font-weight: 600;
+  color: #1a1a2e;
+  text-decoration: none;
+}
+
+.farmer-name-link:hover {
+  color: #2d6a4f;
+}
+
+.followed-date {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.unfollow-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unfollow-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+.loading-text {
+  color: #888;
+  font-style: italic;
+}
