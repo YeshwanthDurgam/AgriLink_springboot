@@ -136,7 +136,7 @@ const Marketplace = () => {
       searchParams.delete('search');
     }
     setSearchParams(searchParams);
-    fetchListings();
+    // Don't call fetchListings() here - useEffect will handle it when page changes
   };
 
   const handleFilterChange = (key, value) => {

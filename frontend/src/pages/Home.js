@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, FiUsers, FiPackage, FiAward, FiShield, FiTruck, FiCheckCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
@@ -6,15 +6,19 @@ import { marketplaceApi, farmApi, authApi } from '../services/api';
 import SearchBar from '../components/SearchBar';
 import './Home.css';
 
+// Simple cache for home data to avoid refetching on every mount
+const homeDataCache = {
+  data: null,
+  timestamp: 0,
+  CACHE_DURATION: 2 * 60 * 1000 // 2 minutes
+};
+
 const Home = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [freshVegetables, setFreshVegetables] = useState([]);
-  const [organicFruits, setOrganicFruits] = useState([]);
-  const [dairyProducts, setDairyProducts] = useState([]);
-  const [grains, setGrains] = useState([]);
+  // Single state for all products instead of 5 duplicate states
+  const [products, setProducts] = useState([]);
   const [statistics, setStatistics] = useState({
     totalFarmers: 0,
     totalProducts: 0,
@@ -54,32 +58,42 @@ const Home = () => {
   }, []);
 
   const fetchHomeData = async () => {
+    // Check cache first
+    const now = Date.now();
+    if (homeDataCache.data && (now - homeDataCache.timestamp) < homeDataCache.CACHE_DURATION) {
+      const cached = homeDataCache.data;
+      setCategories(cached.categories);
+      setProducts(cached.products);
+      setStatistics(cached.statistics);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
-      // Fetch categories from backend only - backend handles filtering and product counts
-      const categoriesRes = await marketplaceApi.get('/categories').catch(() => null);
-      if (categoriesRes?.data?.data && Array.isArray(categoriesRes.data.data)) {
-        // Use backend data directly - do not override productCount
-        setCategories(categoriesRes.data.data.map((cat) => ({
-          ...cat,
-          icon: getCategoryIcon(cat.name)
-        })));
-      } else {
-        // No categories from backend - set empty array
-        setCategories([]);
-      }
-      
-      // Fetch listings for all sections
-      const [topListings, recentListings] = await Promise.all([
+      // Fetch ALL data in parallel for maximum speed
+      const [categoriesRes, topListings, recentListings, farmersResponse] = await Promise.all([
+        marketplaceApi.get('/categories').catch(() => null),
         marketplaceApi.get('/listings/top?limit=10').catch(() => null),
-        marketplaceApi.get('/listings/recent?limit=10').catch(() => null)
+        marketplaceApi.get('/listings/recent?limit=10').catch(() => null),
+        authApi.get('/auth/farmers/ids').catch(() => null)
       ]);
       
+      // Process categories
+      let processedCategories = [];
+      if (categoriesRes?.data?.data && Array.isArray(categoriesRes.data.data)) {
+        processedCategories = categoriesRes.data.data.map((cat) => ({
+          ...cat,
+          icon: getCategoryIcon(cat.name)
+        }));
+      }
+      setCategories(processedCategories);
+      
+      // Process products
       const topProducts = topListings?.data?.data || [];
       const recentProducts = recentListings?.data?.data || [];
       
-      // Format listings for display
       const formatListing = (listing) => ({
         id: listing.id,
         title: listing.title,
@@ -97,54 +111,35 @@ const Home = () => {
         sellerId: listing.sellerId
       });
       
-      // Use real listings if available, otherwise show empty
-      if (topProducts.length > 0 || recentProducts.length > 0) {
-        const allProducts = [...topProducts, ...recentProducts];
-        const formattedProducts = allProducts.map(formatListing);
-        
-        setFeaturedProducts(formattedProducts.slice(0, 10));
-        setFreshVegetables(formattedProducts.slice(0, 10));
-        setOrganicFruits(formattedProducts.slice(0, 10));
-        setDairyProducts(formattedProducts.slice(0, 10));
-        setGrains(formattedProducts.slice(0, 10));
-      } else {
-        // No products available - set empty arrays
-        setFeaturedProducts([]);
-        setFreshVegetables([]);
-        setOrganicFruits([]);
-        setDairyProducts([]);
-        setGrains([]);
-      }
+      const allProducts = [...topProducts, ...recentProducts];
+      const formattedProducts = allProducts.map(formatListing);
+      setProducts(formattedProducts.slice(0, 10));
       
-      // Fetch real farmer count from auth-service
-      let farmerCount = 0;
-      let productCount = 0;
-      try {
-        const farmersResponse = await authApi.get('/auth/farmers/ids');
-        const farmerIds = farmersResponse?.data?.data || farmersResponse?.data || [];
-        farmerCount = Array.isArray(farmerIds) ? farmerIds.length : 0;
-        productCount = topProducts.length + recentProducts.length;
-      } catch (farmerErr) {
-        console.warn('Could not fetch farmer count:', farmerErr);
-        farmerCount = 0;
-      }
-
-      // Set statistics with real data
-      setStatistics({
+      // Process statistics
+      const farmerIds = farmersResponse?.data?.data || farmersResponse?.data || [];
+      const farmerCount = Array.isArray(farmerIds) ? farmerIds.length : 0;
+      const productCount = topProducts.length + recentProducts.length;
+      
+      const stats = {
         totalFarmers: farmerCount,
         totalProducts: productCount,
-        totalOrders: 0, // Would need order API access
+        totalOrders: 0,
         satisfactionRate: 0
-      });
+      };
+      setStatistics(stats);
+      
+      // Update cache
+      homeDataCache.data = {
+        categories: processedCategories,
+        products: formattedProducts.slice(0, 10),
+        statistics: stats
+      };
+      homeDataCache.timestamp = now;
+      
     } catch (err) {
       console.error('Error fetching home data:', err);
-      // Set empty data on error - no mock data
       setCategories([]);
-      setFeaturedProducts([]);
-      setFreshVegetables([]);
-      setOrganicFruits([]);
-      setDairyProducts([]);
-      setGrains([]);
+      setProducts([]);
       setStatistics({
         totalFarmers: 0,
         totalProducts: 0,
@@ -171,8 +166,6 @@ const Home = () => {
     };
     return icons[name] || '🌾';
   };
-
-  // Note: getMockProducts removed - now using real listing data only
 
   const handleCategoryClick = (categoryId) => {
     navigate(`/marketplace?categoryId=${categoryId}`);
@@ -300,7 +293,7 @@ const Home = () => {
       <ProductCarousel 
         title="Featured Products" 
         subtitle="Handpicked fresh produce from our best farmers"
-        products={featuredProducts}
+        products={products}
         onAddToCart={handleAddToCart}
         onAddToWishlist={handleAddToWishlist}
         viewAllLink="/marketplace?sort=featured"
@@ -310,7 +303,7 @@ const Home = () => {
       <ProductCarousel 
         title="Fresh Vegetables" 
         subtitle="Farm-fresh vegetables picked today"
-        products={freshVegetables}
+        products={products}
         onAddToCart={handleAddToCart}
         onAddToWishlist={handleAddToWishlist}
         viewAllLink="/marketplace?category=VEGETABLES"
@@ -389,7 +382,7 @@ const Home = () => {
       <ProductCarousel 
         title="Organic Fruits" 
         subtitle="Naturally grown, chemical-free fruits"
-        products={organicFruits}
+        products={products}
         onAddToCart={handleAddToCart}
         onAddToWishlist={handleAddToWishlist}
         viewAllLink="/marketplace?category=FRUITS"
@@ -399,7 +392,7 @@ const Home = () => {
       <ProductCarousel 
         title="Farm Fresh Dairy" 
         subtitle="Pure milk and dairy products from local farms"
-        products={dairyProducts}
+        products={products}
         onAddToCart={handleAddToCart}
         onAddToWishlist={handleAddToWishlist}
         viewAllLink="/marketplace?category=DAIRY"
@@ -449,7 +442,7 @@ const Home = () => {
       <ProductCarousel 
         title="Premium Grains & Pulses" 
         subtitle="Freshly harvested grains from fertile farms"
-        products={grains}
+        products={products}
         onAddToCart={handleAddToCart}
         onAddToWishlist={handleAddToWishlist}
         viewAllLink="/marketplace?category=GRAINS"

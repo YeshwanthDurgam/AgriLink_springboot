@@ -330,52 +330,6 @@
   color: #0284c7;
 }
 
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  .search-input-wrapper {
-    background: #1e293b;
-    border-color: #334155;
-  }
-
-  .search-bar-container.focused .search-input-wrapper {
-    border-color: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
-  }
-
-  .search-input {
-    color: #f1f5f9;
-  }
-
-  .search-dropdown {
-    background: #1e293b;
-  }
-
-  .dropdown-section {
-    border-color: #334155;
-  }
-
-  .suggestion-item:hover,
-  .recent-item:hover {
-    background: #334155;
-  }
-
-  .suggestion-title {
-    color: #f1f5f9;
-  }
-
-  .trending-chip {
-    background: #334155;
-    border-color: #475569;
-    color: #e2e8f0;
-  }
-
-  .trending-chip:hover {
-    background: #0c4a6e;
-    border-color: #0284c7;
-    color: #7dd3fc;
-  }
-}
-
 /* Mobile */
 @media (max-width: 640px) {
   .search-input-wrapper {

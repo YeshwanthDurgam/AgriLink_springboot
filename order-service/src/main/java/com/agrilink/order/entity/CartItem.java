@@ -14,7 +14,10 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "cart_items", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"cart_id", "listing_id"})
+        @UniqueConstraint(columnNames = { "cart_id", "listing_id" })
+}, indexes = {
+        @Index(name = "idx_cart_item_listing_id", columnList = "listing_id"),
+        @Index(name = "idx_cart_item_seller_id", columnList = "seller_id")
 })
 @Getter
 @Setter

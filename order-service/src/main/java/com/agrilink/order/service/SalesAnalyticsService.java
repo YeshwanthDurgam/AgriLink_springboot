@@ -33,7 +33,7 @@ public class SalesAnalyticsService {
      */
     public SalesAnalyticsDto getSalesAnalytics(UUID sellerId) {
         log.info("Generating sales analytics for seller: {}", sellerId);
-        
+
         // Get date ranges
         LocalDate now = LocalDate.now();
         LocalDateTime startOfMonth = now.withDayOfMonth(1).atStartOfDay();
@@ -43,8 +43,10 @@ public class SalesAnalyticsService {
 
         // Total revenue
         BigDecimal totalRevenue = orderRepository.sumTotalAmountBySellerId(sellerId);
-        BigDecimal revenueThisMonth = orderRepository.sumTotalAmountBySellerIdAndDateRange(sellerId, startOfMonth, endOfMonth);
-        BigDecimal revenueLastMonth = orderRepository.sumTotalAmountBySellerIdAndDateRange(sellerId, startOfLastMonth, endOfLastMonth);
+        BigDecimal revenueThisMonth = orderRepository.sumTotalAmountBySellerIdAndDateRange(sellerId, startOfMonth,
+                endOfMonth);
+        BigDecimal revenueLastMonth = orderRepository.sumTotalAmountBySellerIdAndDateRange(sellerId, startOfLastMonth,
+                endOfLastMonth);
 
         // Revenue growth
         BigDecimal revenueGrowth = BigDecimal.ZERO;
@@ -62,7 +64,7 @@ public class SalesAnalyticsService {
         long completedOrders = orderRepository.countBySellerIdAndStatus(sellerId, Order.OrderStatus.DELIVERED);
 
         // Average order value
-        BigDecimal avgOrderValue = totalOrders > 0 
+        BigDecimal avgOrderValue = totalOrders > 0
                 ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
@@ -105,27 +107,45 @@ public class SalesAnalyticsService {
     }
 
     private List<SalesAnalyticsDto.RevenueByPeriod> calculateRevenueByMonth(UUID sellerId) {
-        List<SalesAnalyticsDto.RevenueByPeriod> periods = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
+        // OPTIMIZED: Single query for all 12 months instead of 24 queries
         LocalDate now = LocalDate.now();
+        LocalDateTime startDate = now.minusMonths(11).withDayOfMonth(1).atStartOfDay();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
 
+        // Get all monthly data in single query
+        List<Object[]> monthlyStats = orderRepository.getMonthlyRevenueStats(sellerId, startDate);
+
+        // Create a map for quick lookup
+        Map<String, Object[]> statsMap = new HashMap<>();
+        for (Object[] row : monthlyStats) {
+            LocalDateTime month = (LocalDateTime) row[0];
+            String key = month.toLocalDate().format(formatter);
+            statsMap.put(key, row);
+        }
+
+        // Build result list for all 12 months (including months with no orders)
+        List<SalesAnalyticsDto.RevenueByPeriod> periods = new ArrayList<>();
         for (int i = 11; i >= 0; i--) {
             LocalDate monthStart = now.minusMonths(i).withDayOfMonth(1);
-            LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
-            
-            LocalDateTime start = monthStart.atStartOfDay();
-            LocalDateTime end = monthEnd.atTime(LocalTime.MAX);
+            String key = monthStart.format(formatter);
 
-            BigDecimal revenue = orderRepository.sumTotalAmountBySellerIdAndDateRange(sellerId, start, end);
-            long orderCount = orderRepository.countBySellerIdAndDateRange(sellerId, start, end);
-            BigDecimal avgOrder = orderCount > 0 
+            BigDecimal revenue = BigDecimal.ZERO;
+            int orderCount = 0;
+
+            if (statsMap.containsKey(key)) {
+                Object[] row = statsMap.get(key);
+                revenue = (BigDecimal) row[1];
+                orderCount = ((Long) row[2]).intValue();
+            }
+
+            BigDecimal avgOrder = orderCount > 0
                     ? revenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
             periods.add(SalesAnalyticsDto.RevenueByPeriod.builder()
-                    .period(monthStart.format(formatter))
+                    .period(key)
                     .revenue(revenue)
-                    .orderCount((int) orderCount)
+                    .orderCount(orderCount)
                     .averageOrderValue(avgOrder)
                     .build());
         }
@@ -135,7 +155,7 @@ public class SalesAnalyticsService {
 
     private List<SalesAnalyticsDto.RevenueByProduct> calculateTopProducts(UUID sellerId) {
         List<Object[]> results = orderRepository.findTopProductsBySellerId(sellerId);
-        
+
         return results.stream()
                 .limit(10)
                 .map(row -> SalesAnalyticsDto.RevenueByProduct.builder()
@@ -150,7 +170,7 @@ public class SalesAnalyticsService {
 
     private List<SalesAnalyticsDto.RevenueByBuyer> calculateTopBuyers(UUID sellerId) {
         List<Object[]> results = orderRepository.findTopBuyersBySellerId(sellerId);
-        
+
         return results.stream()
                 .limit(10)
                 .map(row -> SalesAnalyticsDto.RevenueByBuyer.builder()
@@ -164,13 +184,22 @@ public class SalesAnalyticsService {
     }
 
     private Map<String, Integer> calculateOrdersByStatus(UUID sellerId) {
+        // OPTIMIZED: Single query for all statuses instead of 5+ queries
         Map<String, Integer> statusCounts = new LinkedHashMap<>();
-        
+
+        // Initialize all statuses with 0
         for (Order.OrderStatus status : Order.OrderStatus.values()) {
-            long count = orderRepository.countBySellerIdAndStatus(sellerId, status);
-            statusCounts.put(status.name(), (int) count);
+            statusCounts.put(status.name(), 0);
         }
-        
+
+        // Fetch all counts in single query
+        List<Object[]> results = orderRepository.getOrderCountsByStatus(sellerId);
+        for (Object[] row : results) {
+            Order.OrderStatus status = (Order.OrderStatus) row[0];
+            int count = ((Long) row[1]).intValue();
+            statusCounts.put(status.name(), count);
+        }
+
         return statusCounts;
     }
 }

@@ -2,6 +2,7 @@ package com.agrilink.marketplace.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,7 +17,13 @@ import java.util.UUID;
  * Entity representing a marketplace listing.
  */
 @Entity
-@Table(name = "listings")
+@Table(name = "listings", indexes = {
+        @Index(name = "idx_listing_seller_id", columnList = "seller_id"),
+        @Index(name = "idx_listing_status", columnList = "status"),
+        @Index(name = "idx_listing_category_id", columnList = "category_id"),
+        @Index(name = "idx_listing_created_at", columnList = "created_at"),
+        @Index(name = "idx_listing_seller_status", columnList = "seller_id, status")
+})
 @Getter
 @Setter
 @Builder
@@ -103,11 +110,13 @@ public class Listing {
     @Builder.Default
     private Integer reviewCount = 0;
 
-    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 25)
     @Builder.Default
     private List<ListingImage> images = new ArrayList<>();
 
-    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @BatchSize(size = 25)
     @Builder.Default
     private List<Review> reviews = new ArrayList<>();
 

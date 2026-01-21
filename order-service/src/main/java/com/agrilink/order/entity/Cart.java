@@ -2,6 +2,7 @@ package com.agrilink.order.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,7 +17,9 @@ import java.util.UUID;
  * Each user has one cart that persists across sessions.
  */
 @Entity
-@Table(name = "carts")
+@Table(name = "carts", indexes = {
+        @Index(name = "idx_cart_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @Builder
@@ -31,7 +34,8 @@ public class Cart {
     @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<CartItem> items = new ArrayList<>();
 

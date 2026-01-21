@@ -1,5 +1,22 @@
 import { marketplaceApi } from './api';
 
+// Simple in-memory cache for frequently accessed data
+const cache = {
+  categories: { data: null, timestamp: 0 },
+  CACHE_DURATION: 5 * 60 * 1000 // 5 minutes
+};
+
+const getCachedOrFetch = async (key, fetcher) => {
+  const cached = cache[key];
+  const now = Date.now();
+  if (cached && cached.data && (now - cached.timestamp) < cache.CACHE_DURATION) {
+    return cached.data;
+  }
+  const data = await fetcher();
+  cache[key] = { data, timestamp: now };
+  return data;
+};
+
 const marketplaceService = {
   // Get all listings with pagination and filters
   getListings: async (params = {}) => {
@@ -78,11 +95,12 @@ const marketplaceService = {
     return response.data.data || response.data;
   },
 
-  // Get all categories
+  // Get all categories (with caching)
   getCategories: async () => {
-    const response = await marketplaceApi.get('/categories');
-    // API returns { success, data: [...] }
-    return response.data.data || response.data;
+    return getCachedOrFetch('categories', async () => {
+      const response = await marketplaceApi.get('/categories');
+      return response.data.data || response.data;
+    });
   },
 
   // Search listings

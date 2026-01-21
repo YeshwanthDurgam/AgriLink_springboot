@@ -82,9 +82,20 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
+.hero-search-wrapper .search-input-wrapper {
+  background: white !important;
+  border-color: #e2e8f0;
+}
+
 .hero-search-wrapper .search-input-wrapper input {
   padding: 16px 20px 16px 48px;
   font-size: 16px;
+  color: #1e293b;
+  background: transparent;
+}
+
+.hero-search-wrapper .search-dropdown {
+  background: white;
 }
 
 .hero-buttons {

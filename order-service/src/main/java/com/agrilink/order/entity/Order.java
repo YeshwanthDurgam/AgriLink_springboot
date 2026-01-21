@@ -15,7 +15,14 @@ import java.util.UUID;
  * Entity representing an order.
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "orders", indexes = {
+        @Index(name = "idx_order_buyer_id", columnList = "buyer_id"),
+        @Index(name = "idx_order_seller_id", columnList = "seller_id"),
+        @Index(name = "idx_order_status", columnList = "status"),
+        @Index(name = "idx_order_created_at", columnList = "created_at"),
+        @Index(name = "idx_order_seller_status", columnList = "seller_id, status"),
+        @Index(name = "idx_order_seller_date", columnList = "seller_id, created_at")
+})
 @Getter
 @Setter
 @Builder
