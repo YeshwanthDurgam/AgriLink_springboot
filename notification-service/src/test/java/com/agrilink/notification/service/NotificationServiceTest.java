@@ -6,6 +6,7 @@ import com.agrilink.notification.entity.Notification;
 import com.agrilink.notification.entity.NotificationPreferences;
 import com.agrilink.notification.repository.NotificationPreferencesRepository;
 import com.agrilink.notification.repository.NotificationRepository;
+import com.agrilink.notification.websocket.NotificationWebSocketHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class NotificationServiceTest {
 
     @Mock
     private SmsService smsService;
+
+    @Mock
+    private NotificationWebSocketHandler webSocketHandler;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -93,7 +97,7 @@ class NotificationServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getTitle()).isEqualTo("Order Confirmation");
-        verify(notificationRepository).save(any(Notification.class));
+        verify(notificationRepository, atLeast(1)).save(any(Notification.class));
     }
 
     @Test

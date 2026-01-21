@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import cartService from '../services/cartService';
+import EmptyState from '../components/EmptyState';
 import './Cart.css';
 
 const Cart = () => {
@@ -105,14 +106,11 @@ const Cart = () => {
       </div>
 
       {isEmpty ? (
-        <div className="cart-empty">
-          <div className="empty-icon">🛒</div>
-          <h2>Your cart is empty</h2>
-          <p>Looks like you haven't added any items to your cart yet.</p>
-          <Link to="/marketplace" className="btn btn-primary">
-            Browse Marketplace
-          </Link>
-        </div>
+        <EmptyState 
+          type="cart"
+          actionText="Browse Marketplace"
+          actionLink="/marketplace"
+        />
       ) : (
         <div className="cart-content">
           <div className="cart-items">

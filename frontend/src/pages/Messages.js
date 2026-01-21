@@ -6,6 +6,7 @@ import {
   FaSearch, FaFilter
 } from 'react-icons/fa';
 import messagingService from '../services/messagingService';
+import EmptyState from '../components/EmptyState';
 import './Messages.css';
 
 const ConversationList = ({ conversations, selectedId, onSelect, searchTerm, onSearchChange, filter, onFilterChange }) => {
@@ -61,8 +62,14 @@ const ConversationList = ({ conversations, selectedId, onSelect, searchTerm, onS
       </div>
       {filteredConversations.length === 0 ? (
         <div className="no-conversations">
-          <p>No conversations yet</p>
-          <span>Start a conversation by messaging a seller</span>
+          <EmptyState 
+            type="messages"
+            title={searchTerm ? 'No Matches' : 'No Conversations'}
+            message={searchTerm 
+              ? 'No conversations match your search.'
+              : 'Start a conversation by messaging a seller on any product page.'
+            }
+          />
         </div>
       ) : (
         filteredConversations.map(conv => (

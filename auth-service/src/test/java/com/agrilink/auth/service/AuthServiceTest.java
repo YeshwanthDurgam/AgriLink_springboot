@@ -156,7 +156,7 @@ class AuthServiceTest {
         Authentication authentication = mock(Authentication.class);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-        when(jwtTokenProvider.generateToken(authentication)).thenReturn("jwt-token");
+        when(jwtTokenProvider.generateToken(anyString(), anyString(), any(UUID.class))).thenReturn("jwt-token");
         when(jwtTokenProvider.getExpirationTime()).thenReturn(86400000L);
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
 

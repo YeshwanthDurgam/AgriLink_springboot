@@ -42,19 +42,34 @@ const Dashboard = () => {
       if (farmsResponse.success) {
         const farms = farmsResponse.data.content || [];
         setRecentFarms(farms);
-        setStats(prev => ({
-          ...prev,
+        
+        // Calculate total crops from farms
+        const totalCrops = farms.reduce((sum, farm) => sum + (farm.cropTypes?.length || 0), 0);
+        
+        setStats({
           totalFarms: farmsResponse.data.totalElements || farms.length,
-        }));
+          totalCrops: totalCrops,
+          activeListings: 0, // Would need marketplace API
+          totalRevenue: 0, // Would need order API
+        });
+      } else {
+        // API returned unsuccessful - show zeros
+        setStats({
+          totalFarms: 0,
+          totalCrops: 0,
+          activeListings: 0,
+          totalRevenue: 0,
+        });
+        setRecentFarms([]);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Set mock data for demo
+      // Show zeros on error instead of fake data
       setStats({
-        totalFarms: 3,
-        totalCrops: 12,
-        activeListings: 8,
-        totalRevenue: 45230,
+        totalFarms: 0,
+        totalCrops: 0,
+        activeListings: 0,
+        totalRevenue: 0,
       });
       setRecentFarms([]);
     } finally {

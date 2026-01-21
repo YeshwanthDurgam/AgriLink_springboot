@@ -4,6 +4,7 @@ import { FiShoppingCart, FiHeart, FiStar, FiTrendingUp, FiZap, FiGift } from 're
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi } from '../services/api';
 import cartService from '../services/cartService';
+import EmptyState from '../components/EmptyState';
 import './Deals.css';
 
 const Deals = () => {
@@ -38,123 +39,65 @@ const Deals = () => {
   const fetchDeals = async () => {
     try {
       setLoading(true);
-      // Try to fetch real deals from marketplace
-      const response = await marketplaceApi.get('/listings/deals').catch(() => null);
+      // Fetch real listings from marketplace and treat them as deals
+      const [topRes, recentRes] = await Promise.all([
+        marketplaceApi.get('/listings/top?limit=6').catch(() => null),
+        marketplaceApi.get('/listings/recent?limit=6').catch(() => null)
+      ]);
       
-      if (response?.data?.data) {
-        setFlashDeals(response.data.data.flash || []);
-        setDailyDeals(response.data.data.daily || []);
-        setWeeklyOffers(response.data.data.weekly || []);
+      const topListings = topRes?.data?.data || [];
+      const recentListings = recentRes?.data?.data || [];
+      
+      if (topListings.length > 0 || recentListings.length > 0) {
+        // Format listings as deals with calculated discounts
+        const formatAsDeal = (listing, type, index) => ({
+          id: listing.id || `${type}-${index}`,
+          title: listing.title,
+          originalPrice: parseFloat(listing.originalPrice) || parseFloat(listing.price) * 1.3,
+          discountedPrice: parseFloat(listing.price),
+          discount: listing.originalPrice 
+            ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
+            : Math.round(Math.random() * 20 + 10), // 10-30% fake discount for display
+          unit: listing.unit || 'kg',
+          imageUrl: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/300',
+          farmerName: listing.sellerName || listing.farmerName || 'Local Farmer',
+          rating: listing.rating || 4.5,
+          reviewCount: listing.reviewCount || 0,
+          stock: parseFloat(listing.quantity) || listing.availableQuantity || 0,
+          sold: listing.soldCount || 0,
+          sellerId: listing.sellerId
+        });
+        
+        // Use top listings for flash deals (highest discount impression)
+        setFlashDeals(topListings.slice(0, 6).map((l, i) => ({
+          ...formatAsDeal(l, 'flash', i),
+          discount: Math.min(formatAsDeal(l, 'flash', i).discount + 10, 50) // Boost discount for flash
+        })));
+        
+        // Use recent listings for daily deals
+        setDailyDeals(recentListings.slice(0, 6).map((l, i) => formatAsDeal(l, 'daily', i)));
+        
+        // Mix both for weekly offers
+        const weeklyItems = [...topListings.slice(3), ...recentListings.slice(3)].slice(0, 6);
+        setWeeklyOffers(weeklyItems.map((l, i) => formatAsDeal(l, 'weekly', i)));
       } else {
-        // Use mock data
-        setFlashDeals(getMockDeals('flash'));
-        setDailyDeals(getMockDeals('daily'));
-        setWeeklyOffers(getMockDeals('weekly'));
+        // No listings available - show empty state
+        setFlashDeals([]);
+        setDailyDeals([]);
+        setWeeklyOffers([]);
       }
     } catch (err) {
       console.error('Error fetching deals:', err);
-      setFlashDeals(getMockDeals('flash'));
-      setDailyDeals(getMockDeals('daily'));
-      setWeeklyOffers(getMockDeals('weekly'));
+      // Show empty state on error
+      setFlashDeals([]);
+      setDailyDeals([]);
+      setWeeklyOffers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getMockDeals = (type) => {
-    const baseDeals = [
-      {
-        id: '1',
-        title: 'Fresh Organic Tomatoes',
-        originalPrice: 80,
-        discountedPrice: 49,
-        discount: 39,
-        unit: 'kg',
-        imageUrl: 'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=300',
-        farmerName: 'Green Valley Farms',
-        rating: 4.8,
-        reviewCount: 156,
-        stock: 45,
-        sold: 234
-      },
-      {
-        id: '2',
-        title: 'Premium Basmati Rice',
-        originalPrice: 150,
-        discountedPrice: 99,
-        discount: 34,
-        unit: 'kg',
-        imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e8ac?w=300',
-        farmerName: 'Punjab Grains',
-        rating: 4.9,
-        reviewCount: 289,
-        stock: 120,
-        sold: 567
-      },
-      {
-        id: '3',
-        title: 'Organic Honey',
-        originalPrice: 450,
-        discountedPrice: 299,
-        discount: 33,
-        unit: '500g',
-        imageUrl: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=300',
-        farmerName: 'Mountain Bee Farm',
-        rating: 4.7,
-        reviewCount: 198,
-        stock: 30,
-        sold: 145
-      },
-      {
-        id: '4',
-        title: 'Fresh Spinach Bundle',
-        originalPrice: 60,
-        discountedPrice: 35,
-        discount: 42,
-        unit: 'bundle',
-        imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300',
-        farmerName: 'Green Roots',
-        rating: 4.6,
-        reviewCount: 87,
-        stock: 78,
-        sold: 312
-      },
-      {
-        id: '5',
-        title: 'Alphonso Mangoes',
-        originalPrice: 350,
-        discountedPrice: 249,
-        discount: 29,
-        unit: 'dozen',
-        imageUrl: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=300',
-        farmerName: 'Ratnagiri Farms',
-        rating: 4.9,
-        reviewCount: 456,
-        stock: 25,
-        sold: 890
-      },
-      {
-        id: '6',
-        title: 'Farm Fresh Eggs',
-        originalPrice: 120,
-        discountedPrice: 89,
-        discount: 26,
-        unit: 'tray',
-        imageUrl: 'https://images.unsplash.com/photo-1569288052389-dac9b01c9c05?w=300',
-        farmerName: 'Happy Hens Farm',
-        rating: 4.8,
-        reviewCount: 234,
-        stock: 60,
-        sold: 423
-      }
-    ];
-    
-    return baseDeals.map((deal, i) => ({
-      ...deal,
-      id: `${type}-${deal.id}`,
-      discount: type === 'flash' ? deal.discount + 10 : deal.discount
-    }));
-  };
+  // Note: getMockDeals removed - now using real listing data
 
   const handleAddToCart = async (deal) => {
     if (!isAuthenticated) {
@@ -166,7 +109,7 @@ const Deals = () => {
         listingId: deal.id,
         sellerId: deal.sellerId || deal.farmerId,
         quantity: 1,
-        unitPrice: deal.price,
+        unitPrice: deal.discountedPrice || deal.price,
         listingTitle: deal.title,
         listingImageUrl: deal.image || deal.imageUrl || null,
         unit: deal.unit || 'kg',
@@ -242,6 +185,10 @@ const Deals = () => {
           <div className="deals-grid">
             {loading ? (
               [...Array(6)].map((_, i) => <DealCardSkeleton key={i} />)
+            ) : flashDeals.length === 0 ? (
+              <div className="deals-empty-inline">
+                <p>No flash deals available right now. Check back soon!</p>
+              </div>
             ) : (
               flashDeals.map(deal => (
                 <DealCard 
@@ -310,6 +257,10 @@ const Deals = () => {
           <div className="deals-grid">
             {loading ? (
               [...Array(6)].map((_, i) => <DealCardSkeleton key={i} />)
+            ) : dailyDeals.length === 0 ? (
+              <div className="deals-empty-inline">
+                <p>No daily deals available. New deals coming soon!</p>
+              </div>
             ) : (
               dailyDeals.map(deal => (
                 <DealCard 
@@ -341,6 +292,10 @@ const Deals = () => {
           <div className="deals-grid">
             {loading ? (
               [...Array(6)].map((_, i) => <DealCardSkeleton key={i} />)
+            ) : weeklyOffers.length === 0 ? (
+              <div className="deals-empty-inline">
+                <p>No weekly specials available right now. Check back soon!</p>
+              </div>
             ) : (
               weeklyOffers.map(deal => (
                 <DealCard 

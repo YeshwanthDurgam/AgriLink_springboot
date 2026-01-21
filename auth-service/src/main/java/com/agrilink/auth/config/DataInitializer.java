@@ -4,6 +4,7 @@ import com.agrilink.auth.entity.Role;
 import com.agrilink.auth.entity.User;
 import com.agrilink.auth.repository.RoleRepository;
 import com.agrilink.auth.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -34,6 +36,7 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager entityManager;
 
     // Fixed UUIDs for test users - these must match across all services
     private static final UUID FARMER1_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -59,6 +62,7 @@ public class DataInitializer {
 
     @Bean
     @Order(2)
+    @Transactional
     public CommandLineRunner initTestUsers() {
         return args -> {
             log.info("========================================");
@@ -117,40 +121,70 @@ public class DataInitializer {
     }
 
     private void createUserIfNotExists(UUID userId, String email, String password, Set<String> roleNames, String displayName) {
-        if (userRepository.existsByEmail(email)) {
-            log.info("User already exists: {} ({})", displayName, email);
-            return;
-        }
-
-        // Get roles
-        Set<Role> roles = new HashSet<>();
-        for (String roleName : roleNames) {
-            Optional<Role> roleOpt = roleRepository.findByName(roleName);
-            if (roleOpt.isPresent()) {
-                roles.add(roleOpt.get());
-            } else {
-                log.warn("Role not found: {}. Skipping role assignment for user: {}", roleName, email);
+        try {
+            // Check if user exists by email
+            if (userRepository.existsByEmail(email)) {
+                log.info("User already exists by email: {} ({})", displayName, email);
+                return;
             }
+            
+            // Check if user exists by ID using native query to avoid JPA caching issues
+            Long count = (Long) entityManager.createNativeQuery("SELECT COUNT(*) FROM users WHERE id = :id")
+                    .setParameter("id", userId)
+                    .getSingleResult();
+            
+            if (count > 0) {
+                log.info("User already exists by ID: {} ({})", displayName, email);
+                return;
+            }
+
+            // Get roles
+            Set<Role> roles = new HashSet<>();
+            for (String roleName : roleNames) {
+                Optional<Role> roleOpt = roleRepository.findByName(roleName);
+                if (roleOpt.isPresent()) {
+                    roles.add(roleOpt.get());
+                } else {
+                    log.warn("Role not found: {}. Skipping role assignment for user: {}", roleName, email);
+                }
+            }
+
+            if (roles.isEmpty()) {
+                log.error("No valid roles found for user: {}. Skipping user creation.", email);
+                return;
+            }
+
+            // Use native SQL INSERT to bypass JPA entity state issues with fixed UUIDs
+            String encodedPassword = passwordEncoder.encode(password);
+            
+            int inserted = entityManager.createNativeQuery(
+                "INSERT INTO users (id, email, password, enabled, account_non_expired, account_non_locked, credentials_non_expired) " +
+                "VALUES (:id, :email, :password, :enabled, :accountNonExpired, :accountNonLocked, :credentialsNonExpired) " +
+                "ON CONFLICT (id) DO NOTHING")
+                .setParameter("id", userId)
+                .setParameter("email", email)
+                .setParameter("password", encodedPassword)
+                .setParameter("enabled", true)
+                .setParameter("accountNonExpired", true)
+                .setParameter("accountNonLocked", true)
+                .setParameter("credentialsNonExpired", true)
+                .executeUpdate();
+            
+            if (inserted > 0) {
+                // Add role associations
+                for (Role role : roles) {
+                    entityManager.createNativeQuery(
+                        "INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId) ON CONFLICT DO NOTHING")
+                        .setParameter("userId", userId)
+                        .setParameter("roleId", role.getId())
+                        .executeUpdate();
+                }
+                log.info("Created user: {} ({}) with roles: {}", displayName, email, roleNames);
+            } else {
+                log.info("User {} ({}) was not created (may already exist)", displayName, email);
+            }
+        } catch (Exception e) {
+            log.warn("Could not create user {} ({}): {}. User may already exist.", displayName, email, e.getMessage());
         }
-
-        if (roles.isEmpty()) {
-            log.error("No valid roles found for user: {}. Skipping user creation.", email);
-            return;
-        }
-
-        // Create user with BCrypt-hashed password and fixed UUID
-        User user = User.builder()
-                .id(userId)
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .roles(roles)
-                .enabled(true)
-                .accountNonExpired(true)
-                .accountNonLocked(true)
-                .credentialsNonExpired(true)
-                .build();
-
-        userRepository.save(user);
-        log.info("Created user: {} ({}) with roles: {}", displayName, email, roleNames);
     }
 }

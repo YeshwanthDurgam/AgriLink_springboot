@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Entity representing a payment.
+ * Entity representing a payment with Razorpay integration.
  */
 @Entity
 @Table(name = "payments")
@@ -42,13 +42,39 @@ public class Payment {
 
     @Column(length = 3)
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "INR";
 
     @Column(name = "transaction_id", length = 100)
     private String transactionId;
 
     @Column(name = "payment_gateway", length = 50)
-    private String paymentGateway;
+    @Builder.Default
+    private String paymentGateway = "RAZORPAY";
+
+    // Razorpay specific fields
+    @Column(name = "razorpay_order_id", length = 100)
+    private String razorpayOrderId;
+
+    @Column(name = "razorpay_payment_id", length = 100)
+    private String razorpayPaymentId;
+
+    @Column(name = "razorpay_signature", length = 200)
+    private String razorpaySignature;
+
+    @Column(name = "razorpay_receipt", length = 100)
+    private String razorpayReceipt;
+
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
+    @Column(name = "refund_id", length = 100)
+    private String refundId;
+
+    @Column(name = "refund_amount", precision = 14, scale = 2)
+    private BigDecimal refundAmount;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
@@ -63,9 +89,13 @@ public class Payment {
 
     public enum PaymentStatus {
         PENDING,
-        PROCESSING,
-        COMPLETED,
+        PROCESSING, // Payment being processed
+        CREATED, // Razorpay order created
+        AUTHORIZED, // Payment authorized
+        CAPTURED, // Payment captured
+        COMPLETED, // Payment successful
         FAILED,
+        REFUND_PENDING,
         REFUNDED,
         CANCELLED
     }

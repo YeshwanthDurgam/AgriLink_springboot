@@ -6,7 +6,7 @@ import {
   FiStar, FiDollarSign, FiSettings
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { orderApi, marketplaceApi, userApi } from '../services/api';
 import './BuyerDashboard.css';
 
 const BuyerDashboard = () => {
@@ -33,29 +33,44 @@ const BuyerDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch dashboard stats
-      const [ordersRes, wishlistRes, farmersRes] = await Promise.all([
-        api.get('/order-service/api/v1/orders').catch(() => ({ data: { data: { content: [] } } })),
-        api.get('/marketplace-service/api/v1/wishlist').catch(() => ({ data: { data: [] } })),
-        api.get('/user-service/api/v1/farmers/followed').catch(() => ({ data: { data: [] } }))
+      // Fetch dashboard stats using proper API instances
+      const [ordersRes, wishlistRes, farmersRes, recommendationsRes] = await Promise.all([
+        orderApi.get('/orders/my/purchases').catch(() => ({ data: { data: { content: [] } } })),
+        marketplaceApi.get('/wishlist').catch(() => ({ data: { data: [] } })),
+        userApi.get('/farmers/followed').catch(() => ({ data: { data: [] } })),
+        marketplaceApi.get('/listings/top?limit=4').catch(() => ({ data: { data: [] } }))
       ]);
 
-      const orders = ordersRes.data?.data?.content || [];
-      const wishlist = wishlistRes.data?.data || [];
-      const farmers = farmersRes.data?.data || [];
+      const orders = ordersRes.data?.data?.content || ordersRes.data?.content || [];
+      const wishlist = wishlistRes.data?.data || wishlistRes.data || [];
+      const farmers = farmersRes.data?.data || farmersRes.data || [];
+      const topListings = recommendationsRes.data?.data || recommendationsRes.data || [];
+
+      // Calculate total spent from orders
+      const totalSpent = orders.reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
 
       setStats({
         totalOrders: orders.length,
         pendingOrders: orders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length,
-        wishlistItems: wishlist.length,
-        followingFarmers: farmers.length,
-        walletBalance: 2450,
-        totalSpent: 15680
+        wishlistItems: Array.isArray(wishlist) ? wishlist.length : 0,
+        followingFarmers: Array.isArray(farmers) ? farmers.length : 0,
+        walletBalance: 0, // Would need wallet service
+        totalSpent: totalSpent
       });
 
       setRecentOrders(orders.slice(0, 4));
-      setFollowingFarmers(farmers.slice(0, 4));
-      setRecommendations(getMockRecommendations());
+      setFollowingFarmers(Array.isArray(farmers) ? farmers.slice(0, 4) : []);
+      
+      // Format listings as recommendations
+      const formattedRecommendations = topListings.map(listing => ({
+        id: listing.id,
+        title: listing.title,
+        price: parseFloat(listing.price) || 0,
+        originalPrice: parseFloat(listing.originalPrice) || parseFloat(listing.price) * 1.2,
+        image: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/150',
+        farmer: listing.sellerName || listing.farmerName || 'Local Farmer'
+      }));
+      setRecommendations(formattedRecommendations);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       // Use empty data on error
@@ -75,21 +90,7 @@ const BuyerDashboard = () => {
     }
   };
 
-  const getMockOrders = () => [
-    { id: '1', orderNumber: 'ORD-2024-001', status: 'DELIVERED', total: 456, itemCount: 3, date: '2024-01-15' },
-    { id: '2', orderNumber: 'ORD-2024-002', status: 'PROCESSING', total: 289, itemCount: 2, date: '2024-01-18' },
-    { id: '3', orderNumber: 'ORD-2024-003', status: 'SHIPPED', total: 678, itemCount: 5, date: '2024-01-20' },
-    { id: '4', orderNumber: 'ORD-2024-004', status: 'PENDING', total: 199, itemCount: 1, date: '2024-01-22' }
-  ];
-
-
-
-  const getMockRecommendations = () => [
-    { id: '1', title: 'Organic Tomatoes', price: 49, originalPrice: 80, image: 'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=150', farmer: 'Green Valley' },
-    { id: '2', title: 'Fresh Spinach', price: 35, originalPrice: 60, image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=150', farmer: 'Sunrise Organic' },
-    { id: '3', title: 'Premium Rice', price: 99, originalPrice: 150, image: 'https://images.unsplash.com/photo-1586201375761-83865001e8ac?w=150', farmer: 'Punjab Grains' },
-    { id: '4', title: 'Farm Eggs', price: 89, originalPrice: 120, image: 'https://images.unsplash.com/photo-1569288052389-dac9b01c9c05?w=150', farmer: 'Happy Hens' }
-  ];
+  // Remove unused mock functions
 
   const getStatusColor = (status) => {
     const colors = {

@@ -62,12 +62,14 @@ const Navbar = () => {
         cartService.getCartCount().catch(() => ({ count: 0 })),
         wishlistService.getWishlistCount().catch(() => 0),
         messagingService.getUnreadCount().catch(() => 0),
-        notificationService.getUnreadCount().catch(() => ({ data: 0 }))
+        notificationService.getUnreadCount().catch(() => ({ count: 0 }))
       ]);
-      setCartCount(cartData.count || 0);
-      setWishlistCount(wishlistData || 0);
-      setUnreadMessages(unreadData || 0);
-      setNotificationCount(notifData.data || 0);
+      setCartCount(cartData?.count || 0);
+      setWishlistCount(typeof wishlistData === 'number' ? wishlistData : (wishlistData?.count || 0));
+      setUnreadMessages(typeof unreadData === 'number' ? unreadData : (unreadData?.count || 0));
+      // Handle multiple response formats for notification count
+      const notifCount = notifData?.data?.count || notifData?.count || notifData?.data || (typeof notifData === 'number' ? notifData : 0);
+      setNotificationCount(notifCount);
     } catch (err) {
       console.error('Error fetching counts:', err);
     }

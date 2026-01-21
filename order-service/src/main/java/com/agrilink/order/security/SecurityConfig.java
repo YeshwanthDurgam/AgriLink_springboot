@@ -31,16 +31,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/actuator/**").permitAll()
-                    .requestMatchers("/error").permitAll()
-                    // All order endpoints require authentication
-                    .anyRequest().authenticated())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        // Razorpay webhook endpoint - no auth required (verified by signature)
+                        .requestMatchers("/api/v1/checkout/webhook").permitAll()
+                        // Razorpay config endpoint - public
+                        .requestMatchers("/api/v1/checkout/razorpay-config").permitAll()
+                        // All other endpoints require authentication
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

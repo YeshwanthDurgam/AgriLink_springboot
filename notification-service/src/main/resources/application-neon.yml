@@ -1,0 +1,83 @@
+# =====================================================
+# Notification Service - Neon Database Configuration
+# =====================================================
+# Activate this profile by setting: SPRING_PROFILES_ACTIVE=neon
+# Or run with: --spring.profiles.active=neon
+
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+
+  datasource:
+    # Neon Database Connection URL
+    url: jdbc:postgresql://ep-square-hill-ahcj9c6a-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=notification_schema
+    username: neondb_owner
+    password: npg_bVWzNYFB23tP
+    driver-class-name: org.postgresql.Driver
+
+    # HikariCP Connection Pool Configuration (optimized for serverless)
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+      pool-name: NotificationServicePool
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    schemas: notification_schema
+    default-schema: notification_schema
+
+  # Email Configuration
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: noreply@agrilink.com
+    password: ${MAIL_PASSWORD:password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}
+  expiration: 86400000
+
+# Logging
+logging:
+  level:
+    com.agrilink: INFO
+    org.springframework.security: WARN
+    com.zaxxer.hikari: INFO
+
+# Notification Settings
+notification:
+  email:
+    from: noreply@agrilink.com
+    enabled: true
+  sms:
+    enabled: false
+    provider: twilio
+  push:
+    enabled: false

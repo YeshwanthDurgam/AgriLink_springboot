@@ -11,7 +11,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -23,7 +23,21 @@ spring:
     locations: classpath:db/migration
 
 jwt:
-  secret: ${JWT_SECRET:agrilink-secret-key-for-jwt-token-generation-min-256-bits}
+  secret: ${JWT_SECRET:myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}
+
+# Razorpay Configuration
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID:rzp_test_S6D5FidGJQvsD8}
+    secret: ${RAZORPAY_KEY_SECRET:Y6sc1y1G7x2n2OdRzi2kENbU}
+  webhook:
+    secret: ${RAZORPAY_WEBHOOK_SECRET:webhook_secret}
+
+# Application Configuration
+app:
+  currency: ${APP_CURRENCY:INR}
+  company:
+    name: ${APP_COMPANY_NAME:AgriLink}
 
 logging:
   level:

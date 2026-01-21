@@ -5,6 +5,7 @@ import { FiShoppingBag, FiSearch, FiFilter, FiGrid, FiList, FiShoppingCart, FiHe
 import marketplaceService from '../services/marketplaceService';
 import wishlistService from '../services/wishlistService';
 import { useAuth } from '../context/AuthContext';
+import EmptyState from '../components/EmptyState';
 import './Marketplace.css';
 
 const Marketplace = () => {
@@ -271,14 +272,18 @@ const Marketplace = () => {
           <p>Loading marketplace...</p>
         </div>
       ) : listings.length === 0 ? (
-        <div className="empty-state">
-          <FiShoppingBag className="empty-icon" />
-          <h2>No Listings Found</h2>
-          <p>There are no products matching your criteria.</p>
-          <button onClick={clearFilters} className="browse-btn">
-            Clear Filters
-          </button>
-        </div>
+        <EmptyState 
+          type={searchQuery ? 'search' : 'products'}
+          title={searchQuery ? 'No Results Found' : 'No Products Available'}
+          message={searchQuery 
+            ? `We couldn't find any products matching "${searchQuery}". Try different keywords or browse our categories.`
+            : 'There are no products matching your criteria. Try adjusting your filters.'
+          }
+          actionText="Clear Filters"
+          onAction={clearFilters}
+          secondaryActionText="Browse All"
+          secondaryActionLink="/marketplace"
+        />
       ) : (
         <>
           <div className={`listings-container ${viewMode}`}>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, FiUsers, FiPackage, FiAward, FiShield, FiTruck, FiCheckCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi, farmApi, authApi } from '../services/api';
+import SearchBar from '../components/SearchBar';
 import './Home.css';
 
 const Home = () => {
@@ -69,53 +70,86 @@ const Home = () => {
         setCategories([]);
       }
       
-      // Fetch products by category
-      const [featured, vegetables, fruits, dairy, grainsData] = await Promise.all([
-        marketplaceApi.get('/listings?size=10').catch(() => null),
-        marketplaceApi.get('/listings?size=10').catch(() => null),
-        marketplaceApi.get('/listings?size=10').catch(() => null),
-        marketplaceApi.get('/listings?size=10').catch(() => null),
-        marketplaceApi.get('/listings?size=10').catch(() => null)
+      // Fetch listings for all sections
+      const [topListings, recentListings] = await Promise.all([
+        marketplaceApi.get('/listings/top?limit=10').catch(() => null),
+        marketplaceApi.get('/listings/recent?limit=10').catch(() => null)
       ]);
       
-      setFeaturedProducts(featured?.data?.data?.content || getMockProducts('Featured'));
-      setFreshVegetables(vegetables?.data?.data?.content || getMockProducts('Vegetables'));
-      setOrganicFruits(fruits?.data?.data?.content || getMockProducts('Fruits'));
-      setDairyProducts(dairy?.data?.data?.content || getMockProducts('Dairy'));
-      setGrains(grainsData?.data?.data?.content || getMockProducts('Grains'));
+      const topProducts = topListings?.data?.data || [];
+      const recentProducts = recentListings?.data?.data || [];
+      
+      // Format listings for display
+      const formatListing = (listing) => ({
+        id: listing.id,
+        title: listing.title,
+        price: parseFloat(listing.price) || 0,
+        originalPrice: parseFloat(listing.originalPrice) || parseFloat(listing.price) * 1.2,
+        unit: listing.unit || 'kg',
+        imageUrl: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/300',
+        farmerName: listing.sellerName || listing.farmerName || 'Local Farmer',
+        rating: listing.rating || 0,
+        reviewCount: listing.reviewCount || 0,
+        location: listing.location || 'India',
+        discount: listing.originalPrice 
+          ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
+          : 0,
+        sellerId: listing.sellerId
+      });
+      
+      // Use real listings if available, otherwise show empty
+      if (topProducts.length > 0 || recentProducts.length > 0) {
+        const allProducts = [...topProducts, ...recentProducts];
+        const formattedProducts = allProducts.map(formatListing);
+        
+        setFeaturedProducts(formattedProducts.slice(0, 10));
+        setFreshVegetables(formattedProducts.slice(0, 10));
+        setOrganicFruits(formattedProducts.slice(0, 10));
+        setDairyProducts(formattedProducts.slice(0, 10));
+        setGrains(formattedProducts.slice(0, 10));
+      } else {
+        // No products available - set empty arrays
+        setFeaturedProducts([]);
+        setFreshVegetables([]);
+        setOrganicFruits([]);
+        setDairyProducts([]);
+        setGrains([]);
+      }
       
       // Fetch real farmer count from auth-service
       let farmerCount = 0;
+      let productCount = 0;
       try {
         const farmersResponse = await authApi.get('/auth/farmers/ids');
         const farmerIds = farmersResponse?.data?.data || farmersResponse?.data || [];
         farmerCount = Array.isArray(farmerIds) ? farmerIds.length : 0;
+        productCount = topProducts.length + recentProducts.length;
       } catch (farmerErr) {
         console.warn('Could not fetch farmer count:', farmerErr);
         farmerCount = 0;
       }
 
-      // Set statistics with real farmer count
+      // Set statistics with real data
       setStatistics({
         totalFarmers: farmerCount,
-        totalProducts: 100,
-        totalOrders: 5,
-        satisfactionRate: 98.5
+        totalProducts: productCount,
+        totalOrders: 0, // Would need order API access
+        satisfactionRate: 0
       });
     } catch (err) {
       console.error('Error fetching home data:', err);
-      // Set empty categories on error - no mock data
+      // Set empty data on error - no mock data
       setCategories([]);
-      setFeaturedProducts(getMockProducts('Featured'));
-      setFreshVegetables(getMockProducts('Vegetables'));
-      setOrganicFruits(getMockProducts('Fruits'));
-      setDairyProducts(getMockProducts('Dairy'));
-      setGrains(getMockProducts('Grains'));
+      setFeaturedProducts([]);
+      setFreshVegetables([]);
+      setOrganicFruits([]);
+      setDairyProducts([]);
+      setGrains([]);
       setStatistics({
-        totalFarmers: 2,
-        totalProducts: 100,
-        totalOrders: 5,
-        satisfactionRate: 98.5
+        totalFarmers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        satisfactionRate: 0
       });
     } finally {
       setLoading(false);
@@ -138,25 +172,7 @@ const Home = () => {
     return icons[name] || '🌾';
   };
 
-  const getMockProducts = (category) => {
-    const products = [];
-    for (let i = 1; i <= 10; i++) {
-      products.push({
-        id: `${category}-${i}`,
-        title: `${category} Product ${i}`,
-        price: Math.floor(Math.random() * 500) + 50,
-        originalPrice: Math.floor(Math.random() * 600) + 100,
-        unit: 'kg',
-        imageUrl: `https://source.unsplash.com/300x300/?${category.toLowerCase()},farm`,
-        farmerName: `Farmer ${i}`,
-        rating: (Math.random() * 2 + 3).toFixed(1),
-        reviewCount: Math.floor(Math.random() * 100) + 10,
-        location: 'Maharashtra, India',
-        discount: Math.floor(Math.random() * 30) + 5
-      });
-    }
-    return products;
-  };
+  // Note: getMockProducts removed - now using real listing data only
 
   const handleCategoryClick = (categoryId) => {
     navigate(`/marketplace?categoryId=${categoryId}`);
@@ -215,6 +231,16 @@ const Home = () => {
               <span className="hero-badge">🌾 Farm Fresh Guarantee</span>
               <h1>Fresh From Farm<br />To Your Doorstep</h1>
               <p>Connect directly with local farmers. Get the freshest produce at the best prices with complete transparency.</p>
+              
+              {/* Search Bar */}
+              <div className="hero-search-wrapper">
+                <SearchBar 
+                  placeholder="Search for fresh vegetables, fruits, dairy..."
+                  showTrending={true}
+                  className="hero-search"
+                />
+              </div>
+              
               <div className="hero-buttons">
                 <Link to="/marketplace" className="btn-primary">Shop Now</Link>
                 <Link to="/farmers" className="btn-secondary">Meet Our Farmers</Link>

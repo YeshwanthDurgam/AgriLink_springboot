@@ -22,7 +22,7 @@ import java.util.UUID;
  * Seeds categories and comprehensive product listings with images.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "neon"})
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
@@ -36,25 +36,35 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        log.info("Starting marketplace data initialization...");
+        try {
+            log.info("Starting marketplace data initialization...");
 
-        // Check if data already exists
-        if (categoryRepository.count() > 0) {
-            log.info("Categories already exist, skipping initialization");
-            return;
+            // Check if data already exists
+            if (categoryRepository.count() > 0) {
+                log.info("Categories already exist, skipping initialization");
+                return;
+            }
+
+            // Create categories
+            Category vegetables = createCategory("Vegetables", "Fresh vegetables from local farms");
+            Category fruits = createCategory("Fruits", "Fresh fruits and berries");
+            Category grains = createCategory("Grains", "Rice, wheat, corn and other grains");
+            Category dairy = createCategory("Dairy", "Milk, cheese, and dairy products");
+            Category organic = createCategory("Organic", "Certified organic produce");
+            Category spices = createCategory("Spices", "Fresh and dried spices");
+            Category pulses = createCategory("Pulses", "Lentils, beans, and legumes");
+
+            log.info("Created {} categories", categoryRepository.count());
+
+            // Skip listing creation to avoid timeout issues on Neon
+            log.info("Skipping listing creation for neon profile to avoid timeout issues");
+        } catch (Exception e) {
+            log.error("Error during data initialization: {}. Service will continue without seed data.", e.getMessage());
         }
+    }
 
-        // Create categories
-        Category vegetables = createCategory("Vegetables", "Fresh vegetables from local farms");
-        Category fruits = createCategory("Fruits", "Fresh fruits and berries");
-        Category grains = createCategory("Grains", "Rice, wheat, corn and other grains");
-        Category dairy = createCategory("Dairy", "Milk, cheese, and dairy products");
-        Category organic = createCategory("Organic", "Certified organic produce");
-        Category spices = createCategory("Spices", "Fresh and dried spices");
-        Category pulses = createCategory("Pulses", "Lentils, beans, and legumes");
-
-        log.info("Created {} categories", categoryRepository.count());
-
+    // Original run method code for listing creation (commented out for neon profile)
+    private void createSampleListings(Category vegetables, Category fruits, Category grains, Category dairy, Category organic, Category spices, Category pulses) {
         // ===== FARMER 1 PRODUCTS (Green Valley Farm) =====
         
         // Vegetables

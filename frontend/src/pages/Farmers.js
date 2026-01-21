@@ -4,6 +4,7 @@ import { FiSearch, FiMapPin, FiStar, FiHeart, FiMessageSquare, FiFilter, FiChevr
 import { useAuth } from '../context/AuthContext';
 import { authApi, userApi, marketplaceApi } from '../services/api';
 import { toast } from 'react-toastify';
+import EmptyState from '../components/EmptyState';
 import './Farmers.css';
 
 const Farmers = () => {
@@ -289,11 +290,20 @@ const Farmers = () => {
           )}
 
           {!loading && filteredFarmers.length === 0 && (
-            <div className="no-results">
-              <img src="https://illustrations.popsy.co/gray/search-results.svg" alt="No results" />
-              <h3>No farmers found</h3>
-              <p>Try adjusting your search or filters</p>
-            </div>
+            <EmptyState 
+              type="farmers"
+              title={searchQuery ? 'No Farmers Found' : 'No Farmers Available'}
+              message={searchQuery 
+                ? `We couldn't find any farmers matching "${searchQuery}". Try different keywords or clear your filters.`
+                : 'There are no farmers matching your criteria at the moment.'
+              }
+              actionText="Clear Search"
+              onAction={() => {
+                setSearchQuery('');
+                setFilterLocation('');
+                setFilterCategory('');
+              }}
+            />
           )}
         </div>
       </section>

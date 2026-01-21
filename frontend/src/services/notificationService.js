@@ -1,48 +1,54 @@
-import api from './api';
-
-const NOTIFICATION_SERVICE_URL = '/notification-service';
+import { notificationApi } from './api';
 
 const notificationService = {
   // Get all notifications (paginated)
-  getNotifications: (page = 0, size = 20) => {
-    return api.get(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications`, {
+  getNotifications: async (page = 0, size = 20) => {
+    const response = await notificationApi.get('/notifications', {
       params: { page, size }
     });
+    return response.data;
   },
 
   // Get unread notifications
-  getUnreadNotifications: () => {
-    return api.get(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/unread`);
+  getUnreadNotifications: async () => {
+    const response = await notificationApi.get('/notifications/unread');
+    return response.data;
   },
 
   // Get unread count
-  getUnreadCount: () => {
-    return api.get(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/count`);
+  getUnreadCount: async () => {
+    const response = await notificationApi.get('/notifications/count');
+    return response.data;
   },
 
   // Mark notification as read
-  markAsRead: (notificationId) => {
-    return api.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/${notificationId}/read`);
+  markAsRead: async (notificationId) => {
+    const response = await notificationApi.post(`/notifications/${notificationId}/read`);
+    return response.data;
   },
 
   // Mark all as read
-  markAllAsRead: () => {
-    return api.post(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/read-all`);
+  markAllAsRead: async () => {
+    const response = await notificationApi.post('/notifications/read-all');
+    return response.data;
   },
 
   // Delete notification
-  deleteNotification: (notificationId) => {
-    return api.delete(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/${notificationId}`);
+  deleteNotification: async (notificationId) => {
+    const response = await notificationApi.delete(`/notifications/${notificationId}`);
+    return response.data;
   },
 
   // Get notification preferences
-  getPreferences: () => {
-    return api.get(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/preferences`);
+  getPreferences: async () => {
+    const response = await notificationApi.get('/notifications/preferences');
+    return response.data;
   },
 
   // Update notification preferences
-  updatePreferences: (preferences) => {
-    return api.put(`${NOTIFICATION_SERVICE_URL}/api/v1/notifications/preferences`, preferences);
+  updatePreferences: async (preferences) => {
+    const response = await notificationApi.put('/notifications/preferences', preferences);
+    return response.data;
   },
 
   // WebSocket connection for real-time notifications

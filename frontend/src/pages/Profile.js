@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiEdit2, FiSave, FiX, FiHeart, FiUsers } from 'react-icons/fi';
-import api, { userApi, authApi } from '../services/api';
+import { userApi, authApi } from '../services/api';
 import './Profile.css';
 
 const Profile = () => {
@@ -83,8 +83,8 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/user-service/api/v1/users/profile');
-      const profileData = response.data.data;
+      const response = await userApi.get('/users/profile');
+      const profileData = response.data?.data || response.data;
       setProfile(profileData);
       setFormData({
         firstName: profileData.firstName || '',
@@ -117,8 +117,9 @@ const Profile = () => {
     setSuccess('');
 
     try {
-      const response = await api.put('/user-service/api/v1/users/profile', formData);
-      setProfile(response.data.data);
+      const response = await userApi.put('/users/profile', formData);
+      const updatedProfile = response.data?.data || response.data;
+      setProfile(updatedProfile);
       setEditing(false);
       setSuccess('Profile updated successfully');
       setTimeout(() => setSuccess(''), 3000);

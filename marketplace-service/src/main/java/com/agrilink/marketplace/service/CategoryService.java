@@ -25,26 +25,38 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     /**
-     * Get all categories that have at least one active product.
-     * Uses a single aggregation query with INNER JOIN - no in-memory filtering.
-     * Categories with zero products are NEVER returned.
+     * Get all active categories.
+     * Returns all categories with product counts (0 if no products).
      */
     @Transactional(readOnly = true)
     public List<CategoryDto> getAllCategories() {
+        log.info("Fetching all categories");
+        // First try to get categories with product count
         List<CategoryWithCountProjection> categoriesWithCount = categoryRepository.findCategoriesWithProductCount();
+        
+        // If no categories with products, return all active categories with count 0
+        if (categoriesWithCount.isEmpty()) {
+            log.info("No categories with active products found, returning all active categories");
+            return categoryRepository.findByActiveTrue().stream()
+                    .map(this::mapToDto)
+                    .collect(Collectors.toList());
+        }
+        
         return categoriesWithCount.stream()
                 .map(this::projectionToDto)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get all root categories (no parent) that have at least one active product.
-     * Reuses the same aggregation query to ensure consistency.
+     * Get all root categories (no parent).
+     * Returns all active root categories.
      */
     @Transactional(readOnly = true)
     public List<CategoryDto> getRootCategories() {
-        // Use the same aggregation query - all returned categories have products
-        return getAllCategories();
+        log.info("Fetching root categories");
+        return categoryRepository.findByParentIsNullAndActiveTrue().stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
     /**

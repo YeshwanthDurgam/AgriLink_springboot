@@ -6,7 +6,7 @@ import {
   FiCpu, FiSettings, FiEye, FiEdit2, FiClock
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { marketplaceApi, orderApi, farmApi } from '../services/api';
 import './FarmerDashboard.css';
 
 const FarmerDashboard = () => {
@@ -36,70 +36,125 @@ const FarmerDashboard = () => {
       setLoading(true);
       
       const [listingsRes, ordersRes, analyticsRes] = await Promise.all([
-        api.get('/marketplace-service/api/v1/listings/my').catch(() => ({ data: { data: { content: [] } } })),
-        api.get('/order-service/api/v1/orders/farmer').catch(() => ({ data: { data: { content: [] } } })),
-        api.get('/farm-service/api/v1/analytics/summary').catch(() => ({ data: { data: {} } }))
+        marketplaceApi.get('/listings/my').catch(() => ({ data: { data: { content: [] } } })),
+        orderApi.get('/orders/my/sales').catch(() => ({ data: { data: { content: [] } } })),
+        farmApi.get('/analytics/summary').catch(() => ({ data: { data: {} } }))
       ]);
 
-      const listings = listingsRes.data?.data?.content || [];
-      const orders = ordersRes.data?.data?.content || [];
-      const analytics = analyticsRes.data?.data || {};
+      const listings = listingsRes.data?.data?.content || listingsRes.data?.content || [];
+      const orders = ordersRes.data?.data?.content || ordersRes.data?.content || [];
+      const analytics = analyticsRes.data?.data || analyticsRes.data || {};
+
+      // Calculate total earnings from orders
+      const totalEarnings = orders.reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
+      
+      // Calculate monthly earnings (orders from this month)
+      const now = new Date();
+      const thisMonth = now.getMonth();
+      const thisYear = now.getFullYear();
+      const monthlyOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt || order.orderDate);
+        return orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear;
+      });
+      const monthlyEarnings = monthlyOrders.reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
 
       setStats({
-        totalProducts: listings.length || 45,
-        activeListings: listings.filter(l => l.status === 'ACTIVE').length || 38,
-        totalOrders: orders.length || 156,
-        pendingOrders: orders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length || 8,
-        totalEarnings: analytics.totalEarnings || 125680,
-        monthlyEarnings: analytics.monthlyEarnings || 28450,
-        followers: analytics.followers || 234,
-        rating: analytics.rating || 4.8
+        totalProducts: listings.length,
+        activeListings: listings.filter(l => l.status === 'ACTIVE').length,
+        totalOrders: orders.length,
+        pendingOrders: orders.filter(o => o.status === 'PENDING' || o.status === 'PROCESSING').length,
+        totalEarnings: totalEarnings || analytics.totalEarnings || 0,
+        monthlyEarnings: monthlyEarnings || analytics.monthlyEarnings || 0,
+        followers: analytics.followers || 0,
+        rating: analytics.rating || 0
       });
 
-      setRecentOrders(orders.slice(0, 5) || getMockOrders());
-      setTopProducts(getMockTopProducts());
-      setEarningsData(getMockEarningsData());
+      // Format orders for display
+      const formattedOrders = orders.slice(0, 5).map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber || `ORD-${order.id?.slice(0, 8)}`,
+        buyer: order.buyerName || order.buyerEmail || 'Customer',
+        items: order.items?.length || order.itemCount || 1,
+        total: parseFloat(order.totalAmount) || 0,
+        status: order.status,
+        date: formatRelativeTime(order.createdAt || order.orderDate)
+      }));
+      setRecentOrders(formattedOrders);
+
+      // Format listings as top products based on view count or sales
+      const topProducts = listings
+        .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+        .slice(0, 4)
+        .map(listing => ({
+          id: listing.id,
+          title: listing.title,
+          image: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/100',
+          sold: listing.soldCount || 0,
+          revenue: (listing.soldCount || 0) * (parseFloat(listing.price) || 0),
+          stock: parseFloat(listing.quantity) || listing.availableQuantity || 0
+        }));
+      setTopProducts(topProducts);
+
+      // Generate earnings data from orders (last 7 days)
+      setEarningsData(calculateWeeklyEarnings(orders));
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
+      // Show zeros on error instead of fake data
       setStats({
-        totalProducts: 45,
-        activeListings: 38,
-        totalOrders: 156,
-        pendingOrders: 8,
-        totalEarnings: 125680,
-        monthlyEarnings: 28450,
-        followers: 234,
-        rating: 4.8
+        totalProducts: 0,
+        activeListings: 0,
+        totalOrders: 0,
+        pendingOrders: 0,
+        totalEarnings: 0,
+        monthlyEarnings: 0,
+        followers: 0,
+        rating: 0
       });
-      setRecentOrders(getMockOrders());
-      setTopProducts(getMockTopProducts());
-      setEarningsData(getMockEarningsData());
+      setRecentOrders([]);
+      setTopProducts([]);
+      setEarningsData(getEmptyEarningsData());
     } finally {
       setLoading(false);
     }
   };
 
-  const getMockOrders = () => [
-    { id: '1', orderNumber: 'ORD-2024-156', buyer: 'Amit Singh', items: 3, total: 456, status: 'PENDING', date: '2 hours ago' },
-    { id: '2', orderNumber: 'ORD-2024-155', buyer: 'Priya Sharma', items: 2, total: 289, status: 'PROCESSING', date: '5 hours ago' },
-    { id: '3', orderNumber: 'ORD-2024-154', buyer: 'Raj Kumar', items: 5, total: 678, status: 'SHIPPED', date: '1 day ago' },
-    { id: '4', orderNumber: 'ORD-2024-153', buyer: 'Meena Devi', items: 1, total: 199, status: 'DELIVERED', date: '2 days ago' },
-    { id: '5', orderNumber: 'ORD-2024-152', buyer: 'Suresh Patel', items: 4, total: 567, status: 'DELIVERED', date: '3 days ago' }
-  ];
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
 
-  const getMockTopProducts = () => [
-    { id: '1', title: 'Organic Tomatoes', image: 'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=100', sold: 234, revenue: 11466, stock: 45 },
-    { id: '2', title: 'Fresh Spinach', image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=100', sold: 189, revenue: 6615, stock: 78 },
-    { id: '3', title: 'Premium Rice', image: 'https://images.unsplash.com/photo-1586201375761-83865001e8ac?w=100', sold: 156, revenue: 15444, stock: 120 },
-    { id: '4', title: 'Farm Eggs', image: 'https://images.unsplash.com/photo-1569288052389-dac9b01c9c05?w=100', sold: 145, revenue: 12905, stock: 60 }
-  ];
+  const calculateWeeklyEarnings = (orders) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weeklyData = days.map(day => ({ day, earnings: 0 }));
+    const now = new Date();
+    
+    orders.forEach(order => {
+      const orderDate = new Date(order.createdAt || order.orderDate);
+      const diffDays = Math.floor((now - orderDate) / (1000 * 60 * 60 * 24));
+      if (diffDays < 7) {
+        const dayIndex = orderDate.getDay();
+        weeklyData[dayIndex].earnings += parseFloat(order.totalAmount) || 0;
+      }
+    });
+    
+    // Reorder so current day is last
+    const todayIndex = now.getDay();
+    const reordered = [...weeklyData.slice(todayIndex + 1), ...weeklyData.slice(0, todayIndex + 1)];
+    return reordered;
+  };
 
-  const getMockEarningsData = () => {
+  const getEmptyEarningsData = () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map(day => ({
-      day,
-      earnings: Math.floor(Math.random() * 5000) + 2000
-    }));
+    return days.map(day => ({ day, earnings: 0 }));
   };
 
   const getStatusColor = (status) => {

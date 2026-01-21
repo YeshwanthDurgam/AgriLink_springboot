@@ -37,8 +37,8 @@ public class OrderService {
      * Create a new order.
      */
     @Transactional
-    public OrderDto createOrder(UUID buyerId, CreateOrderRequest request, 
-                                 UUID sellerId, String productName, BigDecimal unitPrice) {
+    public OrderDto createOrder(UUID buyerId, CreateOrderRequest request,
+            UUID sellerId, String productName, BigDecimal unitPrice) {
         log.info("Creating order for buyer: {} from listing: {}", buyerId, request.getListingId());
 
         BigDecimal subtotal = unitPrice.multiply(request.getQuantity());
@@ -203,6 +203,58 @@ public class OrderService {
     @Transactional
     public OrderDto completeOrder(UUID orderId, UUID userId) {
         return updateOrderStatus(orderId, userId, Order.OrderStatus.COMPLETED, "Order completed");
+    }
+
+    /**
+     * Start demo progress - automatically progress order status through stages.
+     * This is for demo/testing purposes only.
+     */
+    public void startDemoProgress(UUID orderId) {
+        log.info("Starting demo progress for order: {}", orderId);
+
+        // Run in a separate thread to not block the request
+        new Thread(() -> {
+            try {
+                Order.OrderStatus[] statuses = {
+                        Order.OrderStatus.CONFIRMED,
+                        Order.OrderStatus.PROCESSING,
+                        Order.OrderStatus.SHIPPED,
+                        Order.OrderStatus.DELIVERED
+                };
+
+                for (Order.OrderStatus status : statuses) {
+                    Thread.sleep(5000); // 5 second delay between status changes
+
+                    try {
+                        Order order = orderRepository.findById(orderId).orElse(null);
+                        if (order == null || order.getStatus() == Order.OrderStatus.CANCELLED) {
+                            log.info("Order {} not found or cancelled, stopping demo progress", orderId);
+                            break;
+                        }
+                        if (order.getStatus() == Order.OrderStatus.DELIVERED) {
+                            log.info("Order {} already delivered, stopping demo progress", orderId);
+                            break;
+                        }
+
+                        order.setStatus(status);
+                        OrderStatusHistory history = OrderStatusHistory.builder()
+                                .status(status)
+                                .notes("Demo: Status updated to " + status)
+                                .changedBy(order.getSellerId())
+                                .build();
+                        order.addStatusHistory(history);
+                        orderRepository.save(order);
+
+                        log.info("Demo progress: Order {} status updated to {}", orderId, status);
+                    } catch (Exception e) {
+                        log.error("Error updating order status in demo mode: {}", e.getMessage());
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Demo progress interrupted for order: {}", orderId);
+            }
+        }).start();
     }
 
     private String generateOrderNumber() {

@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './components/ToastNotification';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 
@@ -15,6 +16,8 @@ import Farms from './pages/Farms';
 import FarmDetail from './pages/FarmDetail';
 import CreateFarm from './pages/CreateFarm';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import OrderConfirmation from './pages/OrderConfirmation';
 import Marketplace from './pages/Marketplace';
 import Devices from './pages/Devices';
 import Cart from './pages/Cart';
@@ -39,9 +42,10 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="app">
-          <Navbar />
+      <ToastProvider>
+        <Router>
+          <div className="app">
+            <Navbar />
           <main className="main-content">
             <Routes>
               {/* Public Routes */}
@@ -93,6 +97,16 @@ function App() {
               <Route path="/orders" element={
                 <PrivateRoute>
                   <Orders />
+                </PrivateRoute>
+              } />
+              <Route path="/orders/:orderId" element={
+                <PrivateRoute>
+                  <OrderDetail />
+                </PrivateRoute>
+              } />
+              <Route path="/order-confirmation/:orderId" element={
+                <PrivateRoute>
+                  <OrderConfirmation />
                 </PrivateRoute>
               } />
               <Route path="/marketplace/listing/:id" element={
@@ -174,6 +188,7 @@ function App() {
           />
         </div>
       </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

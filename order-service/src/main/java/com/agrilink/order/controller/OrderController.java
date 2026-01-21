@@ -199,4 +199,17 @@ public class OrderController {
         OrderDto order = orderService.completeOrder(orderId, userId);
         return ResponseEntity.ok(ApiResponse.success("Order completed", order));
     }
+
+    /**
+     * Start demo progress for an order.
+     * This simulates order lifecycle progression for demo/testing purposes.
+     * POST /api/v1/orders/{orderId}/demo-progress
+     */
+    @PostMapping("/{orderId}/demo-progress")
+    public ResponseEntity<ApiResponse<String>> startDemoProgress(
+            @PathVariable UUID orderId) {
+        log.info("Starting demo progress for order: {}", orderId);
+        orderService.startDemoProgress(orderId);
+        return ResponseEntity.ok(ApiResponse.success("Demo progress started for order"));
+    }
 }

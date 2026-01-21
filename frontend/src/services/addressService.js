@@ -9,7 +9,8 @@ const addressService = {
    */
   getAddresses: async () => {
     const response = await userApi.get('/addresses');
-    return response.data;
+    // Handle both direct array and wrapped response
+    return response.data?.data || response.data || [];
   },
 
   /**
@@ -17,7 +18,7 @@ const addressService = {
    */
   getAddress: async (addressId) => {
     const response = await userApi.get(`/addresses/${addressId}`);
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -25,7 +26,7 @@ const addressService = {
    */
   getDefaultAddress: async () => {
     const response = await userApi.get('/addresses/default');
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -33,7 +34,7 @@ const addressService = {
    */
   getShippingAddresses: async () => {
     const response = await userApi.get('/addresses/shipping');
-    return response.data;
+    return response.data?.data || response.data || [];
   },
 
   /**
@@ -41,7 +42,7 @@ const addressService = {
    */
   getBillingAddresses: async () => {
     const response = await userApi.get('/addresses/billing');
-    return response.data;
+    return response.data?.data || response.data || [];
   },
 
   /**
@@ -49,7 +50,7 @@ const addressService = {
    */
   createAddress: async (addressData) => {
     const response = await userApi.post('/addresses', addressData);
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -57,7 +58,7 @@ const addressService = {
    */
   updateAddress: async (addressId, addressData) => {
     const response = await userApi.put(`/addresses/${addressId}`, addressData);
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -65,7 +66,7 @@ const addressService = {
    */
   setDefaultAddress: async (addressId) => {
     const response = await userApi.patch(`/addresses/${addressId}/default`);
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -73,7 +74,7 @@ const addressService = {
    */
   deleteAddress: async (addressId) => {
     const response = await userApi.delete(`/addresses/${addressId}`);
-    return response.data;
+    return response.data?.data || response.data;
   },
 
   /**
@@ -81,7 +82,7 @@ const addressService = {
    */
   getAddressCount: async () => {
     const response = await userApi.get('/addresses/count');
-    return response.data.count;
+    return response.data?.count || response.data?.data?.count || 0;
   }
 };
 

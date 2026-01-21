@@ -1,0 +1,140 @@
+# =====================================================
+# AgriLink - Docker Compose for Neon Database
+# =====================================================
+# Use this instead of docker-compose.yml when running with Neon
+# Run: docker-compose -f docker-compose.neon.yml up
+
+services:
+  # Auth Service (using Neon Database)
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: agrilink-auth-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${AUTH_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_auth?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    ports:
+      - "8081:8081"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # User Service (using Neon Database)
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: agrilink-user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${USER_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_user?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+    ports:
+      - "8082:8082"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # Farm Service (using Neon Database)
+  farm-service:
+    build:
+      context: ./farm-service
+      dockerfile: Dockerfile
+    container_name: agrilink-farm-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${FARM_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_farm?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+    ports:
+      - "8083:8083"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # Marketplace Service (using Neon Database)
+  marketplace-service:
+    build:
+      context: ./marketplace-service
+      dockerfile: Dockerfile
+    container_name: agrilink-marketplace-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${MARKETPLACE_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_marketplace?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+      USER_SERVICE_URL: http://user-service:8082
+    ports:
+      - "8084:8084"
+    depends_on:
+      - user-service
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # Order Service (using Neon Database)
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: agrilink-order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${ORDER_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_order?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+    ports:
+      - "8085:8085"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # IoT Service (using Neon Database)
+  iot-service:
+    build:
+      context: ./iot-service
+      dockerfile: Dockerfile
+    container_name: agrilink-iot-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${IOT_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_iot?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+    ports:
+      - "8086:8086"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+  # Notification Service (using Neon Database)
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: agrilink-notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: neon
+      NEON_DATASOURCE_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_notification?sslmode=require}
+      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
+      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+    ports:
+      - "8087:8087"
+    networks:
+      - agrilink-network
+    restart: unless-stopped
+
+networks:
+  agrilink-network:
+    driver: bridge

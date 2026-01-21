@@ -1,0 +1,62 @@
+# =====================================================
+# IoT Service - Neon Database Configuration
+# =====================================================
+# Activate this profile by setting: SPRING_PROFILES_ACTIVE=neon
+# Or run with: --spring.profiles.active=neon
+
+server:
+  port: 8086
+
+spring:
+  application:
+    name: iot-service
+
+  datasource:
+    # Neon Database Connection URL
+    url: jdbc:postgresql://ep-square-hill-ahcj9c6a-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=iot_schema
+    username: neondb_owner
+    password: npg_bVWzNYFB23tP
+    driver-class-name: org.postgresql.Driver
+
+    # HikariCP Connection Pool Configuration (optimized for serverless)
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+      pool-name: IoTServicePool
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    schemas: iot_schema
+    default-schema: iot_schema
+
+jwt:
+  secret: ${JWT_SECRET:myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}
+
+logging:
+  level:
+    com.agrilink: INFO
+    org.springframework.security: WARN
+    com.zaxxer.hikari: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

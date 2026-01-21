@@ -8,6 +8,7 @@ import reviewService from '../services/reviewService';
 import messagingService from '../services/messagingService';
 import ReviewList from '../components/ReviewList';
 import ReviewForm from '../components/ReviewForm';
+import ChatWidget from '../components/ChatWidget';
 import './ListingDetail.css';
 
 const ListingDetail = () => {
@@ -489,6 +490,16 @@ const ListingDetail = () => {
           currentUserId={user?.id}
         />
       </div>
+
+      {/* Chat Widget for contacting seller */}
+      {listing && listing.sellerId && user?.id !== listing.sellerId && (
+        <ChatWidget 
+          sellerId={listing.sellerId}
+          sellerName={listing.sellerName || 'Seller'}
+          listingId={listing.id}
+          listingTitle={listing.title}
+        />
+      )}
     </div>
   );
 };

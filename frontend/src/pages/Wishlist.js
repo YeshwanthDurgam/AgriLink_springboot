@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import wishlistService from '../services/wishlistService';
 import cartService from '../services/cartService';
+import EmptyState from '../components/EmptyState';
 import './Wishlist.css';
 
 const Wishlist = () => {
@@ -110,14 +111,11 @@ const Wishlist = () => {
       )}
 
       {items.length === 0 ? (
-        <div className="wishlist-empty">
-          <div className="empty-icon">💚</div>
-          <h2>Your wishlist is empty</h2>
-          <p>Save items you love by clicking the heart icon on any product.</p>
-          <Link to="/marketplace" className="btn btn-primary">
-            Explore Marketplace
-          </Link>
-        </div>
+        <EmptyState 
+          type="wishlist"
+          actionText="Explore Marketplace"
+          actionLink="/marketplace"
+        />
       ) : (
         <div className="wishlist-grid">
           {items.map(item => (

@@ -1,22 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FiPackage, FiClock, FiCheck, FiX, FiTruck, FiRefreshCw } from 'react-icons/fi';
+import { 
+  FiPackage, FiClock, FiCheck, FiX, FiTruck, FiRefreshCw,
+  FiShoppingBag, FiDollarSign, FiCalendar, FiMapPin, FiChevronRight,
+  FiEye, FiCheckCircle
+} from 'react-icons/fi';
 import orderService from '../services/orderService';
+import EmptyState from '../components/EmptyState';
 import './Orders.css';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('buyer'); // 'buyer' or 'seller'
+  const [activeTab, setActiveTab] = useState('buyer');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [activeTab, page]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       let response;
@@ -26,12 +28,13 @@ const Orders = () => {
         response = await orderService.getSellerOrders(page, 10);
       }
       
-      // Handle both paginated and array responses
-      if (response.content) {
-        setOrders(response.content);
-        setTotalPages(response.totalPages || 1);
-      } else if (Array.isArray(response)) {
-        setOrders(response);
+      // Handle paginated response with data wrapper
+      const data = response.data || response;
+      if (data.content) {
+        setOrders(data.content);
+        setTotalPages(data.totalPages || 1);
+      } else if (Array.isArray(data)) {
+        setOrders(data);
         setTotalPages(1);
       } else {
         setOrders([]);
@@ -39,12 +42,21 @@ const Orders = () => {
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      // Show empty state instead of error for no orders
       setOrders([]);
       setTotalPages(1);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [activeTab, page]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchOrders();
   };
 
   const handleCancelOrder = async (orderId) => {
@@ -59,54 +71,78 @@ const Orders = () => {
     }
   };
 
-  const handleUpdateStatus = async (orderId, status) => {
+  const handleConfirmOrder = async (orderId) => {
     try {
-      await orderService.updateOrderStatus(orderId, status);
-      toast.success(`Order status updated to ${status}`);
+      await orderService.confirmOrder(orderId);
+      toast.success('Order confirmed successfully');
+      fetchOrders();
+    } catch (error) {
+      toast.error('Failed to confirm order');
+    }
+  };
+
+  const handleShipOrder = async (orderId) => {
+    try {
+      await orderService.shipOrder(orderId);
+      toast.success('Order marked as shipped');
       fetchOrders();
     } catch (error) {
       toast.error('Failed to update order status');
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return <FiClock className="status-icon pending" />;
-      case 'CONFIRMED':
-        return <FiCheck className="status-icon confirmed" />;
-      case 'SHIPPED':
-      case 'IN_TRANSIT':
-        return <FiTruck className="status-icon shipped" />;
-      case 'DELIVERED':
-        return <FiCheck className="status-icon delivered" />;
-      case 'CANCELLED':
-        return <FiX className="status-icon cancelled" />;
-      default:
-        return <FiPackage className="status-icon" />;
+  const handleDeliverOrder = async (orderId) => {
+    try {
+      await orderService.deliverOrder(orderId);
+      toast.success('Order marked as delivered');
+      fetchOrders();
+    } catch (error) {
+      toast.error('Failed to mark order as delivered');
     }
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      'PENDING': <FiClock />,
+      'CONFIRMED': <FiCheckCircle />,
+      'PROCESSING': <FiPackage />,
+      'SHIPPED': <FiTruck />,
+      'IN_TRANSIT': <FiTruck />,
+      'DELIVERED': <FiCheck />,
+      'CANCELLED': <FiX />
+    };
+    return icons[status?.toUpperCase()] || <FiPackage />;
   };
 
   const getStatusClass = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'status-pending';
-      case 'CONFIRMED':
-        return 'status-confirmed';
-      case 'SHIPPED':
-      case 'IN_TRANSIT':
-        return 'status-shipped';
-      case 'DELIVERED':
-        return 'status-delivered';
-      case 'CANCELLED':
-        return 'status-cancelled';
-      default:
-        return '';
-    }
+    const classes = {
+      'PENDING': 'status-pending',
+      'CONFIRMED': 'status-confirmed',
+      'PROCESSING': 'status-processing',
+      'SHIPPED': 'status-shipped',
+      'IN_TRANSIT': 'status-shipped',
+      'DELIVERED': 'status-delivered',
+      'CANCELLED': 'status-cancelled'
+    };
+    return classes[status?.toUpperCase()] || 'status-pending';
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'PENDING': 'Pending',
+      'CONFIRMED': 'Confirmed',
+      'PROCESSING': 'Processing',
+      'SHIPPED': 'Shipped',
+      'IN_TRANSIT': 'In Transit',
+      'DELIVERED': 'Delivered',
+      'CANCELLED': 'Cancelled'
+    };
+    return labels[status?.toUpperCase()] || status;
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -116,147 +152,222 @@ const Orders = () => {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR',
+      minimumFractionDigits: 2
     }).format(price || 0);
+  };
+
+  const getDeliveryEstimate = (status, createdAt) => {
+    if (status === 'DELIVERED') return 'Delivered';
+    if (status === 'CANCELLED') return 'Cancelled';
+    const date = new Date(createdAt);
+    date.setDate(date.getDate() + 5);
+    return `Est. ${date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}`;
   };
 
   return (
     <div className="orders-page">
+      {/* Header */}
       <div className="orders-header">
-        <h1><FiPackage /> Orders</h1>
-        <button className="refresh-btn" onClick={fetchOrders}>
+        <div className="header-left">
+          <FiPackage className="header-icon" />
+          <div>
+            <h1>My Orders</h1>
+            <p className="header-subtitle">Track and manage your orders</p>
+          </div>
+        </div>
+        <button 
+          className={`refresh-btn ${refreshing ? 'refreshing' : ''}`} 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
           <FiRefreshCw /> Refresh
         </button>
       </div>
 
+      {/* Tabs */}
       <div className="orders-tabs">
         <button
           className={`tab-btn ${activeTab === 'buyer' ? 'active' : ''}`}
           onClick={() => { setActiveTab('buyer'); setPage(0); }}
         >
-          My Purchases
+          <FiShoppingBag /> My Purchases
         </button>
         <button
           className={`tab-btn ${activeTab === 'seller' ? 'active' : ''}`}
           onClick={() => { setActiveTab('seller'); setPage(0); }}
         >
-          My Sales
+          <FiDollarSign /> My Sales
         </button>
       </div>
 
+      {/* Content */}
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading orders...</p>
+          <p>Loading your orders...</p>
         </div>
       ) : orders.length === 0 ? (
-        <div className="empty-state">
-          <FiPackage className="empty-icon" />
-          <h2>No Orders Found</h2>
-          <p>
-            {activeTab === 'buyer'
-              ? "You haven't placed any orders yet."
-              : "You haven't received any orders yet."}
-          </p>
-          {activeTab === 'buyer' && (
-            <Link to="/marketplace" className="browse-btn">
-              Browse Marketplace
-            </Link>
-          )}
-        </div>
+        <EmptyState 
+          type={activeTab === 'buyer' ? 'orders' : 'seller-orders'}
+        />
       ) : (
         <>
+          {/* Orders List */}
           <div className="orders-list">
             {orders.map((order) => (
               <div key={order.id} className="order-card">
-                <div className="order-header">
-                  <div className="order-id">
-                    <span className="label">Order #</span>
-                    <span className="value">{order.id?.slice(0, 8) || 'N/A'}</span>
+                {/* Card Header */}
+                <div className="card-header">
+                  <div className="order-info">
+                    <div className="order-number">
+                      <span className="label">Order</span>
+                      <span className="value">#{order.orderNumber || order.id?.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <div className="order-date">
+                      <FiCalendar />
+                      <span>{formatDate(order.createdAt)}</span>
+                    </div>
                   </div>
                   <div className={`order-status ${getStatusClass(order.status)}`}>
                     {getStatusIcon(order.status)}
-                    <span>{order.status || 'PENDING'}</span>
+                    <span>{getStatusLabel(order.status)}</span>
                   </div>
                 </div>
 
-                <div className="order-body">
-                  <div className="order-info">
-                    <div className="info-row">
-                      <span className="label">Date:</span>
-                      <span className="value">{formatDate(order.createdAt || new Date())}</span>
+                {/* Card Body */}
+                <div className="card-body">
+                  {/* Product Info */}
+                  <div className="product-section">
+                    <div className="product-image">
+                      {order.items?.[0]?.imageUrl ? (
+                        <img src={order.items[0].imageUrl} alt="Product" />
+                      ) : (
+                        <div className="placeholder-image">🌾</div>
+                      )}
                     </div>
-                    {order.listing && (
-                      <div className="info-row">
-                        <span className="label">Product:</span>
-                        <span className="value">{order.listing.title}</span>
+                    <div className="product-details">
+                      <h3 className="product-name">
+                        {order.items?.[0]?.productName || order.listing?.title || order.productName || 'Agricultural Product'}
+                      </h3>
+                      <p className="product-quantity">
+                        Qty: {order.items?.[0]?.quantity || order.quantity || 1} {order.items?.[0]?.unit || order.unit || 'kg'}
+                      </p>
+                      {order.items?.length > 1 && (
+                        <p className="more-items">+{order.items.length - 1} more items</p>
+                      )}
+                    </div>
+                    <div className="price-section">
+                      <span className="total-label">Total</span>
+                      <span className="total-amount">{formatPrice(order.totalAmount)}</span>
+                    </div>
+                  </div>
+
+                  {/* Delivery Info */}
+                  <div className="delivery-section">
+                    <div className="delivery-estimate">
+                      <FiTruck />
+                      <span>{getDeliveryEstimate(order.status, order.createdAt)}</span>
+                    </div>
+                    {order.shippingAddress && (
+                      <div className="delivery-address">
+                        <FiMapPin />
+                        <span>
+                          {typeof order.shippingAddress === 'string' 
+                            ? order.shippingAddress 
+                            : `${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}`}
+                        </span>
                       </div>
                     )}
-                    <div className="info-row">
-                      <span className="label">Quantity:</span>
-                      <span className="value">{order.quantity || 1} {order.unit || 'units'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="label">Total:</span>
-                      <span className="value total">{formatPrice(order.totalAmount)}</span>
-                    </div>
                   </div>
-
-                  {order.shippingAddress && (
-                    <div className="shipping-info">
-                      <span className="label">Shipping to:</span>
-                      <p>{order.shippingAddress}</p>
-                    </div>
-                  )}
                 </div>
 
-                <div className="order-actions">
-                  {activeTab === 'buyer' && order.status === 'PENDING' && (
-                    <button
-                      className="cancel-btn"
-                      onClick={() => handleCancelOrder(order.id)}
-                    >
-                      <FiX /> Cancel Order
-                    </button>
-                  )}
-                  
-                  {activeTab === 'seller' && (
-                    <>
-                      {order.status === 'PENDING' && (
-                        <button
-                          className="confirm-btn"
-                          onClick={() => handleUpdateStatus(order.id, 'CONFIRMED')}
-                        >
-                          <FiCheck /> Confirm
-                        </button>
-                      )}
-                      {order.status === 'CONFIRMED' && (
-                        <button
-                          className="ship-btn"
-                          onClick={() => handleUpdateStatus(order.id, 'SHIPPED')}
-                        >
-                          <FiTruck /> Mark Shipped
-                        </button>
-                      )}
-                    </>
-                  )}
+                {/* Card Footer - Actions */}
+                <div className="card-footer">
+                  <Link to={`/order-confirmation/${order.id}`} className="view-details-btn">
+                    <FiEye /> View Details
+                    <FiChevronRight />
+                  </Link>
+
+                  <div className="action-buttons">
+                    {/* Buyer Actions */}
+                    {activeTab === 'buyer' && order.status === 'PENDING' && (
+                      <button
+                        className="cancel-btn"
+                        onClick={() => handleCancelOrder(order.id)}
+                      >
+                        <FiX /> Cancel
+                      </button>
+                    )}
+
+                    {/* Seller Actions */}
+                    {activeTab === 'seller' && (
+                      <>
+                        {order.status === 'PENDING' && (
+                          <button
+                            className="confirm-btn"
+                            onClick={() => handleConfirmOrder(order.id)}
+                          >
+                            <FiCheck /> Confirm
+                          </button>
+                        )}
+                        {(order.status === 'CONFIRMED' || order.status === 'PROCESSING') && (
+                          <button
+                            className="ship-btn"
+                            onClick={() => handleShipOrder(order.id)}
+                          >
+                            <FiTruck /> Ship
+                          </button>
+                        )}
+                        {order.status === 'SHIPPED' && (
+                          <button
+                            className="deliver-btn"
+                            onClick={() => handleDeliverOrder(order.id)}
+                          >
+                            <FiCheck /> Mark Delivered
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
+
+                {/* Progress Bar */}
+                {order.status !== 'CANCELLED' && (
+                  <div className="progress-bar-container">
+                    <div 
+                      className={`progress-bar ${getStatusClass(order.status)}`}
+                      style={{
+                        width: order.status === 'PENDING' ? '20%' :
+                               order.status === 'CONFIRMED' ? '40%' :
+                               order.status === 'PROCESSING' ? '60%' :
+                               order.status === 'SHIPPED' ? '80%' :
+                               order.status === 'DELIVERED' ? '100%' : '10%'
+                      }}
+                    ></div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination">
               <button
+                className="page-btn"
                 disabled={page === 0}
                 onClick={() => setPage(p => p - 1)}
               >
                 Previous
               </button>
-              <span>Page {page + 1} of {totalPages}</span>
+              <div className="page-info">
+                Page {page + 1} of {totalPages}
+              </div>
               <button
+                className="page-btn"
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage(p => p + 1)}
               >
