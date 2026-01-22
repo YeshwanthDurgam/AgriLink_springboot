@@ -427,12 +427,15 @@ const Messages = () => {
   useEffect(() => {
     // Check if we need to start a new conversation from listing
     const sellerId = searchParams.get('sellerId');
+    const farmerId = searchParams.get('farmer'); // From Farmers page
     const listingId = searchParams.get('listingId');
     const listingTitle = searchParams.get('listingTitle');
     const contactAdmin = searchParams.get('contactAdmin');
 
     if (sellerId) {
       startNewConversation(sellerId, listingId, listingTitle);
+    } else if (farmerId) {
+      startNewConversation(farmerId, null, null);
     } else if (contactAdmin) {
       contactSupport();
     }
@@ -563,6 +566,9 @@ const Messages = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Show error to user
+      const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again.';
+      alert(errorMessage);
     }
   };
 

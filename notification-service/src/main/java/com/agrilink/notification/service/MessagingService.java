@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,17 +30,32 @@ public class MessagingService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final UserServiceClient userServiceClient;
+    private final NotificationService notificationService;
 
     /**
-     * Send a message to another user.
+     * Send a message to another user with role-based validation.
+     * 
+     * Role-based messaging rules:
+     * - CUSTOMER can only message FARMER
+     * - FARMER can message CUSTOMER, MANAGER, or ADMIN
+     * - MANAGER can only message FARMER
+     * - ADMIN can message FARMER or MANAGER
      */
     @Transactional
-    public MessageDto sendMessage(UUID senderId, SendMessageRequest request) {
-        log.info("User {} sending message to {}", senderId, request.getRecipientId());
+    public MessageDto sendMessage(UUID senderId, String senderRole, SendMessageRequest request) {
+        log.info("User {} (role: {}) sending message to {}", senderId, senderRole, request.getRecipientId());
 
         if (senderId.equals(request.getRecipientId())) {
             throw new BadRequestException("Cannot send message to yourself");
         }
+
+        // Get recipient's role
+        String recipientRole = userServiceClient.getUserRole(request.getRecipientId());
+        log.info("Recipient {} has role: {}", request.getRecipientId(), recipientRole);
+
+        // Validate role-based messaging rules
+        validateMessagingPermission(senderRole, recipientRole);
 
         // Find or create conversation
         Conversation conversation = findOrCreateConversation(
@@ -69,7 +85,58 @@ public class MessagingService {
 
         log.info("Message sent with id: {}", message.getId());
 
+        // Send notification to recipient
+        try {
+            String senderName = userServiceClient.getUserName(senderId);
+            notificationService.sendNotification(
+                    request.getRecipientId(),
+                    "New Message from " + senderName,
+                    truncateMessage(request.getContent()),
+                    "MESSAGE",
+                    message.getId().toString()
+            );
+        } catch (Exception e) {
+            log.warn("Failed to send message notification: {}", e.getMessage());
+        }
+
         return mapToMessageDto(message, senderId);
+    }
+
+    /**
+     * Validate if sender is allowed to message recipient based on their roles.
+     */
+    private void validateMessagingPermission(String senderRole, String recipientRole) {
+        boolean allowed = switch (senderRole.toUpperCase()) {
+            case "CUSTOMER", "BUYER" -> 
+                // Customer can only message Farmer
+                Set.of("FARMER").contains(recipientRole.toUpperCase());
+            case "FARMER" -> 
+                // Farmer can message Customer, Manager, or Admin
+                Set.of("CUSTOMER", "BUYER", "MANAGER", "ADMIN").contains(recipientRole.toUpperCase());
+            case "MANAGER" -> 
+                // Manager can only message Farmer
+                Set.of("FARMER").contains(recipientRole.toUpperCase());
+            case "ADMIN" -> 
+                // Admin can message Farmer or Manager
+                Set.of("FARMER", "MANAGER").contains(recipientRole.toUpperCase());
+            default -> false;
+        };
+
+        if (!allowed) {
+            throw new BadRequestException(
+                String.format("Users with role %s cannot send messages to users with role %s", 
+                    senderRole, recipientRole)
+            );
+        }
+    }
+
+    /**
+     * Send a message (legacy method for backward compatibility).
+     */
+    @Transactional
+    public MessageDto sendMessage(UUID senderId, SendMessageRequest request) {
+        // Default to CUSTOMER role if not provided (maintains backward compatibility)
+        return sendMessage(senderId, "CUSTOMER", request);
     }
 
     /**
@@ -171,9 +238,13 @@ public class MessagingService {
     }
 
     private ConversationDto mapToConversationDto(Conversation conversation, UUID currentUserId) {
+        UUID otherParticipantId = conversation.getOtherParticipant(currentUserId);
+        String otherParticipantName = userServiceClient.getUserName(otherParticipantId);
+        
         return ConversationDto.builder()
                 .id(conversation.getId())
-                .otherParticipantId(conversation.getOtherParticipant(currentUserId))
+                .otherParticipantId(otherParticipantId)
+                .otherParticipantName(otherParticipantName)
                 .listingId(conversation.getListingId())
                 .listingTitle(conversation.getListingTitle())
                 .lastMessagePreview(conversation.getLastMessagePreview())

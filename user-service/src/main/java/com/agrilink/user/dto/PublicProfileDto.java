@@ -24,4 +24,5 @@ public class PublicProfileDto {
     private String city;
     private String state;
     private String profilePictureUrl;
+    private String role; // FARMER, CUSTOMER, MANAGER, or ADMIN
 }

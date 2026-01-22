@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +34,7 @@ public class MessagingController {
     private final MessagingService messagingService;
 
     /**
-     * Send a message
+     * Send a message with role-based validation.
      */
     @PostMapping
     public ResponseEntity<ApiResponse<MessageDto>> sendMessage(
@@ -41,7 +42,8 @@ public class MessagingController {
             Authentication authentication,
             @Valid @RequestBody SendMessageRequest sendRequest) {
         UUID senderId = extractUserId(request, authentication);
-        MessageDto message = messagingService.sendMessage(senderId, sendRequest);
+        String senderRole = extractUserRole(authentication);
+        MessageDto message = messagingService.sendMessage(senderId, senderRole, sendRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Message sent", message));
     }
@@ -136,5 +138,27 @@ public class MessagingController {
             return UUID.fromString(userIdStr);
         }
         return UUID.nameUUIDFromBytes(authentication.getName().getBytes());
+    }
+
+    /**
+     * Extract user's primary role from JWT authorities.
+     * Priority: ADMIN > MANAGER > FARMER > CUSTOMER
+     */
+    private String extractUserRole(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return "CUSTOMER";
+        }
+        
+        // Check for roles in order of priority
+        for (String role : new String[]{"ADMIN", "MANAGER", "FARMER", "CUSTOMER", "BUYER"}) {
+            for (GrantedAuthority authority : authentication.getAuthorities()) {
+                String auth = authority.getAuthority().toUpperCase();
+                if (auth.equals(role) || auth.equals("ROLE_" + role)) {
+                    return role;
+                }
+            }
+        }
+        
+        return "CUSTOMER";
     }
 }

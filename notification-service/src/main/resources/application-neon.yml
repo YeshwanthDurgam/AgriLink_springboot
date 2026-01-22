@@ -81,3 +81,8 @@ notification:
     provider: twilio
   push:
     enabled: false
+
+# Microservice URLs
+user:
+  service:
+    url: ${USER_SERVICE_URL:http://localhost:8082}

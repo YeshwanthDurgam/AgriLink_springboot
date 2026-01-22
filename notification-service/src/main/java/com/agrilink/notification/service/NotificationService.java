@@ -77,6 +77,27 @@ public class NotificationService {
     }
 
     /**
+     * Send a simple in-app notification.
+     * Convenience method for sending MESSAGE type notifications.
+     */
+    @Transactional
+    public void sendNotification(UUID userId, String title, String message, String type, String referenceId) {
+        try {
+            SendNotificationRequest request = SendNotificationRequest.builder()
+                    .userId(userId)
+                    .notificationType(Notification.NotificationType.MESSAGE)
+                    .channel(Notification.Channel.IN_APP)
+                    .title(title)
+                    .message(message)
+                    .data(Map.of("type", type, "referenceId", referenceId))
+                    .build();
+            sendNotification(request);
+        } catch (Exception e) {
+            log.warn("Failed to send notification to user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    /**
      * Send notification using a template.
      */
     @Transactional

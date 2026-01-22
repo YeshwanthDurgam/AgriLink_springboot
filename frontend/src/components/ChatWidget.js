@@ -36,7 +36,8 @@ const ChatWidget = ({ sellerId, sellerName, listingId, listingTitle }) => {
     setLoading(true);
     try {
       // Check if conversation already exists
-      const conversations = await messagingService.getConversations();
+      const response = await messagingService.getConversations();
+      const conversations = response?.data?.content || response?.content || [];
       const existing = conversations.find(c => 
         c.otherParticipantId === sellerId && 
         (!listingId || c.listingId === listingId)
@@ -46,7 +47,7 @@ const ChatWidget = ({ sellerId, sellerName, listingId, listingTitle }) => {
         setConversationId(existing.id);
         // Load messages
         const msgs = await messagingService.getConversationMessages(existing.id);
-        setMessages(msgs.content || msgs || []);
+        setMessages(msgs || []);
       }
     } catch (err) {
       console.error('Error loading conversation:', err);
@@ -104,7 +105,7 @@ const ChatWidget = ({ sellerId, sellerName, listingId, listingTitle }) => {
       setTimeout(async () => {
         try {
           const msgs = await messagingService.getConversationMessages(convId);
-          setMessages(msgs.content || msgs || []);
+          setMessages(msgs || []);
         } catch (err) {
           console.error('Error refreshing messages:', err);
         }

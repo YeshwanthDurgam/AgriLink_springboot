@@ -4,6 +4,7 @@ import com.agrilink.user.dto.PublicProfileDto;
 import com.agrilink.user.dto.UpdateProfileRequest;
 import com.agrilink.user.dto.UserProfileDto;
 import com.agrilink.user.entity.UserProfile;
+import com.agrilink.user.repository.FarmerProfileRepository;
 import com.agrilink.user.repository.UserProfileRepository;
 import com.agrilink.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
+    private final FarmerProfileRepository farmerProfileRepository;
 
     /**
      * Get user profile by user ID, creating if not exists.
@@ -133,6 +135,9 @@ public class UserProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElse(null);
         
+        // Determine user role
+        String role = determineUserRole(userId);
+        
         if (profile == null) {
             // Return a default profile for unknown users
             return PublicProfileDto.builder()
@@ -143,10 +148,11 @@ public class UserProfileService {
                     .city("")
                     .state("")
                     .profilePictureUrl("https://randomuser.me/api/portraits/men/32.jpg")
+                    .role(role)
                     .build();
         }
 
-        return mapToPublicDto(profile);
+        return mapToPublicDto(profile, role);
     }
 
     /**
@@ -159,21 +165,38 @@ public class UserProfileService {
         List<UserProfile> profiles = userProfileRepository.findByUserIdIn(userIds);
         
         return userIds.stream()
-                .map(userId -> profiles.stream()
+                .map(userId -> {
+                    String role = determineUserRole(userId);
+                    return profiles.stream()
                         .filter(p -> p.getUserId().equals(userId))
                         .findFirst()
-                        .map(this::mapToPublicDto)
+                        .map(p -> mapToPublicDto(p, role))
                         .orElse(PublicProfileDto.builder()
                                 .userId(userId)
                                 .firstName("Farmer")
                                 .lastName("")
                                 .fullName("Farmer")
                                 .profilePictureUrl("https://randomuser.me/api/portraits/men/32.jpg")
-                                .build()))
+                                .role(role)
+                                .build());
+                })
                 .collect(Collectors.toList());
     }
 
-    private PublicProfileDto mapToPublicDto(UserProfile profile) {
+    /**
+     * Determine user role based on their profiles.
+     * Priority: FARMER > CUSTOMER (default)
+     */
+    private String determineUserRole(UUID userId) {
+        // Check if user has a farmer profile
+        if (farmerProfileRepository.existsByUserId(userId)) {
+            return "FARMER";
+        }
+        // Default to CUSTOMER
+        return "CUSTOMER";
+    }
+
+    private PublicProfileDto mapToPublicDto(UserProfile profile, String role) {
         String fullName = "";
         if (profile.getFirstName() != null) {
             fullName = profile.getFirstName();
@@ -192,6 +215,7 @@ public class UserProfileService {
                 .profilePictureUrl(profile.getProfilePictureUrl() != null 
                         ? profile.getProfilePictureUrl() 
                         : "https://randomuser.me/api/portraits/men/32.jpg")
+                .role(role)
                 .build();
     }
 }
