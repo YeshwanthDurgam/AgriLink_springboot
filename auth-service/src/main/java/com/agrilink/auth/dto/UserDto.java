@@ -20,8 +20,11 @@ public class UserDto {
 
     private UUID id;
     private String email;
+    private String name;
     private String phone;
     private Set<String> roles;
     private boolean enabled;
+    private boolean profileComplete;
+    private String profileStatus;
     private LocalDateTime createdAt;
 }

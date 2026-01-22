@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiPackage, FiShoppingBag, FiTrendingUp, FiDollarSign, FiUsers, FiBarChart2,
   FiPlus, FiMessageSquare, FiStar, FiAlertCircle, FiChevronRight, FiMap,
-  FiCpu, FiSettings, FiEye, FiEdit2, FiClock
+  FiCpu, FiSettings, FiEye, FiEdit2, FiClock, FiCheckCircle, FiXCircle, FiUser
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { marketplaceApi, orderApi, farmApi } from '../services/api';
+import { marketplaceApi, orderApi, farmApi, userApi } from '../services/api';
 import './FarmerDashboard.css';
 
 const FarmerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [profileStatus, setProfileStatus] = useState(null);
   const [stats, setStats] = useState({
     totalProducts: 0,
     activeListings: 0,
@@ -29,7 +30,19 @@ const FarmerDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchProfileStatus();
   }, []);
+
+  const fetchProfileStatus = async () => {
+    try {
+      const res = await userApi.get('/profiles/farmer');
+      setProfileStatus(res.data?.data?.status || res.data?.status || null);
+    } catch (error) {
+      // Profile might not exist yet
+      console.log('Profile not found or error fetching:', error);
+      setProfileStatus(null);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -169,18 +182,49 @@ const FarmerDashboard = () => {
   };
 
   const menuItems = [
-    { icon: FiShoppingBag, label: 'Products', path: '/farmer/products', count: stats.totalProducts },
-    { icon: FiPackage, label: 'Orders', path: '/farmer/orders', badge: stats.pendingOrders > 0 },
-    { icon: FiMap, label: 'My Farms', path: '/farms' },
-    { icon: FiCpu, label: 'IoT Devices', path: '/devices' },
-    { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
-    { icon: FiMessageSquare, label: 'Messages', path: '/messages' },
+    { icon: FiUser, label: 'My Profile', path: '/profile/onboarding' },
+    { icon: FiMap, label: 'Farms', path: '/farms' },
+    { icon: FiMessageSquare, label: 'Chats', path: '/messages' },
+    { icon: FiShoppingBag, label: 'My Products', path: '/farmer/products', count: stats.totalProducts },
+    { icon: FiPackage, label: 'My Sales', path: '/farmer/orders', badge: stats.pendingOrders > 0 },
+    { icon: FiDollarSign, label: 'Income', path: '/analytics' },
     { icon: FiUsers, label: 'Followers', path: '/farmer/followers', count: stats.followers },
     { icon: FiSettings, label: 'Settings', path: '/settings' }
   ];
 
   return (
     <div className="farmer-dashboard">
+      {/* Verification Status Banner */}
+      {profileStatus === 'PENDING' && (
+        <div className="verification-banner pending">
+          <FiClock className="banner-icon" />
+          <div className="banner-content">
+            <h4>Profile Verification Pending</h4>
+            <p>Your profile is under review. Some features like creating listings may be limited until approved.</p>
+          </div>
+          <Link to="/profile/onboarding" className="banner-action">View Profile</Link>
+        </div>
+      )}
+      {profileStatus === 'REJECTED' && (
+        <div className="verification-banner rejected">
+          <FiXCircle className="banner-icon" />
+          <div className="banner-content">
+            <h4>Profile Verification Rejected</h4>
+            <p>Please update your profile information and resubmit for verification.</p>
+          </div>
+          <Link to="/profile/onboarding" className="banner-action">Update Profile</Link>
+        </div>
+      )}
+      {profileStatus === 'APPROVED' && (
+        <div className="verification-banner approved">
+          <FiCheckCircle className="banner-icon" />
+          <div className="banner-content">
+            <h4>Verified Farmer</h4>
+            <p>Your profile is verified. You have full access to all features.</p>
+          </div>
+        </div>
+      )}
+
       {/* Header Section */}
       <section className="dashboard-header">
         <div className="header-content">

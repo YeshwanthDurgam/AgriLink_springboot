@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ToastNotification';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
+import AuthLayout from './components/AuthLayout';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -33,11 +34,33 @@ import Deals from './pages/Deals';
 import BuyerDashboard from './pages/BuyerDashboard';
 import FarmerDashboard from './pages/FarmerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
 import CreateListing from './pages/CreateListing';
 import FarmerProducts from './pages/FarmerProducts';
+import FarmerFollowers from './pages/FarmerFollowers';
+import FarmerOrders from './pages/FarmerOrders';
 import EditListing from './pages/EditListing';
+import ProfileOnboarding from './pages/ProfileOnboarding';
 
 import './App.css';
+
+// Layout wrapper that conditionally shows Navbar
+const AppLayout = ({ children }) => {
+  const location = useLocation();
+  const authRoutes = ['/login', '/register'];
+  const isAuthRoute = authRoutes.includes(location.pathname);
+
+  if (isAuthRoute) {
+    return <AuthLayout>{children}</AuthLayout>;
+  }
+
+  return (
+    <>
+      <Navbar />
+      <main className="main-content">{children}</main>
+    </>
+  );
+};
 
 function App() {
   return (
@@ -45,13 +68,40 @@ function App() {
       <ToastProvider>
         <Router>
           <div className="app">
-            <Navbar />
-          <main className="main-content">
             <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              {/* Auth Routes - with AuthLayout */}
+              <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
+              <Route path="/register" element={<AuthLayout><Register /></AuthLayout>} />
+              
+              {/* All other routes wrapped with Navbar */}
+              <Route path="/*" element={<AppContent />} />
+            </Routes>
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+            />
+          </div>
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}
+
+// Separate component for routes with Navbar
+const AppContent = () => {
+  return (
+    <>
+      <Navbar />
+      <main className="main-content">
+        <Routes>
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/marketplace/:id" element={<ListingDetail />} />
               <Route path="/farmers" element={<Farmers />} />
@@ -129,6 +179,16 @@ function App() {
                   <FarmerProducts />
                 </PrivateRoute>
               } />
+              <Route path="/farmer/followers" element={
+                <PrivateRoute>
+                  <FarmerFollowers />
+                </PrivateRoute>
+              } />
+              <Route path="/farmer/orders" element={
+                <PrivateRoute>
+                  <FarmerOrders />
+                </PrivateRoute>
+              } />
               <Route path="/cart" element={
                 <PrivateRoute>
                   <Cart />
@@ -169,28 +229,24 @@ function App() {
                   <Profile />
                 </PrivateRoute>
               } />
+              <Route path="/profile/onboarding" element={
+                <PrivateRoute>
+                  <ProfileOnboarding />
+                </PrivateRoute>
+              } />
+              <Route path="/manager/dashboard" element={
+                <PrivateRoute>
+                  <ManagerDashboard />
+                </PrivateRoute>
+              } />
               
-              {/* Default Redirect */}
+              {/* Default Routes */}
+              <Route path="/" element={<Home />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
-        </div>
-      </Router>
-      </ToastProvider>
-    </AuthProvider>
+    </>
   );
-}
+};
 
 export default App;

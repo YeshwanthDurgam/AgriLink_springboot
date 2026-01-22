@@ -48,6 +48,11 @@ public interface FollowedFarmerRepository extends JpaRepository<FollowedFarmer, 
     long countByFarmerId(UUID farmerId);
 
     /**
+     * Get all follow records for a specific farmer.
+     */
+    List<FollowedFarmer> findByFarmerId(UUID farmerId);
+
+    /**
      * Get all users following a specific farmer.
      */
     @Query("SELECT f.userId FROM FollowedFarmer f WHERE f.farmerId = :farmerId")

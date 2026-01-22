@@ -41,20 +41,46 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .input-icon {
   position: absolute;
   left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-secondary);
   font-size: 18px;
-  z-index: 1;
+  z-index: 2;
+  pointer-events: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
 }
 
 .input-wrapper input,
 .input-wrapper select {
+  width: 100%;
   padding-left: 44px;
+  padding-right: 14px;
   height: 48px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius, 8px);
+  font-size: 14px;
+  background: var(--surface-color, #fff);
+  color: var(--text-primary);
+}
+
+.input-wrapper input:focus,
+.input-wrapper select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+.input-wrapper input.has-toggle {
+  padding-right: 44px;
 }
 
 .input-wrapper select {

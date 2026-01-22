@@ -2,6 +2,7 @@ package com.agrilink.user.controller;
 
 import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.user.dto.FollowedFarmerDto;
+import com.agrilink.user.dto.FollowerDto;
 import com.agrilink.user.service.FollowedFarmerService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -130,5 +131,18 @@ public class FollowedFarmerController {
     public ResponseEntity<ApiResponse<Long>> getFollowerCount(@PathVariable UUID farmerId) {
         long count = followedFarmerService.getFollowerCount(farmerId);
         return ResponseEntity.ok(ApiResponse.success(count));
+    }
+
+    /**
+     * Get all followers for the current farmer.
+     * GET /api/v1/farmers/my/followers
+     * Returns list of users following this farmer with their profile info.
+     */
+    @GetMapping("/my/followers")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<List<FollowerDto>>> getMyFollowers(HttpServletRequest request) {
+        UUID farmerId = getUserIdFromRequest(request);
+        List<FollowerDto> followers = followedFarmerService.getFollowersForFarmer(farmerId);
+        return ResponseEntity.ok(ApiResponse.success(followers));
     }
 }

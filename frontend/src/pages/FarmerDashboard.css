@@ -4,6 +4,81 @@
   background: #f8fafc;
 }
 
+/* Verification Banner */
+.verification-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 40px;
+  margin: 0;
+}
+
+.verification-banner.pending {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.verification-banner.rejected {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-bottom: 2px solid #ef4444;
+}
+
+.verification-banner.approved {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-bottom: 2px solid #22c55e;
+}
+
+.verification-banner .banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.verification-banner.pending .banner-icon {
+  color: #f59e0b;
+}
+
+.verification-banner.rejected .banner-icon {
+  color: #ef4444;
+}
+
+.verification-banner.approved .banner-icon {
+  color: #22c55e;
+}
+
+.verification-banner .banner-content {
+  flex: 1;
+}
+
+.verification-banner .banner-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.verification-banner .banner-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.verification-banner .banner-action {
+  padding: 8px 16px;
+  background: white;
+  color: #1f2937;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.verification-banner .banner-action:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
 /* Header */
 .dashboard-header {
   background: linear-gradient(135deg, #1f2937 0%, #374151 100%);

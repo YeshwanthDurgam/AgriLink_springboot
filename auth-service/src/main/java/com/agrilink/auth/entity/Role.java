@@ -45,6 +45,6 @@ public class Role {
     private LocalDateTime updatedAt;
 
     public enum RoleName {
-        FARMER, BUYER, ADMIN
+        FARMER, CUSTOMER, BUYER, MANAGER, ADMIN
     }
 }

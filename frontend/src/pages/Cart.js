@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import EmptyState from '../components/EmptyState';
 import './Cart.css';
 
 const Cart = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState({});
 
+  // Block farmers from accessing cart
   useEffect(() => {
-    fetchCart();
-  }, []);
+    if (user?.roles?.includes('FARMER')) {
+      toast.error('Farmers cannot use the cart feature');
+      navigate('/farmer/dashboard');
+      return;
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!user?.roles?.includes('FARMER')) {
+      fetchCart();
+    }
+  }, [user]);
 
   const fetchCart = async () => {
     try {

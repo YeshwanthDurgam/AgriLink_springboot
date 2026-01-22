@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiPackage, FiHeart, FiUsers, FiMessageSquare, FiUser, FiShoppingCart,
   FiTrendingUp, FiClock, FiMapPin, FiAlertCircle, FiChevronRight, 
-  FiStar, FiDollarSign, FiSettings
+  FiStar, FiDollarSign, FiSettings, FiCheckCircle
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { orderApi, marketplaceApi, userApi } from '../services/api';
 import './BuyerDashboard.css';
 
 const BuyerDashboard = () => {
-  const { user } = useAuth();
+  const { user, getUserDisplayName } = useAuth();
   const navigate = useNavigate();
+  const [profileComplete, setProfileComplete] = useState(true);
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -27,7 +28,18 @@ const BuyerDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    checkProfileStatus();
   }, []);
+
+  const checkProfileStatus = async () => {
+    try {
+      const res = await userApi.get('/profiles/customer');
+      setProfileComplete(true);
+    } catch (error) {
+      // Profile doesn't exist
+      setProfileComplete(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -104,22 +116,34 @@ const BuyerDashboard = () => {
   };
 
   const menuItems = [
-    { icon: FiPackage, label: 'My Orders', path: '/orders', count: stats.totalOrders },
-    { icon: FiHeart, label: 'Wishlist', path: '/wishlist', count: stats.wishlistItems },
-    { icon: FiUsers, label: 'Following Farmers', path: '/farmers?following=true', count: stats.followingFarmers },
+    { icon: FiUser, label: 'My Profile', path: '/profile/onboarding' },
+    { icon: FiPackage, label: 'Orders', path: '/orders', count: stats.totalOrders },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', badge: true },
-    { icon: FiUser, label: 'My Profile', path: '/profile' },
-    { icon: FiAlertCircle, label: 'Report Issue', path: '/report' },
+    { icon: FiUsers, label: 'Following', path: '/farmers?following=true', count: stats.followingFarmers },
     { icon: FiSettings, label: 'Settings', path: '/settings' }
   ];
 
+  const displayName = getUserDisplayName ? getUserDisplayName() : (user?.name || user?.email?.split('@')[0] || 'User');
+
   return (
     <div className="buyer-dashboard">
+      {/* Profile Completion Banner */}
+      {!profileComplete && (
+        <div className="profile-completion-banner">
+          <FiCheckCircle className="banner-icon" />
+          <div className="banner-content">
+            <h4>Complete Your Profile</h4>
+            <p>Add your details to get personalized recommendations and faster checkout.</p>
+          </div>
+          <Link to="/profile/onboarding" className="banner-action">Complete Profile</Link>
+        </div>
+      )}
+
       {/* Welcome Section */}
       <section className="dashboard-welcome">
         <div className="welcome-content">
           <div className="welcome-text">
-            <h1>Welcome back, {user?.email?.split('@')[0] || 'User'}!</h1>
+            <h1>Welcome back, {displayName}!</h1>
             <p>Here's what's happening with your orders today.</p>
           </div>
           <Link to="/marketplace" className="shop-now-btn">

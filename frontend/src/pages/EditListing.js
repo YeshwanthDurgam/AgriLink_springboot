@@ -62,8 +62,11 @@ const EditListing = () => {
         expiryDate: listing.expiryDate ? listing.expiryDate.split('T')[0] : ''
       });
       
-      // Handle images
-      const images = listing.images || (listing.imageUrl ? [listing.imageUrl] : ['']);
+      // Handle images - ensure all values are strings
+      const rawImages = listing.images || (listing.imageUrl ? [listing.imageUrl] : []);
+      const images = rawImages
+        .map(img => typeof img === 'string' ? img : (img?.url || img?.imageUrl || ''))
+        .filter(Boolean);
       setImageUrls(images.length > 0 ? images : ['']);
       
     } catch (error) {
@@ -147,16 +150,21 @@ const EditListing = () => {
     try {
       setSaving(true);
       
-      // Filter out empty image URLs
-      const validImages = imageUrls.filter(url => url.trim() !== '');
+      // Filter out empty image URLs - safely handle non-string values
+      const validImages = imageUrls.filter(url => typeof url === 'string' && url.trim() !== '');
       
+      // Map frontend fields to backend CreateListingRequest DTO fields
       const listingData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
-        categoryId: formData.categoryId,
-        images: validImages,
-        imageUrl: validImages[0] || null
+        title: formData.title,
+        description: formData.description,
+        categoryId: formData.categoryId || null,
+        pricePerUnit: parseFloat(formData.price),
+        quantity: parseFloat(formData.quantity),
+        quantityUnit: formData.unit || 'kg',
+        organicCertified: formData.isOrganic || false,
+        harvestDate: formData.harvestDate || null,
+        expiryDate: formData.expiryDate || null,
+        imageUrls: validImages
       };
 
       await marketplaceService.updateListing(id, listingData);
@@ -336,9 +344,9 @@ const EditListing = () => {
             </div>
 
             {/* Image Preview */}
-            {imageUrls.some(url => url.trim()) && (
+            {imageUrls.some(url => typeof url === 'string' && url.trim()) && (
               <div className="image-preview-grid">
-                {imageUrls.filter(url => url.trim()).map((url, index) => (
+                {imageUrls.filter(url => typeof url === 'string' && url.trim()).map((url, index) => (
                   <div key={index} className="image-preview">
                     <img 
                       src={url} 

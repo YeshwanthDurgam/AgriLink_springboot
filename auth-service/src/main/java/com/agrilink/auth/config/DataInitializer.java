@@ -42,6 +42,8 @@ public class DataInitializer {
     private static final UUID FARMER1_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final UUID FARMER2_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
     private static final UUID CUSTOMER_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final UUID MANAGER_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+    private static final UUID ADMIN_ID = UUID.fromString("55555555-5555-5555-5555-555555555555");
 
     @Bean
     @Order(1)
@@ -54,6 +56,7 @@ public class DataInitializer {
             createRoleIfNotExists("FARMER", "Farmer role - can manage farms and create listings");
             createRoleIfNotExists("CUSTOMER", "Customer role - can browse and purchase products");
             createRoleIfNotExists("BUYER", "Buyer role - can browse and purchase products");
+            createRoleIfNotExists("MANAGER", "Manager role - can verify farmers and view products");
             createRoleIfNotExists("ADMIN", "Administrator role - full system access");
 
             log.info("Role initialization completed.");
@@ -96,12 +99,32 @@ public class DataInitializer {
                     "Customer"
             );
 
+            // Manager
+            createUserIfNotExists(
+                    MANAGER_ID,
+                    "manager@agrilink.com",
+                    "Manager@123",
+                    Set.of("MANAGER"),
+                    "Manager"
+            );
+
+            // Admin
+            createUserIfNotExists(
+                    ADMIN_ID,
+                    "admin@agrilink.com",
+                    "Admin@123",
+                    Set.of("ADMIN"),
+                    "Admin"
+            );
+
             log.info("========================================");
             log.info("TEST USER CREDENTIALS:");
             log.info("----------------------------------------");
             log.info("Farmer 1: farmer1@agrilink.com / Farmer@123");
             log.info("Farmer 2: farmer2@agrilink.com / Farmer@123");
             log.info("Customer: customer@agrilink.com / Customer@123");
+            log.info("Manager: manager@agrilink.com / Manager@123");
+            log.info("Admin: admin@agrilink.com / Admin@123");
             log.info("========================================");
             log.info("Test user initialization completed.");
         };

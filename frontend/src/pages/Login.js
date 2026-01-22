@@ -114,7 +114,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                className={errors.password ? 'error' : ''}
+                className={`has-toggle ${errors.password ? 'error' : ''}`}
                 autoComplete="current-password"
               />
               <button

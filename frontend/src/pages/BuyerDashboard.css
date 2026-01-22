@@ -4,6 +4,55 @@
   background: #f8fafc;
 }
 
+/* Profile Completion Banner */
+.profile-completion-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 40px;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border-bottom: 2px solid #0ea5e9;
+}
+
+.profile-completion-banner .banner-icon {
+  font-size: 24px;
+  color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+.profile-completion-banner .banner-content {
+  flex: 1;
+}
+
+.profile-completion-banner .banner-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.profile-completion-banner .banner-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.profile-completion-banner .banner-action {
+  padding: 8px 16px;
+  background: #0ea5e9;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.profile-completion-banner .banner-action:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+}
+
 /* Welcome Section */
 .dashboard-welcome {
   background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);

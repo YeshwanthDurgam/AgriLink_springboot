@@ -1,19 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import wishlistService from '../services/wishlistService';
 import cartService from '../services/cartService';
 import EmptyState from '../components/EmptyState';
 import './Wishlist.css';
 
 const Wishlist = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState({});
 
+  // Block farmers from accessing wishlist
   useEffect(() => {
-    fetchWishlist();
-  }, []);
+    if (user?.roles?.includes('FARMER')) {
+      toast.error('Farmers cannot use the wishlist feature');
+      navigate('/farmer/dashboard');
+      return;
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!user?.roles?.includes('FARMER')) {
+      fetchWishlist();
+    }
+  }, [user]);
 
   const fetchWishlist = async () => {
     try {

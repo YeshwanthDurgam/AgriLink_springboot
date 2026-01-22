@@ -129,8 +129,9 @@ const Register = () => {
                 onChange={handleChange}
               >
                 <option value="FARMER">Farmer</option>
-                <option value="BUYER">Buyer</option>
-                <option value="SUPPLIER">Supplier</option>
+                <option value="CUSTOMER">Customer</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
           </div>
@@ -146,7 +147,7 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Create a password"
-                className={errors.password ? 'error' : ''}
+                className={`has-toggle ${errors.password ? 'error' : ''}`}
                 autoComplete="new-password"
               />
               <button
@@ -185,7 +186,7 @@ const Register = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Confirm your password"
-                className={errors.confirmPassword ? 'error' : ''}
+                className={`has-toggle ${errors.confirmPassword ? 'error' : ''}`}
                 autoComplete="new-password"
               />
               <button

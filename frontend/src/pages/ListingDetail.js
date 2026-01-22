@@ -167,6 +167,12 @@ const ListingDetail = () => {
       return;
     }
 
+    // Farmers cannot add items to cart
+    if (user?.roles?.includes('FARMER')) {
+      alert('Farmers cannot place orders. Please use a customer account to purchase products.');
+      return;
+    }
+
     setActionLoading('cart');
     try {
       const price = listing.pricePerUnit || listing.price;
@@ -194,6 +200,12 @@ const ListingDetail = () => {
   const handleBuyNow = async () => {
     if (!user) {
       navigate('/login', { state: { from: `/marketplace/listing/${id}` } });
+      return;
+    }
+
+    // Farmers cannot buy products
+    if (user?.roles?.includes('FARMER')) {
+      alert('Farmers cannot place orders. Please use a customer account to purchase products.');
       return;
     }
 

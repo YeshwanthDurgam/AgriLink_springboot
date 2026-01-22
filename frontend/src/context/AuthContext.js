@@ -13,6 +13,7 @@ export const useAuth = () => {
 
 /**
  * Get the appropriate dashboard route based on user roles
+ * Role hierarchy: ADMIN → MANAGER → FARMER → CUSTOMER
  * @param {Object} user - User object with roles
  * @returns {string} - Dashboard route
  */
@@ -23,6 +24,8 @@ const getDashboardRoute = (user) => {
   
   if (roles.includes('ADMIN')) {
     return '/admin/dashboard';
+  } else if (roles.includes('MANAGER')) {
+    return '/manager/dashboard';
   } else if (roles.includes('FARMER')) {
     return '/farmer/dashboard';
   } else if (roles.includes('CUSTOMER') || roles.includes('BUYER')) {
@@ -30,6 +33,16 @@ const getDashboardRoute = (user) => {
   }
   
   return '/dashboard';
+};
+
+/**
+ * Get user display name from user object
+ */
+const getUserDisplayName = (user) => {
+  if (!user) return 'User';
+  if (user.name) return user.name;
+  if (user.email) return user.email.split('@')[0];
+  return 'User';
 };
 
 export const AuthProvider = ({ children }) => {
@@ -78,14 +91,36 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await AuthService.login({ email, password });
       if (response.success) {
-        const userResponse = await AuthService.getCurrentUser();
-        if (userResponse.success) {
-          setUser(userResponse.data);
-          localStorage.setItem('user', JSON.stringify(userResponse.data));
-          const dashboardRoute = getDashboardRoute(userResponse.data);
-          return { success: true, redirectTo: dashboardRoute };
+        // Get user data from response or fetch it
+        let userData = response.data;
+        if (userData.userId) {
+          userData.id = userData.userId;
         }
-        return { success: true, redirectTo: '/dashboard' };
+        
+        // Try to get more user details
+        try {
+          const userResponse = await AuthService.getCurrentUser();
+          if (userResponse.success) {
+            userData = { ...userData, ...userResponse.data };
+          }
+        } catch (e) {
+          console.warn('Could not fetch additional user data:', e);
+        }
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Redirect to profile onboarding if profile not complete, otherwise to dashboard
+        const dashboardRoute = getDashboardRoute(userData);
+        const redirectTo = userData.profileComplete === false 
+          ? '/profile/onboarding' 
+          : dashboardRoute;
+        
+        return { 
+          success: true, 
+          redirectTo,
+          user: userData
+        };
       }
       return { success: false, message: response.message };
     } catch (err) {
@@ -136,6 +171,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     clearError,
     getDashboardRoute: () => getDashboardRoute(user),
+    getUserDisplayName: () => getUserDisplayName(user),
   };
 
   return (

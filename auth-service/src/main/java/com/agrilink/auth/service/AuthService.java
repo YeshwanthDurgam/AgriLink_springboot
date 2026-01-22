@@ -106,7 +106,7 @@ public class AuthService {
 
         log.info("User logged in successfully: {}", request.getEmail());
 
-        return AuthResponse.of(token, user.getEmail(), roles, jwtTokenProvider.getExpirationTime());
+        return AuthResponse.of(token, user.getId(), user.getEmail(), null, roles, false, "PENDING", jwtTokenProvider.getExpirationTime());
     }
 
     /**

@@ -5,7 +5,7 @@ import {
   FiMenu, FiX, FiUser, FiLogOut, FiSearch, FiShoppingCart, FiHeart, 
   FiMessageSquare, FiBell, FiChevronDown, FiShoppingBag, 
   FiUsers, FiPackage, FiBarChart2, FiMap, FiCpu,
-  FiHome, FiPercent, FiShield, FiHelpCircle
+  FiHome, FiPercent, FiShield, FiHelpCircle, FiDollarSign
 } from 'react-icons/fi';
 import cartService from '../services/cartService';
 import wishlistService from '../services/wishlistService';
@@ -32,11 +32,20 @@ const Navbar = () => {
   const getUserRole = () => {
     if (!user?.roles) return null;
     if (user.roles.includes('ADMIN')) return 'ADMIN';
+    if (user.roles.includes('MANAGER')) return 'MANAGER';
     if (user.roles.includes('FARMER')) return 'FARMER';
-    return 'BUYER';
+    return 'CUSTOMER';
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.name) return user.name;
+    if (user?.email) return user.email.split('@')[0];
+    return 'User';
   };
 
   const userRole = getUserRole();
+  const displayName = getUserDisplayName();
 
   // Fetch counts
   useEffect(() => {
@@ -97,6 +106,7 @@ const Navbar = () => {
   const getDashboardLink = () => {
     switch(userRole) {
       case 'ADMIN': return '/admin/dashboard';
+      case 'MANAGER': return '/manager/dashboard';
       case 'FARMER': return '/farmer/dashboard';
       default: return '/buyer/dashboard';
     }
@@ -157,17 +167,21 @@ const Navbar = () => {
 
               {isAuthenticated ? (
                 <>
-                  {/* Wishlist */}
-                  <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist">
-                    <FiHeart />
-                    {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
-                  </Link>
+                  {/* Wishlist - not for farmers */}
+                  {userRole !== 'FARMER' && (
+                    <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist">
+                      <FiHeart />
+                      {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
+                    </Link>
+                  )}
 
-                  {/* Cart */}
-                  <Link to="/cart" className="navbar-icon-btn" title="Cart">
-                    <FiShoppingCart />
-                    {cartCount > 0 && <span className="badge">{cartCount}</span>}
-                  </Link>
+                  {/* Cart - not for farmers */}
+                  {userRole !== 'FARMER' && (
+                    <Link to="/cart" className="navbar-icon-btn" title="Cart">
+                      <FiShoppingCart />
+                      {cartCount > 0 && <span className="badge">{cartCount}</span>}
+                    </Link>
+                  )}
 
                   {/* Messages */}
                   <Link to="/messages" className="navbar-icon-btn" title="Messages">
@@ -194,11 +208,11 @@ const Navbar = () => {
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
                     >
                       <div className="user-avatar">
-                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                        {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div className="user-btn-text">
                         <span className="user-greeting">Hello,</span>
-                        <span className="user-name">{user?.email?.split('@')[0] || 'User'}</span>
+                        <span className="user-name">{displayName}</span>
                       </div>
                       <FiChevronDown className={`chevron ${userMenuOpen ? 'rotated' : ''}`} />
                     </button>
@@ -207,10 +221,10 @@ const Navbar = () => {
                       <div className="user-dropdown-menu">
                         <div className="user-dropdown-header">
                           <div className="user-avatar large">
-                            {user?.email?.charAt(0).toUpperCase() || 'U'}
+                            {displayName.charAt(0).toUpperCase()}
                           </div>
                           <div className="user-info">
-                            <span className="user-email">{user?.email}</span>
+                            <span className="user-email">{displayName}</span>
                             <span className={`user-role ${userRole?.toLowerCase()}`}>
                               {userRole || 'User'}
                             </span>
@@ -224,15 +238,26 @@ const Navbar = () => {
                           My Dashboard
                         </Link>
                         
-                        <Link to="/orders" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                          <FiPackage />
-                          My Orders
-                        </Link>
+                        {userRole !== 'FARMER' && (
+                          <Link to="/orders" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                            <FiPackage />
+                            My Orders
+                          </Link>
+                        )}
                         
-                        <Link to="/wishlist" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                          <FiHeart />
-                          Wishlist
-                        </Link>
+                        {userRole === 'FARMER' && (
+                          <Link to="/farmer/orders" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                            <FiDollarSign />
+                            My Sales
+                          </Link>
+                        )}
+                        
+                        {userRole !== 'FARMER' && (
+                          <Link to="/wishlist" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                            <FiHeart />
+                            Wishlist
+                          </Link>
+                        )}
 
                         {userRole === 'FARMER' && (
                           <>
@@ -240,10 +265,6 @@ const Navbar = () => {
                             <Link to="/farms" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
                               <FiMap />
                               My Farms
-                            </Link>
-                            <Link to="/devices" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                              <FiCpu />
-                              IoT Devices
                             </Link>
                             <Link to="/analytics" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
                               <FiBarChart2 />
@@ -262,6 +283,16 @@ const Navbar = () => {
                             <Link to="/admin/users" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
                               <FiUsers />
                               Manage Users
+                            </Link>
+                          </>
+                        )}
+
+                        {userRole === 'MANAGER' && (
+                          <>
+                            <div className="dropdown-divider"></div>
+                            <Link to="/manager/dashboard" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
+                              <FiShield />
+                              Manager Panel
                             </Link>
                           </>
                         )}
@@ -337,9 +368,9 @@ const Navbar = () => {
           {isAuthenticated ? (
             <div className="mobile-user-section">
               <div className="mobile-user-info">
-                <div className="user-avatar">{user?.email?.charAt(0).toUpperCase()}</div>
+                <div className="user-avatar">{displayName.charAt(0).toUpperCase()}</div>
                 <div>
-                  <span className="user-name">{user?.email?.split('@')[0]}</span>
+                  <span className="user-name">{displayName}</span>
                   <span className="user-role">{userRole}</span>
                 </div>
               </div>
@@ -348,12 +379,29 @@ const Navbar = () => {
                 <Link to={getDashboardLink()} onClick={closeMobileMenu}>
                   <FiHome /> Dashboard
                 </Link>
-                <Link to="/orders" onClick={closeMobileMenu}>
-                  <FiPackage /> Orders
-                </Link>
+                {userRole !== 'FARMER' && (
+                  <Link to="/orders" onClick={closeMobileMenu}>
+                    <FiPackage /> Orders
+                  </Link>
+                )}
+                {userRole === 'FARMER' && (
+                  <Link to="/farmer/orders" onClick={closeMobileMenu}>
+                    <FiPackage /> My Sales
+                  </Link>
+                )}
                 <Link to="/profile" onClick={closeMobileMenu}>
                   <FiUser /> Profile
                 </Link>
+                {userRole === 'MANAGER' && (
+                  <Link to="/manager/dashboard" onClick={closeMobileMenu}>
+                    <FiShield /> Manager Panel
+                  </Link>
+                )}
+                {userRole === 'ADMIN' && (
+                  <Link to="/admin/dashboard" onClick={closeMobileMenu}>
+                    <FiShield /> Admin Panel
+                  </Link>
+                )}
                 <button onClick={handleLogout}>
                   <FiLogOut /> Logout
                 </button>

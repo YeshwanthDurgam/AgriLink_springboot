@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FiMapPin, FiCreditCard, FiShield, FiTruck, FiCheck, FiPlus } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import addressService from '../services/addressService';
 import checkoutService from '../services/checkoutService';
@@ -9,6 +10,7 @@ import './Checkout.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cart, setCart] = useState(null);
   const [summary, setSummary] = useState(null);
   const [addresses, setAddresses] = useState([]);
@@ -18,6 +20,14 @@ const Checkout = () => {
   const [submitting, setSubmitting] = useState(false);
   const [paymentStep, setPaymentStep] = useState('address'); // 'address' | 'payment' | 'processing'
   const [error, setError] = useState('');
+
+  // Check if user is farmer - farmers cannot place orders
+  useEffect(() => {
+    if (user?.roles?.includes('FARMER')) {
+      toast.error('Farmers cannot place orders. Please use a customer account.');
+      navigate('/farmer/dashboard');
+    }
+  }, [user, navigate]);
   
   const [newAddress, setNewAddress] = useState({
     fullName: '',

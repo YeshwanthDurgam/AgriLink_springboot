@@ -639,6 +639,17 @@
   color: white;
 }
 
+/* No Data Message */
+.no-data {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin: 0;
+}
+
 /* Analytics Section */
 .analytics-section {
   background: white;

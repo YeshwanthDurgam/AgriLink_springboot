@@ -4,9 +4,10 @@ import {
   FaUsers, FaTractor, FaShoppingCart, FaChartLine, FaExclamationTriangle,
   FaCog, FaBan, FaCheckCircle, FaEye, FaTrash, FaUserShield, FaBell,
   FaComments, FaFileAlt, FaDollarSign, FaClipboardList, FaArrowUp, FaArrowDown,
-  FaSearch, FaFilter, FaCalendarAlt
+  FaSearch, FaFilter, FaCalendarAlt, FaUserTie
 } from 'react-icons/fa';
 import { userApi, orderApi, marketplaceApi } from '../services/api';
+import { toast } from 'react-toastify';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -18,11 +19,13 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     fraudReports: 0,
     pendingApprovals: 0,
+    pendingManagers: 0,
     monthlyGrowth: 0
   });
   const [users, setUsers] = useState([]);
   const [fraudCases, setFraudCases] = useState([]);
   const [pendingFarmers, setPendingFarmers] = useState([]);
+  const [pendingManagers, setPendingManagers] = useState([]);
   const [activeSection, setActiveSection] = useState('overview');
   const [loading, setLoading] = useState(true);
 
@@ -35,13 +38,17 @@ const AdminDashboard = () => {
       setLoading(true);
       
       // Try to fetch real data from available APIs
-      const [sellersRes, listingsRes] = await Promise.all([
+      const [sellersRes, listingsRes, pendingManagersRes, pendingFarmersRes] = await Promise.all([
         marketplaceApi.get('/listings/sellers').catch(() => ({ data: { data: [] } })),
-        marketplaceApi.get('/listings?size=100').catch(() => ({ data: { data: { content: [] } } }))
+        marketplaceApi.get('/listings?size=100').catch(() => ({ data: { data: { content: [] } } })),
+        userApi.get('/profiles/manager/pending').catch(() => ({ data: { data: { content: [] } } })),
+        userApi.get('/profiles/farmer/pending').catch(() => ({ data: { data: { content: [] } } }))
       ]);
       
       const sellers = sellersRes.data?.data || [];
       const listings = listingsRes.data?.data?.content || listingsRes.data?.content || [];
+      const managers = pendingManagersRes.data?.data?.content || pendingManagersRes.data?.content || [];
+      const farmers = pendingFarmersRes.data?.data?.content || pendingFarmersRes.data?.content || [];
       
       // Calculate stats from available data
       const totalFarmers = sellers.length;
@@ -55,9 +62,32 @@ const AdminDashboard = () => {
         activeOrders: activeListings,
         totalRevenue: totalRevenue,
         fraudReports: 0, // Would need fraud API
-        pendingApprovals: 0, // Would need approval API
+        pendingApprovals: farmers.length,
+        pendingManagers: managers.length,
         monthlyGrowth: 0
       });
+      
+      // Format pending managers for display
+      setPendingManagers(managers.map(m => ({
+        id: m.id,
+        name: m.name || 'Unknown',
+        username: m.username || '',
+        city: m.city || 'Unknown',
+        state: m.state || '',
+        phone: m.phone || '',
+        createdAt: m.createdAt,
+        status: m.status
+      })));
+      
+      // Format pending farmers for display
+      setPendingFarmers(farmers.map(f => ({
+        id: f.id,
+        name: f.farmName || f.name || 'Unknown',
+        owner: f.name || 'Unknown',
+        location: f.city ? `${f.city}, ${f.state}` : 'Unknown',
+        applied: f.createdAt,
+        docs: !!f.certificates
+      })));
       
       // Format sellers as users for display
       const formattedUsers = sellers.slice(0, 5).map((seller, index) => ({
@@ -71,9 +101,8 @@ const AdminDashboard = () => {
       }));
       setUsers(formattedUsers);
       
-      // Empty fraud cases and pending farmers (would need dedicated APIs)
+      // Empty fraud cases (would need dedicated API)
       setFraudCases([]);
-      setPendingFarmers([]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       // Set empty state on error
@@ -85,11 +114,13 @@ const AdminDashboard = () => {
         totalRevenue: 0,
         fraudReports: 0,
         pendingApprovals: 0,
+        pendingManagers: 0,
         monthlyGrowth: 0
       });
       setUsers([]);
       setFraudCases([]);
       setPendingFarmers([]);
+      setPendingManagers([]);
     } finally {
       setLoading(false);
     }
@@ -125,9 +156,32 @@ const AdminDashboard = () => {
     // Implement fraud case action logic
   };
 
-  const handleFarmerApproval = (farmerId, approved) => {
-    console.log(`Farmer ${farmerId} ${approved ? 'approved' : 'rejected'}`);
-    // Implement approval logic
+  const handleFarmerApproval = async (farmerId, approved) => {
+    try {
+      await userApi.post(`/profiles/farmer/${farmerId}/approve`, {
+        approved,
+        rejectionReason: approved ? null : 'Profile does not meet requirements'
+      });
+      toast.success(`Farmer ${approved ? 'approved' : 'rejected'} successfully`);
+      fetchDashboardData(); // Refresh data
+    } catch (error) {
+      console.error('Error handling farmer approval:', error);
+      toast.error('Failed to update farmer status');
+    }
+  };
+
+  const handleManagerApproval = async (managerId, approved) => {
+    try {
+      await userApi.post(`/profiles/manager/${managerId}/approve`, {
+        approved,
+        rejectionReason: approved ? null : 'Profile does not meet requirements'
+      });
+      toast.success(`Manager ${approved ? 'approved' : 'rejected'} successfully`);
+      fetchDashboardData(); // Refresh data
+    } catch (error) {
+      console.error('Error handling manager approval:', error);
+      toast.error('Failed to update manager status');
+    }
   };
 
   if (loading) {
@@ -185,6 +239,13 @@ const AdminDashboard = () => {
             >
               <FaClipboardList /> Approvals
               {stats.pendingApprovals > 0 && <span className="menu-badge">{stats.pendingApprovals}</span>}
+            </button>
+            <button 
+              className={`menu-item ${activeSection === 'managers' ? 'active' : ''}`}
+              onClick={() => setActiveSection('managers')}
+            >
+              <FaUserTie /> Managers
+              {stats.pendingManagers > 0 && <span className="menu-badge">{stats.pendingManagers}</span>}
             </button>
             <button 
               className={`menu-item ${activeSection === 'orders' ? 'active' : ''}`}
@@ -350,6 +411,37 @@ const AdminDashboard = () => {
 
           {/* Two Column Row */}
           <div className="two-column-row">
+            {/* Pending Manager Approvals */}
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2><FaUserTie /> Pending Manager Approvals</h2>
+                <Link to="/admin/managers" className="view-all">View All</Link>
+              </div>
+              <div className="approvals-list">
+                {pendingManagers.length === 0 ? (
+                  <p className="no-data">No pending manager approvals</p>
+                ) : (
+                  pendingManagers.map(manager => (
+                    <div key={manager.id} className="approval-item">
+                      <div className="approval-info">
+                        <span className="farm-name">{manager.name}</span>
+                        <span className="farm-owner">@{manager.username} • {manager.city}, {manager.state}</span>
+                        <span className="farm-date">Applied: {manager.createdAt ? new Date(manager.createdAt).toLocaleDateString() : 'N/A'}</span>
+                      </div>
+                      <div className="approval-actions">
+                        <button className="approve-btn" onClick={() => handleManagerApproval(manager.id, true)}>
+                          <FaCheckCircle /> Approve
+                        </button>
+                        <button className="reject-btn" onClick={() => handleManagerApproval(manager.id, false)}>
+                          <FaBan /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             {/* Fraud Cases */}
             <div className="dashboard-section">
               <div className="section-header">
@@ -357,60 +449,70 @@ const AdminDashboard = () => {
                 <Link to="/admin/fraud" className="view-all">View All</Link>
               </div>
               <div className="fraud-list">
-                {fraudCases.map(fraudCase => (
-                  <div key={fraudCase.id} className="fraud-item">
-                    <div className="fraud-priority" style={{ backgroundColor: getPriorityColor(fraudCase.priority) }}></div>
-                    <div className="fraud-info">
-                      <span className="fraud-type">{fraudCase.type}</span>
-                      <span className="fraud-parties">
-                        <strong>{fraudCase.reporter}</strong> reported <strong>{fraudCase.accused}</strong>
-                      </span>
-                      <span className="fraud-date">
-                        <FaCalendarAlt /> {new Date(fraudCase.date).toLocaleDateString()}
-                      </span>
+                {fraudCases.length === 0 ? (
+                  <p className="no-data">No fraud cases reported</p>
+                ) : (
+                  fraudCases.map(fraudCase => (
+                    <div key={fraudCase.id} className="fraud-item">
+                      <div className="fraud-priority" style={{ backgroundColor: getPriorityColor(fraudCase.priority) }}></div>
+                      <div className="fraud-info">
+                        <span className="fraud-type">{fraudCase.type}</span>
+                        <span className="fraud-parties">
+                          <strong>{fraudCase.reporter}</strong> reported <strong>{fraudCase.accused}</strong>
+                        </span>
+                        <span className="fraud-date">
+                          <FaCalendarAlt /> {new Date(fraudCase.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="fraud-actions">
+                        <span className="status-badge" style={{ backgroundColor: getStatusColor(fraudCase.status) + '20', color: getStatusColor(fraudCase.status) }}>
+                          {fraudCase.status}
+                        </span>
+                        <button className="action-btn" onClick={() => handleFraudAction(fraudCase.id, 'investigate')}>
+                          <FaEye />
+                        </button>
+                      </div>
                     </div>
-                    <div className="fraud-actions">
-                      <span className="status-badge" style={{ backgroundColor: getStatusColor(fraudCase.status) + '20', color: getStatusColor(fraudCase.status) }}>
-                        {fraudCase.status}
-                      </span>
-                      <button className="action-btn" onClick={() => handleFraudAction(fraudCase.id, 'investigate')}>
-                        <FaEye />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Pending Approvals */}
+          {/* Second Two Column Row */}
+          <div className="two-column-row">
             <div className="dashboard-section">
               <div className="section-header">
                 <h2><FaClipboardList /> Pending Farmer Approvals</h2>
                 <Link to="/admin/approvals" className="view-all">View All</Link>
               </div>
               <div className="approvals-list">
-                {pendingFarmers.map(farmer => (
-                  <div key={farmer.id} className="approval-item">
-                    <div className="approval-info">
-                      <span className="farm-name">{farmer.name}</span>
-                      <span className="farm-owner">{farmer.owner} • {farmer.location}</span>
-                      <span className="farm-date">Applied: {new Date(farmer.applied).toLocaleDateString()}</span>
+                {pendingFarmers.length === 0 ? (
+                  <p className="no-data">No pending farmer approvals</p>
+                ) : (
+                  pendingFarmers.map(farmer => (
+                    <div key={farmer.id} className="approval-item">
+                      <div className="approval-info">
+                        <span className="farm-name">{farmer.name}</span>
+                        <span className="farm-owner">{farmer.owner} • {farmer.location}</span>
+                        <span className="farm-date">Applied: {farmer.applied ? new Date(farmer.applied).toLocaleDateString() : 'N/A'}</span>
+                      </div>
+                      <div className="approval-status">
+                        <span className={`docs-status ${farmer.docs ? 'complete' : 'incomplete'}`}>
+                          {farmer.docs ? '✓ Docs Complete' : '⚠ Missing Docs'}
+                        </span>
+                      </div>
+                      <div className="approval-actions">
+                        <button className="approve-btn" onClick={() => handleFarmerApproval(farmer.id, true)}>
+                          <FaCheckCircle /> Approve
+                        </button>
+                        <button className="reject-btn" onClick={() => handleFarmerApproval(farmer.id, false)}>
+                          <FaBan /> Reject
+                        </button>
+                      </div>
                     </div>
-                    <div className="approval-status">
-                      <span className={`docs-status ${farmer.docs ? 'complete' : 'incomplete'}`}>
-                        {farmer.docs ? '✓ Docs Complete' : '⚠ Missing Docs'}
-                      </span>
-                    </div>
-                    <div className="approval-actions">
-                      <button className="approve-btn" onClick={() => handleFarmerApproval(farmer.id, true)}>
-                        <FaCheckCircle /> Approve
-                      </button>
-                      <button className="reject-btn" onClick={() => handleFarmerApproval(farmer.id, false)}>
-                        <FaBan /> Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
