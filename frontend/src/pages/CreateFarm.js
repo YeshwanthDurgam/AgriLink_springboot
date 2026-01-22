@@ -84,8 +84,11 @@ const CreateFarm = () => {
     setSubmitting(true);
     try {
       const farmData = {
-        ...formData,
-        size: formData.size ? parseFloat(formData.size) : null,
+        name: formData.name,
+        description: formData.description || '',
+        location: formData.location,
+        totalArea: formData.size ? parseFloat(formData.size) : null,
+        areaUnit: 'ACRE'
       };
       
       const response = await FarmService.createFarm(farmData);

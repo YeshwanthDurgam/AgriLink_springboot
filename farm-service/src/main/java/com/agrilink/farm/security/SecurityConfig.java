@@ -41,6 +41,7 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/api/v1/weather/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/farms/farmer/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/farms/**").authenticated()
                     .requestMatchers("/api/v1/farms/**").hasRole("FARMER")
                     .requestMatchers("/api/v1/export/**").authenticated()

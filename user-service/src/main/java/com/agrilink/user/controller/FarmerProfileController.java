@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -129,5 +130,25 @@ public class FarmerProfileController {
     public ResponseEntity<ApiResponse<Long>> getPendingCount() {
         long count = farmerProfileService.getPendingCount();
         return ResponseEntity.ok(ApiResponse.success(count));
+    }
+
+    /**
+     * Get all approved farmers (public endpoint for farmers listing).
+     * GET /api/v1/profiles/farmer/approved
+     */
+    @GetMapping("/approved")
+    public ResponseEntity<ApiResponse<List<FarmerProfileDto>>> getApprovedFarmers() {
+        List<FarmerProfileDto> farmers = farmerProfileService.getApprovedFarmers();
+        return ResponseEntity.ok(ApiResponse.success(farmers));
+    }
+
+    /**
+     * Approve all pending farmers (development/testing only).
+     * POST /api/v1/profiles/farmer/approve-all
+     */
+    @PostMapping("/approve-all")
+    public ResponseEntity<ApiResponse<Integer>> approveAllPendingFarmers() {
+        int count = farmerProfileService.approveAllPending();
+        return ResponseEntity.ok(ApiResponse.success("Approved " + count + " farmers", count));
     }
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../services/api';
+import FarmService from '../services/farmService';
 import { toast } from 'react-toastify';
 import { 
   FiUser, FiPhone, FiMapPin, FiCamera, FiSave, FiSkipForward,
@@ -97,6 +98,36 @@ const ProfileOnboarding = () => {
       else if (userRole === 'MANAGER') endpoint = '/profiles/manager';
 
       await userApi.put(endpoint, formData);
+      
+      // For farmers, also create a farm in farm-service if farmName is provided
+      if (userRole === 'FARMER' && formData.farmName) {
+        try {
+          // Check if farm already exists
+          const farmsResponse = await FarmService.getMyFarms();
+          const existingFarms = farmsResponse?.data || [];
+          
+          // Only create if no farm exists
+          if (existingFarms.length === 0) {
+            const farmData = {
+              name: formData.farmName,
+              description: formData.farmBio || '',
+              location: formData.city && formData.state 
+                ? `${formData.city}, ${formData.state}` 
+                : formData.city || formData.state || '',
+              totalArea: 0,
+              areaUnit: 'HECTARE'
+            };
+            await FarmService.createFarm(farmData);
+            console.log('Farm created successfully from profile onboarding');
+          } else {
+            console.log('Farm already exists, skipping creation');
+          }
+        } catch (farmErr) {
+          console.error('Could not create farm entry:', farmErr);
+          // Don't fail the whole operation if farm creation fails
+        }
+      }
+      
       toast.success('Profile saved successfully!');
       
       if (userRole === 'FARMER' || userRole === 'MANAGER') {

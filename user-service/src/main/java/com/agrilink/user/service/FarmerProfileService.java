@@ -160,6 +160,38 @@ public class FarmerProfileService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get all approved farmers.
+     */
+    @Transactional(readOnly = true)
+    public List<FarmerProfileDto> getApprovedFarmers() {
+        log.info("Fetching all approved farmers from database");
+        List<FarmerProfile> approvedFarmers = farmerProfileRepository.findByStatus(ProfileStatus.APPROVED);
+        log.info("Found {} approved farmers in database", approvedFarmers.size());
+        return approvedFarmers.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Approve all pending farmer profiles (development/testing only).
+     */
+    @Transactional
+    public int approveAllPending() {
+        log.info("Approving all pending farmers");
+        List<FarmerProfile> pendingFarmers = farmerProfileRepository.findByStatus(ProfileStatus.PENDING);
+        log.info("Found {} pending farmers to approve", pendingFarmers.size());
+        
+        for (FarmerProfile farmer : pendingFarmers) {
+            farmer.setStatus(ProfileStatus.APPROVED);
+            farmer.setApprovedAt(LocalDateTime.now());
+            farmerProfileRepository.save(farmer);
+            log.info("Approved farmer: {} ({})", farmer.getName(), farmer.getId());
+        }
+        
+        return pendingFarmers.size();
+    }
+
     private FarmerProfileDto mapToDto(FarmerProfile profile) {
         return FarmerProfileDto.builder()
                 .id(profile.getId())

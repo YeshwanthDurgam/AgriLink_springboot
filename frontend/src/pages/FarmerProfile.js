@@ -4,8 +4,9 @@ import {
   FiMapPin, FiStar, FiUsers, FiPackage, FiMail, FiPhone, 
   FiCalendar, FiHeart, FiCheck, FiArrowLeft, FiShoppingCart
 } from 'react-icons/fi';
+import { FaTractor } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
-import { authApi, userApi, marketplaceApi } from '../services/api';
+import { authApi, userApi, marketplaceApi, farmApi } from '../services/api';
 import { toast } from 'react-toastify';
 import './FarmerProfile.css';
 
@@ -16,8 +17,10 @@ const FarmerProfile = () => {
   const [farmer, setFarmer] = useState(null);
   const [profile, setProfile] = useState(null);
   const [sellerStats, setSellerStats] = useState(null);
+  const [farms, setFarms] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [farmsLoading, setFarmsLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -95,6 +98,21 @@ const FarmerProfile = () => {
     }
   }, [farmerId]);
 
+  // Fetch farmer's farms (PUBLIC endpoint)
+  const fetchFarmerFarms = useCallback(async () => {
+    try {
+      setFarmsLoading(true);
+      const response = await farmApi.get(`/farms/farmer/${farmerId}`);
+      const farmsData = response?.data?.data || [];
+      setFarms(farmsData);
+    } catch (err) {
+      console.error('Error fetching farmer farms:', err);
+      setFarms([]);
+    } finally {
+      setFarmsLoading(false);
+    }
+  }, [farmerId]);
+
   // Fetch farmer's products
   const fetchFarmerProducts = useCallback(async () => {
     try {
@@ -140,8 +158,9 @@ const FarmerProfile = () => {
 
   useEffect(() => {
     fetchFarmerDetails();
+    fetchFarmerFarms();
     fetchFarmerProducts();
-  }, [fetchFarmerDetails, fetchFarmerProducts]);
+  }, [fetchFarmerDetails, fetchFarmerFarms, fetchFarmerProducts]);
 
   useEffect(() => {
     checkFollowStatus();
@@ -342,6 +361,63 @@ const FarmerProfile = () => {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Farmer's Farms Section */}
+      <section className="farmer-farms-section">
+        <div className="section-header">
+          <h2><FaTractor /> Farms by {farmerName}</h2>
+          <span className="farm-count">{farms.length} {farms.length === 1 ? 'farm' : 'farms'}</span>
+        </div>
+
+        {farmsLoading ? (
+          <div className="farms-loading">
+            <div className="loading-grid">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="farm-card-skeleton">
+                  <div className="skeleton-image"></div>
+                  <div className="skeleton-content">
+                    <div className="skeleton-text"></div>
+                    <div className="skeleton-text short"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : farms.length === 0 ? (
+          <div className="no-farms">
+            <FaTractor size={48} />
+            <h3>No Farms Listed</h3>
+            <p>This farmer hasn't registered any farms yet.</p>
+          </div>
+        ) : (
+          <div className="farms-grid">
+            {farms.map(farm => (
+              <div key={farm.id} className="public-farm-card">
+                <div className="farm-card-image">
+                  🏡
+                </div>
+                <div className="farm-card-content">
+                  <h3 className="farm-name">{farm.name}</h3>
+                  {farm.location && (
+                    <div className="farm-location">
+                      <FiMapPin />
+                      <span>{farm.location}</span>
+                    </div>
+                  )}
+                  {farm.description && (
+                    <p className="farm-description">{farm.description}</p>
+                  )}
+                  {farm.totalArea > 0 && (
+                    <div className="farm-size">
+                      <span>{farm.totalArea} {farm.areaUnit?.toLowerCase() || 'hectares'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Farmer's Products Section */}

@@ -103,6 +103,18 @@ public class FarmController {
         return ResponseEntity.ok(ApiResponse.success("Farm deleted successfully"));
     }
 
+    /**
+     * Get all farms for a specific farmer (PUBLIC endpoint).
+     * GET /api/v1/farms/farmer/{farmerId}
+     */
+    @GetMapping("/farmer/{farmerId}")
+    public ResponseEntity<ApiResponse<List<FarmDto>>> getFarmsByFarmerId(
+            @PathVariable UUID farmerId) {
+        log.info("Public request to get farms for farmer: {}", farmerId);
+        List<FarmDto> farms = farmService.getFarmsByFarmer(farmerId);
+        return ResponseEntity.ok(ApiResponse.success(farms));
+    }
+
     private UUID getUserIdFromRequest(HttpServletRequest request, Authentication authentication) {
         String userIdStr = (String) request.getAttribute("userId");
         if (StringUtils.hasText(userIdStr)) {

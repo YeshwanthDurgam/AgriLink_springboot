@@ -40,6 +40,8 @@ public class SecurityConfig {
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/api/v1/users/public/**").permitAll()
                     .requestMatchers("/api/v1/farmers/*/followers/count").permitAll()
+                    .requestMatchers("/api/v1/profiles/farmer/approved").permitAll()
+                    .requestMatchers("/api/v1/profiles/farmer/approve-all").permitAll()
                     .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

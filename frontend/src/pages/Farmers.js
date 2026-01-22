@@ -77,7 +77,6 @@ const Farmers = () => {
         return {
           id: follow.farmerId,
           name: sellerStats.name || follow.farmerName || 'Farmer',
-          farmName: sellerStats.farmName || follow.farmName || 'Local Farm',
           location: sellerStats.location || follow.location || 'India',
           avatar: sellerStats.avatar || follow.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(follow.farmerName || 'Farmer')}&background=2d6a4f&color=fff`,
           coverImage: sellerStats.coverImage || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
@@ -107,35 +106,50 @@ const Farmers = () => {
     try {
       setLoading(true);
       
-      // Fetch sellers from marketplace-service (has aggregated product/rating/follower data)
-      const sellersResponse = await marketplaceApi.get('/listings/sellers');
-      
-      let farmersList = [];
-      if (sellersResponse?.data?.data && Array.isArray(sellersResponse.data.data)) {
-        farmersList = sellersResponse.data.data;
-      } else if (Array.isArray(sellersResponse?.data)) {
-        farmersList = sellersResponse.data;
+      // Fetch approved farmers from user-service (primary source)
+      let approvedFarmers = [];
+      try {
+        const approvedResponse = await userApi.get('/profiles/farmer/approved');
+        approvedFarmers = approvedResponse?.data?.data || [];
+      } catch (err) {
+        console.warn('Could not fetch approved farmers from user-service:', err);
       }
 
-      // Map sellers to farmer format
-      farmersList = farmersList.map(seller => ({
-        id: seller.id,
-        name: seller.name || 'Farmer',
-        farmName: seller.farmName || 'Local Farm',
-        email: seller.email,
-        location: seller.location || 'India',
-        avatar: seller.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(seller.name || 'Farmer')}&background=2d6a4f&color=fff`,
-        coverImage: seller.coverImage || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
-        rating: seller.rating || 0,
-        reviewCount: seller.reviewCount || 0,
-        followers: seller.followers || 0,
-        products: seller.products || 0,
-        specialties: seller.specialties || [],
-        isVerified: seller.verified !== false,
-        joinedDate: seller.joinedYear ? `${seller.joinedYear}` : null,
-        description: seller.description || ''
-      }));
+      // Fetch sellers from marketplace-service for additional stats
+      let sellersMap = {};
+      try {
+        const sellersResponse = await marketplaceApi.get('/listings/sellers');
+        const sellers = sellersResponse?.data?.data || [];
+        sellers.forEach(seller => {
+          sellersMap[seller.id] = seller;
+        });
+      } catch (err) {
+        console.warn('Could not fetch seller stats:', err);
+      }
 
+      // Map approved farmers with marketplace data
+      let farmersList = approvedFarmers.map(farmer => {
+        const sellerStats = sellersMap[farmer.userId] || {};
+        return {
+          id: farmer.userId,
+          name: farmer.name || 'Farmer',
+          location: farmer.city && farmer.state 
+            ? `${farmer.city}, ${farmer.state}` 
+            : farmer.city || farmer.state || 'India',
+          avatar: farmer.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(farmer.name || 'Farmer')}&background=2d6a4f&color=fff`,
+          coverImage: farmer.farmPhoto || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400',
+          rating: sellerStats.rating || 0,
+          reviewCount: sellerStats.reviewCount || 0,
+          followers: sellerStats.followers || 0,
+          products: sellerStats.products || 0,
+          specialties: farmer.cropTypes ? farmer.cropTypes.split(',').map(s => s.trim()) : [],
+          isVerified: true,
+          joinedDate: farmer.createdAt ? new Date(farmer.createdAt).getFullYear().toString() : null,
+          description: farmer.farmBio || ''
+        };
+      });
+
+      // Only show farmers from DB - no fallback to marketplace sellers
       setFarmers(farmersList);
     } catch (err) {
       console.error('Error fetching farmers:', err);
@@ -183,7 +197,7 @@ const Farmers = () => {
 
   const filteredFarmers = farmers.filter(farmer => {
     const matchesSearch = farmer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         farmer.farmName.toLowerCase().includes(searchQuery.toLowerCase());
+                         (farmer.location && farmer.location.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
   });
 
@@ -197,15 +211,15 @@ const Farmers = () => {
           <div className="hero-stats">
             <div className="hero-stat">
               <FiUsers />
-              <span>2,500+ Farmers</span>
+              <span>{farmers.length} {farmers.length === 1 ? 'Farmer' : 'Farmers'}</span>
             </div>
             <div className="hero-stat">
               <FiPackage />
-              <span>15,000+ Products</span>
+              <span>{farmers.reduce((sum, f) => sum + (f.products || 0), 0)} Products</span>
             </div>
             <div className="hero-stat">
               <FiAward />
-              <span>98% Satisfaction</span>
+              <span>Verified Farmers</span>
             </div>
           </div>
         </div>
@@ -355,7 +369,6 @@ const FarmerCard = ({ farmer, isFollowed, onFollow, onMessage }) => {
           <h3 className="farmer-name">
             {farmer.name}
           </h3>
-          <p className="farm-name">{farmer.farmName}</p>
           
           <div className="farmer-location">
             <FiMapPin />
