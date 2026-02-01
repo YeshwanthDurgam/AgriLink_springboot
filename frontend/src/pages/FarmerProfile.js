@@ -7,6 +7,7 @@ import {
 import { FaTractor } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { authApi, userApi, marketplaceApi, farmApi } from '../services/api';
+import guestService from '../services/guestService';
 import { toast } from 'react-toastify';
 import './FarmerProfile.css';
 
@@ -205,8 +206,21 @@ const FarmerProfile = () => {
   };
 
   const handleAddToCart = async (product) => {
+    const cartItem = {
+      listingId: product.id,
+      sellerId: farmerId,
+      quantity: 1,
+      unitPrice: product.price,
+      listingTitle: product.title,
+      listingImageUrl: product.images?.[0] || product.imageUrl || null,
+      unit: product.unit || 'kg',
+      availableQuantity: product.quantity || null
+    };
+    
     if (!isAuthenticated) {
-      toast.info('Please login to add items to cart');
+      // Guest user - use localStorage
+      guestService.addToGuestCart(cartItem);
+      toast.success('Added to cart!');
       return;
     }
 

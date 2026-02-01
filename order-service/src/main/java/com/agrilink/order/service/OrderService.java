@@ -2,6 +2,7 @@ package com.agrilink.order.service;
 
 import com.agrilink.common.exception.ForbiddenException;
 import com.agrilink.common.exception.ResourceNotFoundException;
+import com.agrilink.order.client.NotificationClient;
 import com.agrilink.order.dto.*;
 import com.agrilink.order.entity.Order;
 import com.agrilink.order.entity.OrderItem;
@@ -32,6 +33,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
+    private final NotificationClient notificationClient;
 
     /**
      * Create a new order.
@@ -162,7 +164,63 @@ public class OrderService {
         order.addStatusHistory(history);
 
         Order updatedOrder = orderRepository.save(order);
+
+        // Send status update email notification
+        sendStatusUpdateEmail(updatedOrder, newStatus, notes);
+
         return mapToDto(updatedOrder);
+    }
+
+    /**
+     * Send order status update email notification.
+     */
+    private void sendStatusUpdateEmail(Order order, Order.OrderStatus newStatus, String notes) {
+        try {
+            String customerEmail = order.getBuyerEmail();
+            String customerName = order.getBuyerName() != null ? order.getBuyerName() : "Valued Customer";
+
+            if (customerEmail == null || customerEmail.isEmpty()) {
+                log.warn("No buyer email found for order {}, skipping status update email", order.getOrderNumber());
+                return;
+            }
+
+            String statusMessage = getStatusMessage(newStatus, notes);
+            String trackingNumber = null; // Tracking number not available in basic status update
+
+            notificationClient.sendOrderStatusEmail(
+                    customerEmail,
+                    customerName,
+                    order.getOrderNumber(),
+                    newStatus.name(),
+                    statusMessage,
+                    trackingNumber);
+
+            log.info("Order status update email sent for order: {}", order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to send order status email for order {}: {}", order.getOrderNumber(), e.getMessage());
+            // Don't throw - email failure shouldn't affect order status update
+        }
+    }
+
+    /**
+     * Get human-readable status message.
+     */
+    private String getStatusMessage(Order.OrderStatus status, String notes) {
+        String baseMessage = switch (status) {
+            case PENDING -> "Your order is pending confirmation.";
+            case CONFIRMED -> "Great news! Your order has been confirmed by the seller.";
+            case PROCESSING -> "Your order is being prepared for shipment.";
+            case SHIPPED -> "Your order has been shipped and is on its way!";
+            case DELIVERED -> "Your order has been delivered. Enjoy!";
+            case COMPLETED -> "Your order is complete. Thank you for shopping with us!";
+            case CANCELLED -> "Your order has been cancelled.";
+            case REFUNDED -> "Your order has been refunded. The amount will be credited to your account.";
+        };
+
+        if (notes != null && !notes.isEmpty()) {
+            return baseMessage + " " + notes;
+        }
+        return baseMessage;
     }
 
     /**

@@ -4,7 +4,8 @@ import { FiShoppingCart, FiHeart, FiStar, FiTrendingUp, FiZap, FiGift } from 're
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi } from '../services/api';
 import cartService from '../services/cartService';
-import EmptyState from '../components/EmptyState';
+import guestService from '../services/guestService';
+import { toast } from 'react-toastify';
 import './Deals.css';
 
 const Deals = () => {
@@ -100,39 +101,56 @@ const Deals = () => {
   // Note: getMockDeals removed - now using real listing data
 
   const handleAddToCart = async (deal) => {
+    const cartItem = {
+      listingId: deal.id,
+      sellerId: deal.sellerId || deal.farmerId,
+      quantity: 1,
+      unitPrice: deal.discountedPrice || deal.price,
+      listingTitle: deal.title,
+      listingImageUrl: deal.image || deal.imageUrl || null,
+      unit: deal.unit || 'kg',
+      availableQuantity: deal.stock || null
+    };
+    
     if (!isAuthenticated) {
-      navigate('/login');
+      // Guest user - use localStorage
+      guestService.addToGuestCart(cartItem);
+      toast.success('Added to cart!');
       return;
     }
+    
     try {
-      await cartService.addToCart({
-        listingId: deal.id,
-        sellerId: deal.sellerId || deal.farmerId,
-        quantity: 1,
-        unitPrice: deal.discountedPrice || deal.price,
-        listingTitle: deal.title,
-        listingImageUrl: deal.image || deal.imageUrl || null,
-        unit: deal.unit || 'kg',
-        availableQuantity: deal.stock || null
-      });
-      alert('Added to cart!');
+      await cartService.addToCart(cartItem);
+      toast.success('Added to cart!');
     } catch (err) {
       console.error('Error adding to cart:', err);
-      alert('Failed to add to cart. Please try again.');
+      toast.error('Failed to add to cart. Please try again.');
     }
   };
 
-  const handleAddToWishlist = async (productId) => {
+  const handleAddToWishlist = async (product) => {
     if (!isAuthenticated) {
-      navigate('/login');
+      // Guest user - use localStorage
+      const wishlistItem = {
+        id: product.id,
+        listingId: product.id,
+        title: product.title,
+        price: product.discountedPrice || product.price,
+        imageUrl: product.image || product.imageUrl,
+        unit: product.unit || 'kg',
+        sellerId: product.sellerId || product.farmerId
+      };
+      guestService.addToGuestWishlist(wishlistItem);
+      toast.success('Added to wishlist!');
       return;
     }
+    
     try {
-      await marketplaceApi.post(`/wishlist/${productId}`);
-      alert('Added to wishlist!');
+      await marketplaceApi.post(`/wishlist/${product.id}`);
+      toast.success('Added to wishlist!');
     } catch (err) {
       console.error('Error adding to wishlist:', err);
-      alert('Failed to add to wishlist. Please try again.');
+      toast.error('Failed to add to wishlist. Please try again.');
     }
   };
 
@@ -344,7 +362,7 @@ const DealCard = ({ deal, isFlash, onAddToCart, onAddToWishlist }) => {
         className="wishlist-btn"
         onClick={(e) => {
           e.stopPropagation();
-          onAddToWishlist(deal.id);
+          onAddToWishlist(deal);
         }}
       >
         <FiHeart />

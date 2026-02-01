@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Account Status</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f7f6;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header - Changes based on approval status -->
+                    <tr th:if="${approved}">
+                        <td
+                            style="background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); padding: 30px 40px; text-align: center;">
+                            <span style="font-size: 48px;">🎉</span>
+                            <h1 style="color: #ffffff; margin: 10px 0 0 0; font-size: 24px; font-weight: 600;">
+                                Congratulations!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your Farmer
+                                Account is Approved</p>
+                        </td>
+                    </tr>
+                    <tr th:unless="${approved}">
+                        <td
+                            style="background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%); padding: 30px 40px; text-align: center;">
+                            <span style="font-size: 48px;">📋</span>
+                            <h1 style="color: #ffffff; margin: 10px 0 0 0; font-size: 24px; font-weight: 600;">
+                                Application Update</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Farmer Account
+                                Status</p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Dear <strong th:text="${farmerName}">Farmer</strong>,
+                            </p>
+
+                            <!-- Approved Content -->
+                            <div th:if="${approved}">
+                                <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                    Great news! Your farmer account has been verified and approved. You can now:
+                                </p>
+
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                    style="background-color: #e8f5e9; border-radius: 8px; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                                width="100%">
+                                                <tr>
+                                                    <td style="padding: 8px 0;">
+                                                        <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                        <span style="color: #495057; margin-left: 10px;">List your
+                                                            products on the marketplace</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 8px 0;">
+                                                        <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                        <span style="color: #495057; margin-left: 10px;">Receive orders
+                                                            from buyers directly</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 8px 0;">
+                                                        <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                        <span style="color: #495057; margin-left: 10px;">Access
+                                                            analytics and insights</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 8px 0;">
+                                                        <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                        <span style="color: #495057; margin-left: 10px;">Connect with
+                                                            customers across India</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- CTA Button -->
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                    style="margin: 30px 0;">
+                                    <tr>
+                                        <td style="text-align: center;">
+                                            <a th:href="${dashboardUrl}"
+                                                style="display: inline-block; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                                Go to Farmer Dashboard 🚀
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Rejected Content -->
+                            <div th:unless="${approved}">
+                                <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                    We've reviewed your farmer account application. Unfortunately, we couldn't
+                                    approve your application at this time.
+                                </p>
+
+                                <table th:if="${reason != ''}" role="presentation" cellspacing="0" cellpadding="0"
+                                    border="0" width="100%"
+                                    style="background-color: #ffebee; border-radius: 8px; border-left: 4px solid #f44336; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <p
+                                                style="margin: 0 0 10px 0; color: #c62828; font-weight: 600; font-size: 14px;">
+                                                Reason:
+                                            </p>
+                                            <p style="margin: 0; color: #795548; font-size: 14px; line-height: 1.6;"
+                                                th:text="${reason}">
+                                                Additional documentation required.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                                    You can update your profile and reapply. If you believe this was a mistake
+                                    or need clarification, please contact our support team.
+                                </p>
+
+                                <!-- Support Contact -->
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                    style="background-color: #f5f5f5; border-radius: 8px; margin: 20px 0;">
+                                    <tr>
+                                        <td style="padding: 20px; text-align: center;">
+                                            <p style="margin: 0; color: #6c757d; font-size: 14px;">
+                                                Contact Support: <a th:href="'mailto:' + ${supportEmail}"
+                                                    th:text="${supportEmail}"
+                                                    style="color: #1976d2;">support@agrilink.com</a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <p
+                                style="color: #6c757d; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; text-align: center;">
+                                Thank you for being part of the AgriLink community! 🌾
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef; text-align: center;">
+                            <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                © <span th:text="${currentYear}">2026</span> AgriLink. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

@@ -1,16 +1,26 @@
 package com.agrilink.notification.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Email Service for sending emails.
- * Mock implementation for development.
+ * Email Service for sending HTML emails using Thymeleaf templates.
+ * Supports Gmail SMTP with async delivery.
  */
 @Slf4j
 @Service
@@ -18,15 +28,22 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
 
     @Value("${notification.email.from}")
     private String fromAddress;
 
+    @Value("${notification.email.from-name:AgriLink}")
+    private String fromName;
+
     @Value("${notification.email.enabled}")
     private boolean emailEnabled;
 
+    @Value("${notification.email.base-url:http://localhost:3000}")
+    private String baseUrl;
+
     /**
-     * Send an email asynchronously.
+     * Send a plain text email asynchronously.
      */
     @Async
     public void sendEmail(String to, String subject, String body) {
@@ -36,69 +53,284 @@ public class EmailService {
         }
 
         try {
-            log.info("Sending email to {} with subject: {}", to, subject);
+            log.info("Sending plain text email to {} with subject: {}", to, subject);
 
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromAddress);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
-            // Mock send - in production, uncomment the next line
-            // mailSender.send(message);
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, false); // false = plain text
 
-            log.info("Email sent successfully to {}", to);
+            mailSender.send(mimeMessage);
+            log.info("✅ Email sent successfully to {}", to);
+
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send email", e);
+            log.error("❌ Failed to send email to {}: {}", to, e.getMessage(), e);
+            // Don't throw - email failures shouldn't break the main flow
         }
     }
 
     /**
-     * Send a welcome email.
+     * Send an HTML email using a Thymeleaf template.
+     */
+    @Async
+    public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables) {
+        if (!emailEnabled) {
+            log.info("Email sending disabled. Would have sent HTML email to {} with subject: {}", to, subject);
+            return;
+        }
+
+        try {
+            log.info("Sending HTML email to {} with subject: {} using template: {}", to, subject, templateName);
+
+            // Create mutable copy of variables to add common variables
+            Map<String, Object> templateVariables = new java.util.HashMap<>(variables);
+
+            // Add common variables
+            templateVariables.put("baseUrl", baseUrl);
+            templateVariables.put("currentYear", LocalDateTime.now().getYear());
+
+            // Process Thymeleaf template
+            Context context = new Context();
+            context.setVariables(templateVariables);
+            String htmlContent = templateEngine.process("email/" + templateName, context);
+
+            // Create and send email
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true); // true = HTML
+
+            mailSender.send(mimeMessage);
+            log.info("✅ HTML email sent successfully to {}", to);
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send HTML email to {}: {}", to, e.getMessage(), e);
+            // Build a helpful plain text fallback based on the template type and variables
+            String fallbackBody = buildPlainTextFallback(templateName, variables);
+            sendEmail(to, subject, fallbackBody);
+        }
+    }
+
+    /**
+     * Build plain text email content as fallback when HTML fails.
+     */
+    private String buildPlainTextFallback(String templateName, Map<String, Object> variables) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("AgriLink Notification\n");
+        sb.append("=====================\n\n");
+
+        switch (templateName) {
+            case "welcome":
+                sb.append("Welcome to AgriLink, ").append(variables.getOrDefault("userName", "User")).append("!\n\n");
+                sb.append("We're thrilled to have you join our community.\n\n");
+                sb.append("Get started:\n");
+                sb.append("- Complete your profile: ")
+                        .append(variables.getOrDefault("profileUrl", baseUrl + "/profile")).append("\n");
+                sb.append("- Browse marketplace: ")
+                        .append(variables.getOrDefault("marketplaceUrl", baseUrl + "/marketplace")).append("\n");
+                break;
+            case "password-reset":
+                sb.append("Password Reset Request\n\n");
+                sb.append("Hi ").append(variables.getOrDefault("userName", "User")).append(",\n\n");
+                sb.append("Click the link below to reset your password:\n");
+                sb.append(variables.getOrDefault("resetUrl", baseUrl + "/reset-password")).append("\n\n");
+                sb.append("This link expires in 24 hours.\n");
+                sb.append("If you didn't request this, please ignore this email.\n");
+                break;
+            case "email-verification":
+                sb.append("Email Verification\n\n");
+                sb.append("Hi ").append(variables.getOrDefault("userName", "User")).append(",\n\n");
+                sb.append("Click the link below to verify your email:\n");
+                sb.append(variables.getOrDefault("verifyUrl", baseUrl + "/verify-email")).append("\n\n");
+                sb.append("This link expires in 48 hours.\n");
+                break;
+            case "order-confirmation":
+                sb.append("Order Confirmation - ").append(variables.getOrDefault("orderNumber", "")).append("\n\n");
+                sb.append("Thank you for your order, ").append(variables.getOrDefault("customerName", "Customer"))
+                        .append("!\n\n");
+                sb.append("Total: ").append(variables.getOrDefault("currency", "INR")).append(" ")
+                        .append(variables.getOrDefault("totalAmount", "")).append("\n");
+                sb.append("Track your order: ").append(variables.getOrDefault("trackOrderUrl", baseUrl)).append("\n");
+                break;
+            default:
+                sb.append("You have a new notification from AgriLink.\n");
+                sb.append("Please visit ").append(baseUrl).append(" for more details.\n");
+        }
+
+        sb.append("\n--\nAgriLink Team\n");
+        sb.append(baseUrl).append("\n");
+        return sb.toString();
+    }
+
+    /**
+     * Send a welcome email to new users.
      */
     @Async
     public void sendWelcomeEmail(String to, String userName) {
-        String subject = "Welcome to AgriLink!";
-        String body = String.format("""
-                Hello %s,
-                
-                Welcome to AgriLink! We're excited to have you join our community.
-                
-                AgriLink connects farmers directly with buyers, making agricultural commerce 
-                easier and more efficient for everyone.
-                
-                Get started by:
-                1. Completing your profile
-                2. Exploring the marketplace
-                3. Setting up your farm (if you're a farmer)
-                
-                If you have any questions, feel free to reach out to our support team.
-                
-                Happy farming!
-                The AgriLink Team
-                """, userName);
+        String subject = "🌱 Welcome to AgriLink!";
 
-        sendEmail(to, subject, body);
+        Map<String, Object> variables = Map.of(
+                "userName", userName,
+                "loginUrl", baseUrl + "/login",
+                "marketplaceUrl", baseUrl + "/marketplace",
+                "profileUrl", baseUrl + "/profile");
+
+        sendHtmlEmail(to, subject, "welcome", variables);
     }
 
     /**
      * Send an order confirmation email.
      */
     @Async
-    public void sendOrderConfirmationEmail(String to, String orderNumber, String total) {
-        String subject = "Order Confirmation - " + orderNumber;
-        String body = String.format("""
-                Your order has been confirmed!
-                
-                Order Number: %s
-                Total: %s
-                
-                You can track your order status in your AgriLink account.
-                
-                Thank you for shopping with AgriLink!
-                """, orderNumber, total);
+    public void sendOrderConfirmationEmail(String to, String customerName, String orderNumber,
+            BigDecimal totalAmount, String currency,
+            List<OrderItemInfo> items, String shippingAddress) {
+        String subject = "✅ Order Confirmed - " + orderNumber;
 
-        sendEmail(to, subject, body);
+        Map<String, Object> variables = Map.of(
+                "customerName", customerName,
+                "orderNumber", orderNumber,
+                "totalAmount", totalAmount,
+                "currency", currency,
+                "items", items,
+                "shippingAddress", shippingAddress,
+                "orderDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy")),
+                "trackOrderUrl", baseUrl + "/orders/" + orderNumber);
+
+        sendHtmlEmail(to, subject, "order-confirmation", variables);
+    }
+
+    /**
+     * Send an order status update email.
+     */
+    @Async
+    public void sendOrderStatusEmail(String to, String customerName, String orderNumber,
+            String newStatus, String statusMessage) {
+        String subject = "📦 Order Update - " + orderNumber;
+
+        Map<String, Object> variables = Map.of(
+                "customerName", customerName,
+                "orderNumber", orderNumber,
+                "newStatus", newStatus,
+                "statusMessage", statusMessage,
+                "trackOrderUrl", baseUrl + "/orders/" + orderNumber);
+
+        sendHtmlEmail(to, subject, "order-status", variables);
+    }
+
+    /**
+     * Send a password reset email.
+     * 
+     * @param to       recipient email
+     * @param userName display name
+     * @param resetUrl full password reset URL (already contains token)
+     */
+    @Async
+    public void sendPasswordResetEmail(String to, String userName, String resetUrl) {
+        String subject = "🔐 Reset Your AgriLink Password";
+
+        Map<String, Object> variables = Map.of(
+                "userName", userName,
+                "resetUrl", resetUrl,
+                "expiryHours", 24);
+
+        sendHtmlEmail(to, subject, "password-reset", variables);
+    }
+
+    /**
+     * Send email verification email.
+     * 
+     * @param to        recipient email
+     * @param userName  display name
+     * @param verifyUrl full email verification URL (already contains token)
+     */
+    @Async
+    public void sendEmailVerificationEmail(String to, String userName, String verifyUrl) {
+        String subject = "✉️ Verify Your AgriLink Email";
+
+        Map<String, Object> variables = Map.of(
+                "userName", userName,
+                "verifyUrl", verifyUrl,
+                "expiryHours", 48);
+
+        sendHtmlEmail(to, subject, "email-verification", variables);
+    }
+
+    /**
+     * Send farmer approval notification.
+     */
+    @Async
+    public void sendFarmerApprovalEmail(String to, String farmerName, boolean approved, String reason) {
+        String subject = approved
+                ? "🎉 Your Farmer Account is Approved!"
+                : "❌ Farmer Account Application Status";
+
+        Map<String, Object> variables = Map.of(
+                "farmerName", farmerName,
+                "approved", approved,
+                "reason", reason != null ? reason : "",
+                "dashboardUrl", baseUrl + "/farmer/dashboard",
+                "supportEmail", fromAddress);
+
+        sendHtmlEmail(to, subject, "farmer-approval", variables);
+    }
+
+    /**
+     * Send payment receipt email.
+     */
+    @Async
+    public void sendPaymentReceiptEmail(String to, String customerName, String orderNumber,
+            String transactionId, BigDecimal amount, String currency,
+            String paymentMethod) {
+        String subject = "💳 Payment Receipt - " + orderNumber;
+
+        Map<String, Object> variables = Map.of(
+                "customerName", customerName,
+                "orderNumber", orderNumber,
+                "transactionId", transactionId,
+                "amount", amount,
+                "currency", currency,
+                "paymentMethod", paymentMethod,
+                "paymentDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy HH:mm")),
+                "orderUrl", baseUrl + "/orders/" + orderNumber);
+
+        sendHtmlEmail(to, subject, "payment-receipt", variables);
+    }
+
+    /**
+     * Send new message notification email.
+     */
+    @Async
+    public void sendNewMessageEmail(String to, String recipientName, String senderName,
+            String messagePreview) {
+        String subject = "💬 New Message from " + senderName;
+
+        Map<String, Object> variables = Map.of(
+                "recipientName", recipientName,
+                "senderName", senderName,
+                "messagePreview", messagePreview.length() > 100
+                        ? messagePreview.substring(0, 100) + "..."
+                        : messagePreview,
+                "messagesUrl", baseUrl + "/messages");
+
+        sendHtmlEmail(to, subject, "new-message", variables);
+    }
+
+    /**
+     * DTO for order item information in emails.
+     */
+    public record OrderItemInfo(
+            String productName,
+            int quantity,
+            String unit,
+            BigDecimal unitPrice,
+            BigDecimal totalPrice,
+            String imageUrl) {
     }
 }

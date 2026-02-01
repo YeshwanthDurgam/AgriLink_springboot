@@ -82,6 +82,22 @@ public class Address {
     public enum AddressType {
         SHIPPING,
         BILLING,
-        BOTH
+        BOTH,
+        HOME,
+        WORK,
+        OTHER;
+
+        // Allow case-insensitive deserialization
+        @com.fasterxml.jackson.annotation.JsonCreator
+        public static AddressType fromString(String value) {
+            if (value == null) {
+                return SHIPPING; // default
+            }
+            try {
+                return AddressType.valueOf(value.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return SHIPPING; // fallback to default
+            }
+        }
     }
 }

@@ -13,9 +13,9 @@ spring:
 
   datasource:
     # Neon Database Connection URL
-    url: jdbc:postgresql://ep-square-hill-ahcj9c6a-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=notification_schema
+    url: jdbc:postgresql://ep-withered-wave-ah6absff-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=notification_schema
     username: neondb_owner
-    password: npg_bVWzNYFB23tP
+    password: npg_0aWqleYJP1nw
     driver-class-name: org.postgresql.Driver
 
     # HikariCP Connection Pool Configuration (optimized for serverless)
@@ -33,6 +33,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
+        default_schema: notification_schema
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
@@ -46,18 +47,33 @@ spring:
     schemas: notification_schema
     default-schema: notification_schema
 
-  # Email Configuration
+  # Email Configuration - Gmail SMTP (SSL on port 465)
   mail:
-    host: smtp.example.com
-    port: 587
-    username: noreply@agrilink.com
-    password: ${MAIL_PASSWORD:password}
+    host: smtp.gmail.com
+    port: 465
+    username: arunteja2385@gmail.com
+    password: ${MAIL_PASSWORD:rgnt vljl ienu hmgw}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false
+          connectiontimeout: 30000
+          timeout: 30000
+          writetimeout: 30000
+
+  # Thymeleaf Configuration for Email Templates
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
 
 # JWT Configuration
 jwt:
@@ -74,7 +90,8 @@ logging:
 # Notification Settings
 notification:
   email:
-    from: noreply@agrilink.com
+    from: arunteja2385@gmail.com
+    from-name: AgriLink
     enabled: true
   sms:
     enabled: false

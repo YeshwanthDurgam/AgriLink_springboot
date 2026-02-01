@@ -46,7 +46,7 @@ public class CheckoutController {
      * GET /api/v1/checkout/summary
      */
     @GetMapping("/summary")
-    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER') or hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<CheckoutSummary>> getCheckoutSummary(
             HttpServletRequest request,
             Authentication authentication) {
@@ -60,7 +60,7 @@ public class CheckoutController {
      * POST /api/v1/checkout/initialize
      */
     @PostMapping("/initialize")
-    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER') or hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<CheckoutResponse>> initializeCheckout(
             HttpServletRequest request,
             Authentication authentication,
@@ -88,7 +88,7 @@ public class CheckoutController {
      * POST /api/v1/checkout/verify-payment
      */
     @PostMapping("/verify-payment")
-    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER')")
+    @PreAuthorize("hasRole('BUYER') or hasRole('FARMER') or hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<PaymentVerificationResponse>> verifyPayment(
             HttpServletRequest request,
             Authentication authentication,

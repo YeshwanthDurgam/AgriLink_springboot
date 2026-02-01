@@ -13,9 +13,9 @@ spring:
 
   datasource:
     # Neon Database Connection URL
-    url: jdbc:postgresql://ep-square-hill-ahcj9c6a-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=marketplace_schema
+    url: jdbc:postgresql://ep-withered-wave-ah6absff-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=marketplace_schema
     username: neondb_owner
-    password: npg_bVWzNYFB23tP
+    password: npg_0aWqleYJP1nw
     driver-class-name: org.postgresql.Driver
 
     # HikariCP Connection Pool Configuration (optimized for serverless)
@@ -35,6 +35,7 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: marketplace_schema
         jdbc:
           lob:
             non_contextual_creation: true

@@ -32,19 +32,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/actuator/**").permitAll()
-                    .requestMatchers("/error").permitAll()
-                    // Internal service endpoints
-                    .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send/template").permitAll()
-                    // All other endpoints require authentication
-                    .anyRequest().authenticated())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        // Internal service endpoints for sending notifications
+                        .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send/template").permitAll()
+                        // Email API endpoints (for inter-service communication)
+                        .requestMatchers("/api/v1/emails/**").permitAll()
+                        // Email test endpoints (for development/testing)
+                        .requestMatchers("/api/v1/email-test/**").permitAll()
+                        // All other endpoints require authentication
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

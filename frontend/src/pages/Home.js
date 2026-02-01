@@ -1,480 +1,703 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, FiUsers, FiPackage, FiAward, FiShield, FiTruck, FiCheckCircle } from 'react-icons/fi';
+import { 
+  FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, 
+  FiPackage, FiTruck, FiShield, FiCheckCircle, FiClock,
+  FiZap, FiMapPin, FiArrowRight
+} from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { marketplaceApi, farmApi, authApi } from '../services/api';
+import { marketplaceApi } from '../services/api';
+import guestService from '../services/guestService';
+import { toast } from 'react-toastify';
 import SearchBar from '../components/SearchBar';
 import './Home.css';
 
-// Simple cache for home data to avoid refetching on every mount
-const homeDataCache = {
-  data: null,
-  timestamp: 0,
-  CACHE_DURATION: 2 * 60 * 1000 // 2 minutes
+// ============= CONSTANTS =============
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    title: "Fresh From Farm To Your Doorstep",
+    subtitle: "Connect directly with local farmers. Get the freshest produce at the best prices.",
+    image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200",
+    buttonText: "Shop Now",
+    buttonLink: "/marketplace",
+    bgColor: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
+  },
+  {
+    id: 2,
+    title: "Organic Vegetables at 20% Off",
+    subtitle: "Fresh, chemical-free vegetables sourced directly from organic farms.",
+    image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200",
+    buttonText: "Shop Organic",
+    buttonLink: "/marketplace?organic=true",
+    bgColor: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)"
+  },
+  {
+    id: 3,
+    title: "Support Local Farmers",
+    subtitle: "Every purchase helps a farmer. Join 10,000+ conscious consumers.",
+    image: "https://images.unsplash.com/photo-1595855759920-86582396756a?w=1200",
+    buttonText: "Meet Farmers",
+    buttonLink: "/farmers",
+    bgColor: "linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)"
+  },
+  {
+    id: 4,
+    title: "Free Delivery on Orders Above ₹500",
+    subtitle: "Fast and reliable delivery to your doorstep within 24 hours.",
+    image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1200",
+    buttonText: "Order Now",
+    buttonLink: "/marketplace",
+    bgColor: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)"
+  }
+];
+
+const CATEGORY_IMAGES = {
+  'Vegetables': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300',
+  'Fruits': 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=300',
+  'Grains': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300',
+  'Dairy': 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300',
+  'Spices': 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300',
+  'Pulses': 'https://images.unsplash.com/photo-1515543904506-2ef97737f375?w=300',
+  'Organic': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300',
+  'Seeds': 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=300',
+  'Nuts': 'https://images.unsplash.com/photo-1608797178974-15b35a64ede9?w=300',
+  'Herbs': 'https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300'
 };
 
+const RECENTLY_VIEWED_KEY = 'agrilink_recently_viewed';
+
+// ============= MAIN COMPONENT =============
 const Home = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  
+  // State management
   const [categories, setCategories] = useState([]);
-  // Single state for all products instead of 5 duplicate states
-  const [products, setProducts] = useState([]);
-  const [statistics, setStatistics] = useState({
-    totalFarmers: 0,
-    totalProducts: 0,
-    totalOrders: 0,
-    satisfactionRate: 0
-  });
+  const [categoryProducts, setCategoryProducts] = useState({});
+  const [topProducts, setTopProducts] = useState([]);
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [farmers, setFarmers] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [visibleStats, setVisibleStats] = useState(false);
-  const statsRef = useRef(null);
+  
+  // Banner carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const bannerIntervalRef = useRef(null);
+  
+  // Deal timer state
+  const [dealTimer, setDealTimer] = useState({ hours: 5, minutes: 45, seconds: 30 });
 
+  // ============= EFFECTS =============
+  
+  // Auto-slide banner
   useEffect(() => {
-    fetchHomeData();
+    bannerIntervalRef.current = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % BANNER_SLIDES.length);
+    }, 5000);
     
-    // Intersection observer for stats animation
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleStats(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    if (statsRef.current) {
-      observer.observe(statsRef.current);
-    }
-    
-    // Fallback: show stats after 2 seconds even if not scrolled into view
-    const timeout = setTimeout(() => {
-      setVisibleStats(true);
-    }, 2000);
-    
-    return () => {
-      observer.disconnect();
-      clearTimeout(timeout);
-    };
+    return () => clearInterval(bannerIntervalRef.current);
   }, []);
 
-  const fetchHomeData = async () => {
-    // Check cache first
-    const now = Date.now();
-    if (homeDataCache.data && (now - homeDataCache.timestamp) < homeDataCache.CACHE_DURATION) {
-      const cached = homeDataCache.data;
-      setCategories(cached.categories);
-      setProducts(cached.products);
-      setStatistics(cached.statistics);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Fetch ALL data in parallel for maximum speed
-      const [categoriesRes, topListings, recentListings, farmersResponse] = await Promise.all([
-        marketplaceApi.get('/categories').catch(() => null),
-        marketplaceApi.get('/listings/top?limit=10').catch(() => null),
-        marketplaceApi.get('/listings/recent?limit=10').catch(() => null),
-        authApi.get('/auth/farmers/ids').catch(() => null)
-      ]);
-      
-      // Process categories
-      let processedCategories = [];
-      if (categoriesRes?.data?.data && Array.isArray(categoriesRes.data.data)) {
-        processedCategories = categoriesRes.data.data.map((cat) => ({
-          ...cat,
-          icon: getCategoryIcon(cat.name)
-        }));
-      }
-      setCategories(processedCategories);
-      
-      // Process products
-      const topProducts = topListings?.data?.data || [];
-      const recentProducts = recentListings?.data?.data || [];
-      
-      const formatListing = (listing) => ({
-        id: listing.id,
-        title: listing.title,
-        price: parseFloat(listing.price) || 0,
-        originalPrice: parseFloat(listing.originalPrice) || parseFloat(listing.price) * 1.2,
-        unit: listing.unit || 'kg',
-        imageUrl: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/300',
-        farmerName: listing.sellerName || listing.farmerName || 'Local Farmer',
-        rating: listing.rating || 0,
-        reviewCount: listing.reviewCount || 0,
-        location: listing.location || 'India',
-        discount: listing.originalPrice 
-          ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
-          : 0,
-        sellerId: listing.sellerId
+  // Deal countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDealTimer(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        }
+        return { hours: 5, minutes: 45, seconds: 30 };
       });
-      
-      const allProducts = [...topProducts, ...recentProducts];
-      const formattedProducts = allProducts.map(formatListing);
-      setProducts(formattedProducts.slice(0, 10));
-      
-      // Process statistics
-      const farmerIds = farmersResponse?.data?.data || farmersResponse?.data || [];
-      const farmerCount = Array.isArray(farmerIds) ? farmerIds.length : 0;
-      const productCount = topProducts.length + recentProducts.length;
-      
-      const stats = {
-        totalFarmers: farmerCount,
-        totalProducts: productCount,
-        totalOrders: 0,
-        satisfactionRate: 0
-      };
-      setStatistics(stats);
-      
-      // Update cache
-      homeDataCache.data = {
-        categories: processedCategories,
-        products: formattedProducts.slice(0, 10),
-        statistics: stats
-      };
-      homeDataCache.timestamp = now;
-      
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load recently viewed from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENTLY_VIEWED_KEY);
+    if (stored) {
+      try {
+        setRecentlyViewed(JSON.parse(stored));
+      } catch (e) {
+        console.error('Error parsing recently viewed:', e);
+      }
+    }
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ============= DATA FETCHING =============
+  
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      const [categoriesRes, topRes, recentRes, farmersRes] = await Promise.all([
+        marketplaceApi.get('/categories').catch(() => null),
+        marketplaceApi.get('/listings/top?limit=12').catch(() => null),
+        marketplaceApi.get('/listings/recent?limit=12').catch(() => null),
+        marketplaceApi.get('/listings/sellers').catch(() => null)
+      ]);
+
+      // Process categories
+      if (categoriesRes?.data?.data) {
+        const cats = categoriesRes.data.data.map(cat => ({
+          ...cat,
+          image: CATEGORY_IMAGES[cat.name] || CATEGORY_IMAGES['Vegetables']
+        }));
+        setCategories(cats);
+        
+        // Fetch products for first 3 categories
+        if (cats.length > 0) {
+          fetchCategoryProducts(cats.slice(0, 3));
+        }
+      }
+
+      // Process top products
+      if (topRes?.data?.data) {
+        setTopProducts(formatProducts(topRes.data.data));
+      }
+
+      // Process recent products
+      if (recentRes?.data?.data) {
+        setRecentProducts(formatProducts(recentRes.data.data));
+      }
+
+      // Process farmers
+      if (farmersRes?.data?.data) {
+        setFarmers(farmersRes.data.data.slice(0, 8));
+      }
+
     } catch (err) {
       console.error('Error fetching home data:', err);
-      setCategories([]);
-      setProducts([]);
-      setStatistics({
-        totalFarmers: 0,
-        totalProducts: 0,
-        totalOrders: 0,
-        satisfactionRate: 0
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  const getCategoryIcon = (name) => {
-    const icons = {
-      'Vegetables': '🥬',
-      'Fruits': '🍎',
-      'Grains': '🌾',
-      'Dairy': '🥛',
-      'Spices': '🌶️',
-      'Pulses': '🫘',
-      'Organic': '🌿',
-      'Seeds': '🌱',
-      'Nuts': '🥜',
-      'Herbs': '🌿'
-    };
-    return icons[name] || '🌾';
+  const fetchCategoryProducts = async (cats) => {
+    for (const cat of cats) {
+      try {
+        const res = await marketplaceApi.get(`/listings/category/${cat.id}?size=8`);
+        if (res?.data?.data?.content) {
+          setCategoryProducts(prev => ({
+            ...prev,
+            [cat.id]: formatProducts(res.data.data.content)
+          }));
+        }
+      } catch (err) {
+        console.error(`Error fetching products for category ${cat.name}:`, err);
+      }
+    }
   };
 
-  const handleCategoryClick = (categoryId) => {
-    navigate(`/marketplace?categoryId=${categoryId}`);
+  const formatProducts = (listings) => {
+    return listings.map(listing => ({
+      id: listing.id,
+      title: listing.title,
+      price: parseFloat(listing.price) || 0,
+      originalPrice: parseFloat(listing.originalPrice) || Math.round(parseFloat(listing.price) * 1.2),
+      unit: listing.unit || listing.quantityUnit || 'kg',
+      imageUrl: listing.imageUrl || listing.images?.[0]?.imageUrl || 'https://via.placeholder.com/300',
+      images: listing.images,
+      sellerName: listing.sellerName || 'Local Farmer',
+      sellerId: listing.sellerId,
+      rating: listing.averageRating || listing.rating || 4.5,
+      reviewCount: listing.reviewCount || 0,
+      location: listing.location || 'India',
+      discount: listing.originalPrice 
+        ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
+        : Math.floor(Math.random() * 25) + 5,
+      quantity: listing.quantity,
+      quantityUnit: listing.quantityUnit || listing.unit
+    }));
+  };
+
+  // ============= HANDLERS =============
+  
+  const handleBannerNav = (direction) => {
+    clearInterval(bannerIntervalRef.current);
+    if (direction === 'next') {
+      setCurrentSlide(prev => (prev + 1) % BANNER_SLIDES.length);
+    } else {
+      setCurrentSlide(prev => (prev - 1 + BANNER_SLIDES.length) % BANNER_SLIDES.length);
+    }
+    bannerIntervalRef.current = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % BANNER_SLIDES.length);
+    }, 5000);
+  };
+
+  const handleDotClick = (index) => {
+    clearInterval(bannerIntervalRef.current);
+    setCurrentSlide(index);
+    bannerIntervalRef.current = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % BANNER_SLIDES.length);
+    }, 5000);
   };
 
   const handleAddToCart = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    const cartItem = {
+      listingId: product.id,
+      sellerId: product.sellerId,
+      quantity: 1,
+      unitPrice: product.price,
+      listingTitle: product.title,
+      listingImageUrl: product.imageUrl,
+      unit: product.unit,
+      availableQuantity: product.quantity || 100
+    };
+    
     if (!isAuthenticated) {
-      navigate('/login');
+      guestService.addToGuestCart(cartItem);
+      toast.success('Added to cart!');
       return;
     }
+    
     try {
       const cartService = (await import('../services/cartService')).default;
-      await cartService.addToCart({
-        listingId: product.id,
-        sellerId: product.sellerId,
-        quantity: 1,
-        unitPrice: product.pricePerUnit || product.price,
-        listingTitle: product.title,
-        listingImageUrl: product.images?.[0]?.imageUrl || product.imageUrl || null,
-        unit: product.quantityUnit || product.unit || 'kg',
-        availableQuantity: product.quantity ? parseInt(product.quantity) : null
-      });
-      // Show success feedback
-      alert('Added to cart!');
+      await cartService.addToCart(cartItem);
+      toast.success('Added to cart!');
     } catch (err) {
       console.error('Error adding to cart:', err);
-      alert('Failed to add to cart. Please try again.');
+      toast.error('Failed to add to cart');
     }
   };
 
-  const handleAddToWishlist = async (e, productId) => {
+  const handleAddToWishlist = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
+    
     if (!isAuthenticated) {
-      navigate('/login');
+      const wishlistItem = {
+        id: product.id,
+        listingId: product.id,
+        title: product.title,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        unit: product.unit,
+        sellerId: product.sellerId
+      };
+      guestService.addToGuestWishlist(wishlistItem);
+      toast.success('Added to wishlist!');
       return;
     }
+    
     try {
-      await marketplaceApi.post(`/wishlist/${productId}`);
-      alert('Added to wishlist!');
+      await marketplaceApi.post(`/wishlist/${product.id}`);
+      toast.success('Added to wishlist!');
     } catch (err) {
       console.error('Error adding to wishlist:', err);
-      alert('Failed to add to wishlist. Please try again.');
+      toast.error('Failed to add to wishlist');
     }
   };
 
-  return (
-    <div className="home-page">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-slider">
-          <div className="hero-slide active">
-            <div className="hero-content">
-              <span className="hero-badge">🌾 Farm Fresh Guarantee</span>
-              <h1>Fresh From Farm<br />To Your Doorstep</h1>
-              <p>Connect directly with local farmers. Get the freshest produce at the best prices with complete transparency.</p>
-              
-              {/* Search Bar */}
-              <div className="hero-search-wrapper">
-                <SearchBar 
-                  placeholder="Search for fresh vegetables, fruits, dairy..."
-                  showTrending={true}
-                  className="hero-search"
-                />
-              </div>
-              
-              <div className="hero-buttons">
-                <Link to="/marketplace" className="btn-primary">Shop Now</Link>
-                <Link to="/farmers" className="btn-secondary">Meet Our Farmers</Link>
-              </div>
-              <div className="hero-features">
-                <div className="hero-feature">
-                  <FiTruck />
-                  <span>Free Delivery</span>
-                </div>
-                <div className="hero-feature">
-                  <FiShield />
-                  <span>Quality Assured</span>
-                </div>
-                <div className="hero-feature">
-                  <FiCheckCircle />
-                  <span>100% Organic</span>
-                </div>
-              </div>
-            </div>
-            <div className="hero-image">
-              <img src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600" alt="Fresh Farm Produce" />
-            </div>
-          </div>
-        </div>
-      </section>
+  const handleProductClick = (product) => {
+    // Save to recently viewed
+    const viewed = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
+    const filtered = viewed.filter(p => p.id !== product.id);
+    const updated = [product, ...filtered].slice(0, 10);
+    localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(updated));
+    setRecentlyViewed(updated);
+    
+    navigate(`/marketplace/${product.id}`);
+  };
 
-      {/* Categories Section */}
-      <section className="categories-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2>Shop by Category</h2>
-            <Link to="/marketplace" className="view-all">View All Categories →</Link>
-          </div>
-          {categories.length > 0 ? (
-            <div className="categories-grid">
-              {categories.map((category) => (
+  // ============= RENDER =============
+  
+  const currentBanner = BANNER_SLIDES[currentSlide];
+  const dealsProducts = topProducts.filter(p => p.discount > 10).slice(0, 6);
+  const dealOfTheDay = topProducts.find(p => p.discount > 15) || topProducts[0];
+
+  if (loading) {
+    return (
+      <div className="home-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading fresh products...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="home-page-v2">
+      {/* ============= HERO BANNER CAROUSEL ============= */}
+      <section className="hero-banner-section" style={{ background: currentBanner?.bgColor }}>
+        <div className="banner-container">
+          <button className="banner-nav-btn prev" onClick={() => handleBannerNav('prev')}>
+            <FiChevronLeft />
+          </button>
+          
+          <div className="banner-content-wrapper">
+            <div className="banner-slides">
+              {BANNER_SLIDES.map((slide, index) => (
                 <div 
-                  key={category.id} 
-                  className="category-card"
-                  onClick={() => handleCategoryClick(category.id)}
+                  key={slide.id} 
+                  className={`banner-slide ${index === currentSlide ? 'active' : ''}`}
                 >
-                  <div className="category-icon">{category.icon}</div>
-                  <h3>{category.name}</h3>
+                  <div className="banner-text">
+                    <h1>{slide.title}</h1>
+                    <p>{slide.subtitle}</p>
+                    <Link to={slide.buttonLink} className="banner-cta-btn">
+                      {slide.buttonText} <FiArrowRight />
+                    </Link>
+                  </div>
+                  <div className="banner-image">
+                    <img src={slide.image} alt={slide.title} />
+                  </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="empty-categories">
-              <p>No categories available at the moment. Please check back later.</p>
-              <Link to="/marketplace" className="browse-all-btn">Browse All Products</Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Featured Products Carousel */}
-      <ProductCarousel 
-        title="Featured Products" 
-        subtitle="Handpicked fresh produce from our best farmers"
-        products={products}
-        onAddToCart={handleAddToCart}
-        onAddToWishlist={handleAddToWishlist}
-        viewAllLink="/marketplace?sort=featured"
-      />
-
-      {/* Fresh Vegetables Carousel */}
-      <ProductCarousel 
-        title="Fresh Vegetables" 
-        subtitle="Farm-fresh vegetables picked today"
-        products={products}
-        onAddToCart={handleAddToCart}
-        onAddToWishlist={handleAddToWishlist}
-        viewAllLink="/marketplace?category=VEGETABLES"
-        bgColor="#f0fff4"
-      />
-
-      {/* Statistics Section */}
-      <section className="statistics-section" ref={statsRef}>
-        <div className="section-container">
-          <div className="stats-header">
-            <h2>Trusted by Thousands</h2>
-            <p>Building India's largest farmer-to-consumer marketplace</p>
-          </div>
-          <div className="stats-grid">
-            <div className={`stat-card ${visibleStats ? 'animate' : ''}`}>
-              <div className="stat-icon farmers">
-                <FiUsers />
-              </div>
-              <div className="stat-number">
-                <CountUp end={statistics.totalFarmers} visible={visibleStats} />+
-              </div>
-              <div className="stat-label">Farmers Onboarded</div>
-            </div>
-            <div className={`stat-card ${visibleStats ? 'animate' : ''}`} style={{ animationDelay: '0.1s' }}>
-              <div className="stat-icon products">
-                <FiPackage />
-              </div>
-              <div className="stat-number">
-                <CountUp end={statistics.totalProducts} visible={visibleStats} />+
-              </div>
-              <div className="stat-label">Products Available</div>
-            </div>
-            <div className={`stat-card ${visibleStats ? 'animate' : ''}`} style={{ animationDelay: '0.2s' }}>
-              <div className="stat-icon orders">
-                <FiTruck />
-              </div>
-              <div className="stat-number">
-                <CountUp end={statistics.totalOrders} visible={visibleStats} />+
-              </div>
-              <div className="stat-label">Orders Delivered</div>
-            </div>
-            <div className={`stat-card ${visibleStats ? 'animate' : ''}`} style={{ animationDelay: '0.3s' }}>
-              <div className="stat-icon satisfaction">
-                <FiAward />
-              </div>
-              <div className="stat-number">
-                <CountUp end={statistics.satisfactionRate} visible={visibleStats} decimals={1} />%
-              </div>
-              <div className="stat-label">Customer Satisfaction</div>
-            </div>
           </div>
           
-          {/* Trust Badges */}
-          <div className="trust-badges">
-            <div className="trust-badge">
-              <img src="https://img.icons8.com/color/48/verified-badge.png" alt="Verified" />
-              <span>Verified Farmers</span>
-            </div>
-            <div className="trust-badge">
-              <img src="https://img.icons8.com/color/48/organic-food.png" alt="Organic" />
-              <span>Organic Certified</span>
-            </div>
-            <div className="trust-badge">
-              <img src="https://img.icons8.com/color/48/security-checked.png" alt="Secure" />
-              <span>Secure Payments</span>
-            </div>
-            <div className="trust-badge">
-              <img src="https://img.icons8.com/color/48/prize.png" alt="Award" />
-              <span>Award Winning</span>
-            </div>
+          <button className="banner-nav-btn next" onClick={() => handleBannerNav('next')}>
+            <FiChevronRight />
+          </button>
+          
+          <div className="banner-dots">
+            {BANNER_SLIDES.map((_, index) => (
+              <button 
+                key={index} 
+                className={`dot ${index === currentSlide ? 'active' : ''}`}
+                onClick={() => handleDotClick(index)}
+              />
+            ))}
           </div>
+        </div>
+        
+        {/* Search Bar Overlay */}
+        <div className="banner-search-wrapper">
+          <SearchBar 
+            placeholder="Search for fresh vegetables, fruits, dairy..."
+            showTrending={true}
+            className="banner-search"
+          />
         </div>
       </section>
 
-      {/* Organic Fruits Carousel */}
-      <ProductCarousel 
-        title="Organic Fruits" 
-        subtitle="Naturally grown, chemical-free fruits"
-        products={products}
-        onAddToCart={handleAddToCart}
-        onAddToWishlist={handleAddToWishlist}
-        viewAllLink="/marketplace?category=FRUITS"
-      />
-
-      {/* Dairy Products Carousel */}
-      <ProductCarousel 
-        title="Farm Fresh Dairy" 
-        subtitle="Pure milk and dairy products from local farms"
-        products={products}
-        onAddToCart={handleAddToCart}
-        onAddToWishlist={handleAddToWishlist}
-        viewAllLink="/marketplace?category=DAIRY"
-        bgColor="#fffbeb"
-      />
-
-      {/* Why Choose Us Section */}
-      <section className="why-choose-section">
+      {/* ============= CATEGORY STRIP ============= */}
+      <section className="category-strip-section">
         <div className="section-container">
-          <h2>Why Choose AgriLink?</h2>
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">🌱</div>
-              <h3>Direct from Farmers</h3>
-              <p>No middlemen. Buy directly from verified farmers and get the best prices.</p>
+          <div className="category-strip">
+            {categories.map(category => (
+              <Link 
+                key={category.id} 
+                to={`/marketplace?categoryId=${category.id}`}
+                className="category-strip-item"
+              >
+                <div className="category-strip-image">
+                  <img src={category.image} alt={category.name} />
+                </div>
+                <span>{category.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============= FLASH DEALS SECTION ============= */}
+      {dealsProducts.length > 0 && (
+        <section className="flash-deals-section">
+          <div className="section-container">
+            <div className="deals-layout">
+              {/* Flash Deals */}
+              <div className="flash-deals-box">
+                <div className="deals-header">
+                  <div className="deals-title">
+                    <FiZap className="flash-icon" />
+                    <h2>Flash Deals</h2>
+                  </div>
+                  <div className="deals-timer">
+                    <FiClock />
+                    <span>
+                      {String(dealTimer.hours).padStart(2, '0')}:
+                      {String(dealTimer.minutes).padStart(2, '0')}:
+                      {String(dealTimer.seconds).padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flash-deals-grid">
+                  {dealsProducts.slice(0, 4).map(product => (
+                    <DealCard 
+                      key={product.id} 
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                      onClick={() => handleProductClick(product)}
+                    />
+                  ))}
+                </div>
+                <Link to="/deals" className="view-all-deals">
+                  View All Deals <FiArrowRight />
+                </Link>
+              </div>
+              
+              {/* Deal of the Day */}
+              {dealOfTheDay && (
+                <div className="deal-of-day-box">
+                  <div className="dotd-badge">🎯 Deal of the Day</div>
+                  <div className="dotd-image" onClick={() => handleProductClick(dealOfTheDay)}>
+                    <img src={dealOfTheDay.imageUrl} alt={dealOfTheDay.title} />
+                    <span className="dotd-discount">-{dealOfTheDay.discount}%</span>
+                  </div>
+                  <div className="dotd-info">
+                    <h3>{dealOfTheDay.title}</h3>
+                    <div className="dotd-price">
+                      <span className="dotd-current">₹{dealOfTheDay.price}</span>
+                      <span className="dotd-original">₹{dealOfTheDay.originalPrice}</span>
+                    </div>
+                    <button 
+                      className="dotd-add-btn"
+                      onClick={(e) => handleAddToCart(e, dealOfTheDay)}
+                    >
+                      <FiShoppingCart /> Add to Cart
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="feature-card">
-              <div className="feature-icon">🚚</div>
-              <h3>Same Day Delivery</h3>
-              <p>Fresh produce delivered to your doorstep within hours of harvest.</p>
+          </div>
+        </section>
+      )}
+
+      {/* ============= TRENDING PRODUCTS ============= */}
+      {topProducts.length > 0 && (
+        <ProductCarousel 
+          title="🔥 Trending Now"
+          subtitle="Most popular products this week"
+          products={topProducts}
+          onAddToCart={handleAddToCart}
+          onAddToWishlist={handleAddToWishlist}
+          onProductClick={handleProductClick}
+          viewAllLink="/marketplace?sort=popular"
+        />
+      )}
+
+      {/* ============= SHOP BY CATEGORY GRID ============= */}
+      <section className="category-grid-section">
+        <div className="section-container">
+          <div className="section-header">
+            <h2>Shop by Category</h2>
+            <Link to="/marketplace" className="view-all-link">
+              View All <FiArrowRight />
+            </Link>
+          </div>
+          <div className="category-grid">
+            {categories.slice(0, 8).map(category => (
+              <Link 
+                key={category.id}
+                to={`/marketplace?categoryId=${category.id}`}
+                className="category-grid-card"
+              >
+                <div className="category-grid-image">
+                  <img src={category.image} alt={category.name} />
+                </div>
+                <h3>{category.name}</h3>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============= CATEGORY-SPECIFIC CAROUSELS ============= */}
+      {categories.slice(0, 3).map(category => (
+        categoryProducts[category.id]?.length > 0 && (
+          <ProductCarousel 
+            key={category.id}
+            title={`Fresh ${category.name}`}
+            subtitle={`Discover quality ${category.name.toLowerCase()} from local farms`}
+            products={categoryProducts[category.id]}
+            onAddToCart={handleAddToCart}
+            onAddToWishlist={handleAddToWishlist}
+            onProductClick={handleProductClick}
+            viewAllLink={`/marketplace?categoryId=${category.id}`}
+            bgColor={category.name === 'Vegetables' ? '#f0fff4' : category.name === 'Fruits' ? '#fef3c7' : '#fff'}
+          />
+        )
+      ))}
+
+      {/* ============= TRUST BADGES ============= */}
+      <section className="trust-section">
+        <div className="section-container">
+          <div className="trust-badges-row">
+            <div className="trust-badge-item">
+              <FiTruck className="trust-icon" />
+              <div>
+                <h4>Free Delivery</h4>
+                <p>On orders above ₹500</p>
+              </div>
             </div>
-            <div className="feature-card">
-              <div className="feature-icon">✅</div>
-              <h3>Quality Guaranteed</h3>
-              <p>Every product goes through strict quality checks before delivery.</p>
+            <div className="trust-badge-item">
+              <FiShield className="trust-icon" />
+              <div>
+                <h4>Secure Payments</h4>
+                <p>100% secure checkout</p>
+              </div>
             </div>
-            <div className="feature-card">
-              <div className="feature-icon">💰</div>
-              <h3>Best Prices</h3>
-              <p>Fair prices for farmers, savings for you. Everyone wins!</p>
+            <div className="trust-badge-item">
+              <FiCheckCircle className="trust-icon" />
+              <div>
+                <h4>Quality Assured</h4>
+                <p>Verified farmers only</p>
+              </div>
             </div>
-            <div className="feature-card">
-              <div className="feature-icon">🔒</div>
-              <h3>Secure Payments</h3>
-              <p>Multiple payment options with 100% secure transactions.</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">📞</div>
-              <h3>24/7 Support</h3>
-              <p>Our team is always here to help with any questions or concerns.</p>
+            <div className="trust-badge-item">
+              <FiPackage className="trust-icon" />
+              <div>
+                <h4>Easy Returns</h4>
+                <p>7 days return policy</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Grains Carousel */}
-      <ProductCarousel 
-        title="Premium Grains & Pulses" 
-        subtitle="Freshly harvested grains from fertile farms"
-        products={products}
-        onAddToCart={handleAddToCart}
-        onAddToWishlist={handleAddToWishlist}
-        viewAllLink="/marketplace?category=GRAINS"
-      />
+      {/* ============= NEW ARRIVALS ============= */}
+      {recentProducts.length > 0 && (
+        <ProductCarousel 
+          title="✨ New Arrivals"
+          subtitle="Fresh listings from our farmers"
+          products={recentProducts}
+          onAddToCart={handleAddToCart}
+          onAddToWishlist={handleAddToWishlist}
+          onProductClick={handleProductClick}
+          viewAllLink="/marketplace?sort=newest"
+          bgColor="#f8fafc"
+        />
+      )}
 
-      {/* CTA Section */}
-      <section className="cta-section">
-        <div className="cta-content">
-          <h2>Are You a Farmer?</h2>
-          <p>Join thousands of farmers selling directly to consumers. No commission, full control.</p>
-          <Link to="/register?role=FARMER" className="cta-button">Start Selling Today →</Link>
+      {/* ============= FEATURED FARMERS ============= */}
+      {farmers.length > 0 && (
+        <section className="farmers-section">
+          <div className="section-container">
+            <div className="section-header">
+              <div>
+                <h2>👨‍🌾 Meet Our Farmers</h2>
+                <p className="section-subtitle">The people behind your fresh produce</p>
+              </div>
+              <Link to="/farmers" className="view-all-link">
+                View All <FiArrowRight />
+              </Link>
+            </div>
+            <div className="farmers-carousel">
+              {farmers.map(farmer => (
+                <FarmerCard key={farmer.sellerId} farmer={farmer} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============= BUDGET SECTION ============= */}
+      <section className="budget-section">
+        <div className="section-container">
+          <div className="section-header">
+            <h2>💰 Budget Friendly</h2>
+          </div>
+          <div className="budget-cards">
+            <Link to="/marketplace?maxPrice=100" className="budget-card">
+              <span className="budget-amount">Under ₹100</span>
+              <span className="budget-text">Great deals on essentials</span>
+            </Link>
+            <Link to="/marketplace?maxPrice=250" className="budget-card">
+              <span className="budget-amount">Under ₹250</span>
+              <span className="budget-text">Quality at low prices</span>
+            </Link>
+            <Link to="/marketplace?maxPrice=500" className="budget-card">
+              <span className="budget-amount">Under ₹500</span>
+              <span className="budget-text">Premium selections</span>
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Footer will be added separately */}
+      {/* ============= RECENTLY VIEWED ============= */}
+      {recentlyViewed.length > 0 && (
+        <ProductCarousel 
+          title="👁️ Recently Viewed"
+          subtitle="Continue where you left off"
+          products={recentlyViewed}
+          onAddToCart={handleAddToCart}
+          onAddToWishlist={handleAddToWishlist}
+          onProductClick={handleProductClick}
+          viewAllLink="/marketplace"
+          bgColor="#fff"
+        />
+      )}
+
+      {/* ============= BECOME A SELLER CTA ============= */}
+      <section className="seller-cta-section">
+        <div className="section-container">
+          <div className="seller-cta-content">
+            <div className="seller-cta-text">
+              <h2>Are You a Farmer?</h2>
+              <p>Join thousands of farmers selling directly to consumers. No middlemen, full control over your prices.</p>
+              <ul className="seller-benefits">
+                <li><FiCheckCircle /> Zero commission on sales</li>
+                <li><FiCheckCircle /> Direct customer relationships</li>
+                <li><FiCheckCircle /> IoT-powered farm management</li>
+                <li><FiCheckCircle /> 24/7 seller support</li>
+              </ul>
+              <Link to="/register?role=FARMER" className="seller-cta-btn">
+                Start Selling Today <FiArrowRight />
+              </Link>
+            </div>
+            <div className="seller-cta-image">
+              <img 
+                src="https://images.unsplash.com/photo-1595855759920-86582396756a?w=600" 
+                alt="Happy Farmer" 
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============= APP DOWNLOAD BANNER ============= */}
+      <section className="app-download-section">
+        <div className="section-container">
+          <div className="app-download-content">
+            <div className="app-info">
+              <h3>📱 Download AgriLink App</h3>
+              <p>Shop on the go with our mobile app. Get exclusive app-only deals!</p>
+            </div>
+            <div className="app-buttons">
+              <button className="app-store-btn" onClick={() => toast.info('Coming soon to App Store!')}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" />
+              </button>
+              <button className="play-store-btn" onClick={() => toast.info('Coming soon to Play Store!')}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Play Store" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
+// ============= SUB COMPONENTS =============
+
 // Product Carousel Component
-const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishlist, viewAllLink, bgColor }) => {
+const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishlist, onProductClick, viewAllLink, bgColor }) => {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       setCanScrollLeft(scrollLeft > 0);
       setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkScroll();
@@ -483,11 +706,11 @@ const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishli
       ref.addEventListener('scroll', checkScroll);
       return () => ref.removeEventListener('scroll', checkScroll);
     }
-  }, [products]);
+  }, [products, checkScroll]);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
-      const scrollAmount = 300;
+      const scrollAmount = 320;
       scrollRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -498,19 +721,21 @@ const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishli
   if (!products || products.length === 0) return null;
 
   return (
-    <section className="product-carousel-section" style={{ backgroundColor: bgColor || 'white' }}>
+    <section className="product-carousel-section" style={{ backgroundColor: bgColor || '#fff' }}>
       <div className="section-container">
         <div className="section-header">
           <div>
             <h2>{title}</h2>
             {subtitle && <p className="section-subtitle">{subtitle}</p>}
           </div>
-          <Link to={viewAllLink} className="view-all">View All →</Link>
+          <Link to={viewAllLink} className="view-all-link">
+            View All <FiArrowRight />
+          </Link>
         </div>
         
         <div className="carousel-wrapper">
           {canScrollLeft && (
-            <button className="carousel-btn left" onClick={() => scroll('left')}>
+            <button className="carousel-nav-btn left" onClick={() => scroll('left')}>
               <FiChevronLeft />
             </button>
           )}
@@ -522,12 +747,13 @@ const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishli
                 product={product}
                 onAddToCart={onAddToCart}
                 onAddToWishlist={onAddToWishlist}
+                onClick={() => onProductClick(product)}
               />
             ))}
           </div>
           
           {canScrollRight && (
-            <button className="carousel-btn right" onClick={() => scroll('right')}>
+            <button className="carousel-nav-btn right" onClick={() => scroll('right')}>
               <FiChevronRight />
             </button>
           )}
@@ -538,90 +764,92 @@ const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishli
 };
 
 // Product Card Component
-const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
-  const navigate = useNavigate();
-  
-  // Support both API format and mock data format
-  const imageUrl = product.images?.[0]?.imageUrl || product.imageUrl || 'https://via.placeholder.com/200';
-  const price = product.pricePerUnit || product.price || 0;
-  const unit = product.quantityUnit || product.unit || 'kg';
-  const sellerName = product.sellerName || product.farmerName || product.location || 'Local Farmer';
-  const rating = product.averageRating || product.rating || 4.5;
-  const reviewCount = product.reviewCount || 0;
-  const discount = product.discount || 0;
-  const originalPrice = product.originalPrice || price;
-  
+const ProductCard = ({ product, onAddToCart, onAddToWishlist, onClick }) => {
   return (
-    <div className="product-card" onClick={() => navigate(`/marketplace/${product.id}`)}>
-      {discount > 0 && (
-        <span className="discount-badge">-{discount}%</span>
+    <div className="product-card-v2" onClick={onClick}>
+      {product.discount > 0 && (
+        <span className="product-discount-badge">-{product.discount}%</span>
       )}
       <button 
-        className="wishlist-btn"
-        onClick={(e) => onAddToWishlist(e, product.id)}
+        className="product-wishlist-btn"
+        onClick={(e) => onAddToWishlist(e, product)}
       >
         <FiHeart />
       </button>
       
-      <div className="product-image">
-        <img src={imageUrl} alt={product.title} />
+      <div className="product-image-v2">
+        <img src={product.imageUrl} alt={product.title} loading="lazy" />
       </div>
       
-      <div className="product-info">
-        <span className="product-farmer">{sellerName}</span>
-        <h3 className="product-title">{product.title}</h3>
+      <div className="product-info-v2">
+        <span className="product-seller">{product.sellerName}</span>
+        <h3 className="product-title-v2">{product.title}</h3>
         
-        <div className="product-rating">
-          <FiStar className="star-icon" />
-          <span>{rating}</span>
-          <span className="review-count">({reviewCount})</span>
+        <div className="product-rating-v2">
+          <FiStar className="star-filled" />
+          <span>{product.rating?.toFixed(1) || '4.5'}</span>
+          <span className="review-count">({product.reviewCount || 0})</span>
         </div>
         
-        <div className="product-price">
-          <span className="current-price">₹{price}</span>
-          {originalPrice > price && (
-            <span className="original-price">₹{originalPrice}</span>
+        <div className="product-price-v2">
+          <span className="current-price">₹{product.price}</span>
+          {product.originalPrice > product.price && (
+            <span className="original-price">₹{product.originalPrice}</span>
           )}
-          <span className="unit">/{unit}</span>
+          <span className="price-unit">/{product.unit}</span>
         </div>
         
         <button 
-          className="add-to-cart-btn"
+          className="add-cart-btn-v2"
           onClick={(e) => onAddToCart(e, product)}
         >
-          <FiShoppingCart /> Add to Cart
+          <FiShoppingCart /> Add
         </button>
       </div>
     </div>
   );
 };
 
-// Count Up Animation Component
-const CountUp = ({ end, visible, decimals = 0 }) => {
-  const [count, setCount] = useState(0);
+// Deal Card Component
+const DealCard = ({ product, onAddToCart, onClick }) => {
+  return (
+    <div className="deal-card" onClick={onClick}>
+      <div className="deal-card-image">
+        <img src={product.imageUrl} alt={product.title} loading="lazy" />
+        <span className="deal-discount">-{product.discount}%</span>
+      </div>
+      <div className="deal-card-info">
+        <h4>{product.title}</h4>
+        <div className="deal-price">
+          <span className="deal-current">₹{product.price}</span>
+          <span className="deal-original">₹{product.originalPrice}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Farmer Card Component
+const FarmerCard = ({ farmer }) => {
+  const navigate = useNavigate();
   
-  useEffect(() => {
-    if (!visible) return;
-    
-    const duration = 2000;
-    const startTime = Date.now();
-    
-    const animate = () => {
-      const now = Date.now();
-      const progress = Math.min((now - startTime) / duration, 1);
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      
-      setCount(end * easeOutQuart);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-    
-    requestAnimationFrame(animate);
-  }, [end, visible]);
-  
-  return decimals > 0 ? count.toFixed(decimals) : Math.floor(count).toLocaleString();
+  return (
+    <div className="farmer-card-v2" onClick={() => navigate(`/farmers/${farmer.sellerId}`)}>
+      <div className="farmer-avatar">
+        {farmer.sellerName?.charAt(0)?.toUpperCase() || 'F'}
+      </div>
+      <h4 className="farmer-name">{farmer.sellerName || 'Local Farmer'}</h4>
+      <div className="farmer-stats">
+        <span><FiPackage /> {farmer.productCount || 0} Products</span>
+        <span><FiStar /> {farmer.averageRating?.toFixed(1) || '4.5'}</span>
+      </div>
+      {farmer.location && (
+        <span className="farmer-location">
+          <FiMapPin /> {farmer.location}
+        </span>
+      )}
+    </div>
+  );
 };
 
 export default Home;

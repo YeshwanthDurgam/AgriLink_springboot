@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f7f6;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); padding: 30px 40px; text-align: center;">
+                            <span style="font-size: 48px;">✅</span>
+                            <h1 style="color: #ffffff; margin: 10px 0 0 0; font-size: 24px; font-weight: 600;">Order
+                                Confirmed!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                                Order #<span th:text="${orderNumber}">ORD-123456</span>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hi <strong th:text="${customerName}">Customer</strong>,
+                            </p>
+
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                                Great news! Your order has been confirmed and is being prepared by our farmers.
+                                You'll receive fresh produce directly from the farm! 🌾
+                            </p>
+
+                            <!-- Order Details Box -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="background-color: #f8f9fa; border-radius: 8px; margin-bottom: 30px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%">
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #6c757d; font-size: 14px;">Order
+                                                    Number:</td>
+                                                <td style="padding: 8px 0; color: #212529; font-size: 14px; font-weight: 600; text-align: right;"
+                                                    th:text="${orderNumber}">ORD-123456</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #6c757d; font-size: 14px;">Order Date:
+                                                </td>
+                                                <td style="padding: 8px 0; color: #212529; font-size: 14px; text-align: right;"
+                                                    th:text="${orderDate}">January 27, 2026</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Order Items -->
+                            <h3 style="color: #2e7d32; margin: 0 0 15px 0; font-size: 18px;">📦 Order Items</h3>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;">
+                                <tr style="background-color: #f8f9fa;">
+                                    <th
+                                        style="padding: 12px; text-align: left; color: #495057; font-size: 14px; font-weight: 600;">
+                                        Product</th>
+                                    <th
+                                        style="padding: 12px; text-align: center; color: #495057; font-size: 14px; font-weight: 600;">
+                                        Qty</th>
+                                    <th
+                                        style="padding: 12px; text-align: right; color: #495057; font-size: 14px; font-weight: 600;">
+                                        Price</th>
+                                </tr>
+                                <tr th:each="item : ${items}">
+                                    <td style="padding: 12px; border-top: 1px solid #e9ecef; color: #212529; font-size: 14px;"
+                                        th:text="${item.productName}">Fresh Tomatoes</td>
+                                    <td
+                                        style="padding: 12px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; text-align: center;">
+                                        <span th:text="${item.quantity}">2</span> <span th:text="${item.unit}">kg</span>
+                                    </td>
+                                    <td
+                                        style="padding: 12px; border-top: 1px solid #e9ecef; color: #212529; font-size: 14px; text-align: right;">
+                                        <span th:text="${currency}">₹</span><span
+                                            th:text="${#numbers.formatDecimal(item.totalPrice, 1, 2)}">150.00</span>
+                                    </td>
+                                </tr>
+                                <tr style="background-color: #e8f5e9;">
+                                    <td colspan="2"
+                                        style="padding: 15px; font-weight: 600; color: #2e7d32; font-size: 16px;">Total
+                                        Amount</td>
+                                    <td
+                                        style="padding: 15px; font-weight: 700; color: #2e7d32; font-size: 18px; text-align: right;">
+                                        <span th:text="${currency}">₹</span><span
+                                            th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">450.00</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Shipping Address -->
+                            <h3 style="color: #2e7d32; margin: 30px 0 15px 0; font-size: 18px;">📍 Delivery Address</h3>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="background-color: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.6;"
+                                            th:text="${shippingAddress}">
+                                            123 Main Street, Bangalore, Karnataka 560001
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin: 30px 0;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a th:href="${trackOrderUrl}"
+                                            style="display: inline-block; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Track Your Order 📦
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p
+                                style="color: #6c757d; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+                                Thank you for supporting local farmers! 🙏
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef; text-align: center;">
+                            <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                © <span th:text="${currentYear}">2026</span> AgriLink. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

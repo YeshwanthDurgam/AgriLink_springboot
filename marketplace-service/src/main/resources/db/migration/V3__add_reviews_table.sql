@@ -1,3 +1,15 @@
+-- Create Reviews table if not exists (needed for fresh Neon databases)
+CREATE TABLE IF NOT EXISTS reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    listing_id UUID NOT NULL,
+    reviewer_id UUID NOT NULL,
+    seller_id UUID NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Enhance Reviews table with additional fields
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS order_id UUID;
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS title VARCHAR(255);

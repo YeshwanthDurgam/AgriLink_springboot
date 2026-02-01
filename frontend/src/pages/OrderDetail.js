@@ -15,11 +15,25 @@ const OrderDetail = () => {
   const isNewOrder = location.state?.newOrder;
   const paymentId = location.state?.paymentId;
 
+  // Check if the orderId is an order number (e.g., ORD-xxx) or a UUID
+  const isOrderNumber = (id) => {
+    return id && (id.startsWith('ORD-') || id.startsWith('ORD_') || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+  };
+
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await orderService.getOrderById(orderId);
-      setOrder(data);
+      let response;
+      
+      // If it looks like an order number, use getOrderByNumber, otherwise use getOrderById
+      if (isOrderNumber(orderId)) {
+        response = await orderService.getOrderByNumber(orderId);
+      } else {
+        response = await orderService.getOrderById(orderId);
+      }
+      // Handle wrapped API response (response.data) or direct data
+      const orderData = response.data || response;
+      setOrder(orderData);
     } catch (err) {
       console.error('Error fetching order:', err);
       setError('Failed to load order details');

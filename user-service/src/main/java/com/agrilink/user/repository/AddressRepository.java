@@ -30,7 +30,7 @@ public interface AddressRepository extends JpaRepository<Address, UUID> {
     @Query("UPDATE Address a SET a.isDefault = false WHERE a.userId = :userId AND a.id != :addressId")
     void clearDefaultForUser(@Param("userId") UUID userId, @Param("addressId") UUID addressId);
 
-    @Query("SELECT a FROM Address a WHERE a.userId = :userId AND a.addressType IN ('SHIPPING', 'BOTH')")
+    @Query("SELECT a FROM Address a WHERE a.userId = :userId AND a.addressType IN ('SHIPPING', 'BOTH', 'HOME', 'WORK', 'OTHER')")
     List<Address> findShippingAddresses(@Param("userId") UUID userId);
 
     @Query("SELECT a FROM Address a WHERE a.userId = :userId AND a.addressType IN ('BILLING', 'BOTH')")

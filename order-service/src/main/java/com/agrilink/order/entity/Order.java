@@ -76,6 +76,12 @@ public class Order {
     @Column(name = "shipping_phone", length = 20)
     private String shippingPhone;
 
+    @Column(name = "buyer_email", length = 255)
+    private String buyerEmail;
+
+    @Column(name = "buyer_name", length = 255)
+    private String buyerName;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

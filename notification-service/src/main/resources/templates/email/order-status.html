@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f7f6;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%); padding: 30px 40px; text-align: center;">
+                            <span style="font-size: 48px;">📦</span>
+                            <h1 style="color: #ffffff; margin: 10px 0 0 0; font-size: 24px; font-weight: 600;">Order
+                                Update</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                                Order #<span th:text="${orderNumber}">ORD-123456</span>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hi <strong th:text="${customerName}">Customer</strong>,
+                            </p>
+
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                                Your order status has been updated. Here's the latest:
+                            </p>
+
+                            <!-- Status Badge -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin-bottom: 30px;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <span th:switch="${newStatus}">
+                                            <span th:case="'CONFIRMED'"
+                                                style="display: inline-block; background-color: #e3f2fd; color: #1565c0; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                ✅ Confirmed
+                                            </span>
+                                            <span th:case="'PROCESSING'"
+                                                style="display: inline-block; background-color: #fff3e0; color: #ef6c00; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                ⚙️ Processing
+                                            </span>
+                                            <span th:case="'SHIPPED'"
+                                                style="display: inline-block; background-color: #e8f5e9; color: #2e7d32; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                🚚 Shipped
+                                            </span>
+                                            <span th:case="'OUT_FOR_DELIVERY'"
+                                                style="display: inline-block; background-color: #fce4ec; color: #c2185b; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                🏃 Out for Delivery
+                                            </span>
+                                            <span th:case="'DELIVERED'"
+                                                style="display: inline-block; background-color: #e8f5e9; color: #2e7d32; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                🎉 Delivered
+                                            </span>
+                                            <span th:case="'CANCELLED'"
+                                                style="display: inline-block; background-color: #ffebee; color: #c62828; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;">
+                                                ❌ Cancelled
+                                            </span>
+                                            <span th:case="*"
+                                                style="display: inline-block; background-color: #f5f5f5; color: #616161; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px;"
+                                                th:text="${newStatus}">
+                                                Status
+                                            </span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Status Message -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="background-color: #f8f9fa; border-radius: 8px; margin-bottom: 30px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0; color: #495057; font-size: 15px; line-height: 1.6; text-align: center;"
+                                            th:text="${statusMessage}">
+                                            Your order is on its way!
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Progress Tracker (Visual) -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin-bottom: 30px;">
+                                <tr>
+                                    <td style="text-align: center; padding: 10px;">
+                                        <span
+                                            th:classappend="${newStatus == 'CONFIRMED' or newStatus == 'PROCESSING' or newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? 'active' : ''"
+                                            style="display: inline-block; width: 30px; height: 30px; border-radius: 50%; background-color: #4caf50; color: white; line-height: 30px; font-size: 14px;">✓</span>
+                                        <span
+                                            style="display: inline-block; width: 40px; height: 3px; background-color: #e0e0e0; vertical-align: middle;"
+                                            th:style="${newStatus == 'PROCESSING' or newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? 'background-color: #4caf50' : 'background-color: #e0e0e0'"></span>
+                                        <span
+                                            style="display: inline-block; width: 30px; height: 30px; border-radius: 50%; line-height: 30px; font-size: 14px;"
+                                            th:style="${newStatus == 'PROCESSING' or newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? 'background-color: #4caf50; color: white' : 'background-color: #e0e0e0; color: #9e9e9e'"
+                                            th:text="${newStatus == 'PROCESSING' or newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? '✓' : '2'">2</span>
+                                        <span
+                                            style="display: inline-block; width: 40px; height: 3px; vertical-align: middle;"
+                                            th:style="${newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? 'background-color: #4caf50' : 'background-color: #e0e0e0'"></span>
+                                        <span
+                                            style="display: inline-block; width: 30px; height: 30px; border-radius: 50%; line-height: 30px; font-size: 14px;"
+                                            th:style="${newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? 'background-color: #4caf50; color: white' : 'background-color: #e0e0e0; color: #9e9e9e'"
+                                            th:text="${newStatus == 'SHIPPED' or newStatus == 'OUT_FOR_DELIVERY' or newStatus == 'DELIVERED'} ? '✓' : '3'">3</span>
+                                        <span
+                                            style="display: inline-block; width: 40px; height: 3px; vertical-align: middle;"
+                                            th:style="${newStatus == 'DELIVERED'} ? 'background-color: #4caf50' : 'background-color: #e0e0e0'"></span>
+                                        <span
+                                            style="display: inline-block; width: 30px; height: 30px; border-radius: 50%; line-height: 30px; font-size: 14px;"
+                                            th:style="${newStatus == 'DELIVERED'} ? 'background-color: #4caf50; color: white' : 'background-color: #e0e0e0; color: #9e9e9e'"
+                                            th:text="${newStatus == 'DELIVERED'} ? '✓' : '4'">4</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; padding-top: 5px;">
+                                        <span
+                                            style="display: inline-block; width: 60px; font-size: 10px; color: #6c757d;">Confirmed</span>
+                                        <span
+                                            style="display: inline-block; width: 60px; font-size: 10px; color: #6c757d;">Processing</span>
+                                        <span
+                                            style="display: inline-block; width: 60px; font-size: 10px; color: #6c757d;">Shipped</span>
+                                        <span
+                                            style="display: inline-block; width: 60px; font-size: 10px; color: #6c757d;">Delivered</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin: 30px 0;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a th:href="${trackOrderUrl}"
+                                            style="display: inline-block; background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            View Order Details
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef; text-align: center;">
+                            <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                © <span th:text="${currentYear}">2026</span> AgriLink. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${emailTitle}">AgriLink Email</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        .fallback-font { font-family: Arial, sans-serif; }
+    </style>
+    <![endif]-->
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+    <!-- Email Container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f7f6;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <!-- Email Content -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); padding: 30px 40px; text-align: center;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <span style="font-size: 32px;">🌱</span>
+                                        <h1
+                                            style="color: #ffffff; margin: 10px 0 0 0; font-size: 28px; font-weight: 600;">
+                                            AgriLink</h1>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">
+                                            Farm Fresh, Direct to You</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content - To be replaced by child templates -->
+                    <tr>
+                        <td style="padding: 40px;" th:fragment="content">
+                            <!-- Content goes here -->
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e9ecef;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
+                                            Connect with us
+                                        </p>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="padding: 0 10px;">
+                                                    <a href="#"
+                                                        style="color: #2e7d32; text-decoration: none; font-size: 20px;">📱</a>
+                                                </td>
+                                                <td style="padding: 0 10px;">
+                                                    <a href="#"
+                                                        style="color: #2e7d32; text-decoration: none; font-size: 20px;">📧</a>
+                                                </td>
+                                                <td style="padding: 0 10px;">
+                                                    <a href="#"
+                                                        style="color: #2e7d32; text-decoration: none; font-size: 20px;">🌐</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; padding-top: 20px;">
+                                        <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                            © <span th:text="${currentYear}">2026</span> AgriLink. All rights reserved.
+                                        </p>
+                                        <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
+                                            Connecting farmers and buyers across India
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

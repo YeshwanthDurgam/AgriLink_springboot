@@ -7,10 +7,13 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ToastNotification';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import AuthLayout from './components/AuthLayout';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Farms from './pages/Farms';
@@ -44,24 +47,6 @@ import ProfileOnboarding from './pages/ProfileOnboarding';
 
 import './App.css';
 
-// Layout wrapper that conditionally shows Navbar
-const AppLayout = ({ children }) => {
-  const location = useLocation();
-  const authRoutes = ['/login', '/register'];
-  const isAuthRoute = authRoutes.includes(location.pathname);
-
-  if (isAuthRoute) {
-    return <AuthLayout>{children}</AuthLayout>;
-  }
-
-  return (
-    <>
-      <Navbar />
-      <main className="main-content">{children}</main>
-    </>
-  );
-};
-
 function App() {
   return (
     <AuthProvider>
@@ -72,6 +57,8 @@ function App() {
               {/* Auth Routes - with AuthLayout */}
               <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
               <Route path="/register" element={<AuthLayout><Register /></AuthLayout>} />
+              <Route path="/forgot-password" element={<AuthLayout><ForgotPassword /></AuthLayout>} />
+              <Route path="/reset-password" element={<AuthLayout><ResetPassword /></AuthLayout>} />
               
               {/* All other routes wrapped with Navbar */}
               <Route path="/*" element={<AppContent />} />
@@ -104,9 +91,13 @@ const AppContent = () => {
         <Routes>
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/marketplace/:id" element={<ListingDetail />} />
+              <Route path="/marketplace/listing/:id" element={<ListingDetail />} />
               <Route path="/farmers" element={<Farmers />} />
               <Route path="/farmers/:farmerId" element={<FarmerProfile />} />
               <Route path="/deals" element={<Deals />} />
+              {/* Cart and Wishlist - Public with guest support */}
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/wishlist" element={<Wishlist />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={
@@ -159,11 +150,6 @@ const AppContent = () => {
                   <OrderConfirmation />
                 </PrivateRoute>
               } />
-              <Route path="/marketplace/listing/:id" element={
-                <PrivateRoute>
-                  <ListingDetail />
-                </PrivateRoute>
-              } />
               <Route path="/marketplace/create" element={
                 <PrivateRoute>
                   <CreateListing />
@@ -187,16 +173,6 @@ const AppContent = () => {
               <Route path="/farmer/orders" element={
                 <PrivateRoute>
                   <FarmerOrders />
-                </PrivateRoute>
-              } />
-              <Route path="/cart" element={
-                <PrivateRoute>
-                  <Cart />
-                </PrivateRoute>
-              } />
-              <Route path="/wishlist" element={
-                <PrivateRoute>
-                  <Wishlist />
                 </PrivateRoute>
               } />
               <Route path="/checkout" element={
@@ -245,6 +221,7 @@ const AppContent = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
+      <Footer />
     </>
   );
 };

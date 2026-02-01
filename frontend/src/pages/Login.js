@@ -3,6 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import guestService from '../services/guestService';
+import cartService from '../services/cartService';
+import wishlistService from '../services/wishlistService';
 import './Auth.css';
 
 const Login = () => {
@@ -18,13 +21,25 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  // Get the redirect path from location state - handle both string and object formats
+  const getRedirectPath = () => {
+    const fromState = location.state?.from;
+    if (typeof fromState === 'string') {
+      return fromState;
+    } else if (fromState?.pathname) {
+      return fromState.pathname;
+    }
+    return null;
+  };
+
+  const from = getRedirectPath();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from, { replace: true });
+    if (isAuthenticated && !submitting) {
+      // If already authenticated, redirect
+      navigate(from || '/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, navigate, from, submitting]);
 
   useEffect(() => {
     if (error) {
@@ -64,15 +79,69 @@ const Login = () => {
 
     setSubmitting(true);
     const result = await login(formData.email, formData.password);
-    setSubmitting(false);
 
     if (result.success) {
       toast.success('Login successful! Welcome back.');
-      // Use role-based redirect if available, otherwise use the from location
-      const redirectTo = result.redirectTo || from;
+      
+      // Sync guest cart to server if there's guest data
+      if (guestService.hasGuestData()) {
+        await syncGuestDataToServer();
+      }
+      
+      // Determine redirect: use passed 'from' location, or role-based dashboard
+      const redirectTo = from || result.redirectTo || '/dashboard';
       navigate(redirectTo, { replace: true });
     } else {
       toast.error(result.message || 'Login failed. Please try again.');
+    }
+    
+    setSubmitting(false);
+  };
+
+  // Sync guest cart and wishlist to server after login
+  const syncGuestDataToServer = async () => {
+    try {
+      const guestData = guestService.getDataToSync();
+      
+      // Sync cart items
+      if (guestData.cart.items.length > 0) {
+        for (const item of guestData.cart.items) {
+          try {
+            await cartService.addToCart({
+              listingId: item.listingId,
+              sellerId: item.sellerId,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              listingTitle: item.productName,
+              listingImageUrl: item.imageUrl,
+              unit: item.unit,
+              availableQuantity: item.availableQuantity
+            });
+          } catch (err) {
+            console.warn('Could not sync cart item:', item.productName, err);
+          }
+        }
+        toast.success(`${guestData.cart.items.length} item(s) from your guest cart have been added`);
+      }
+      
+      // Sync wishlist items
+      if (guestData.wishlist.length > 0) {
+        for (const item of guestData.wishlist) {
+          try {
+            await wishlistService.addToWishlist(item.listingId);
+          } catch (err) {
+            console.warn('Could not sync wishlist item:', item.productName, err);
+          }
+        }
+        toast.success(`${guestData.wishlist.length} item(s) from your guest wishlist have been added`);
+      }
+      
+      // Clear guest data after successful sync
+      guestService.clearAllGuestData();
+    } catch (err) {
+      console.error('Error syncing guest data:', err);
+      // Don't block login if sync fails, but notify user
+      toast.warning('Some items from your guest cart could not be synced');
     }
   };
 
@@ -178,18 +247,47 @@ const Login = () => {
 
       <div className="auth-banner">
         <div className="banner-content">
-          <h2>🌾 AgriLink</h2>
-          <h3>Connecting Farmers to Markets</h3>
-          <p>
-            Join thousands of farmers and buyers on the most trusted
-            agricultural marketplace platform.
+          <div className="logo-area">
+            <div className="logo-icon">🌾</div>
+            <h2>AgriLink</h2>
+            <h3>Farm Fresh • Direct Sales</h3>
+          </div>
+          <p className="tagline">
+            Join thousands of farmers and buyers on India's most trusted
+            agricultural marketplace. Fresh produce, fair prices, direct connections.
           </p>
           <ul className="banner-features">
-            <li>✓ Direct farm-to-market sales</li>
-            <li>✓ Real-time IoT monitoring</li>
-            <li>✓ Secure transactions</li>
-            <li>✓ Nationwide delivery</li>
+            <li>
+              <span className="feature-icon">🚜</span>
+              <span>Direct farm-to-market sales</span>
+            </li>
+            <li>
+              <span className="feature-icon">📡</span>
+              <span>Real-time IoT crop monitoring</span>
+            </li>
+            <li>
+              <span className="feature-icon">🔒</span>
+              <span>Secure payment gateway</span>
+            </li>
+            <li>
+              <span className="feature-icon">🚚</span>
+              <span>Nationwide express delivery</span>
+            </li>
           </ul>
+        </div>
+        <div className="banner-stats">
+          <div className="stat-item">
+            <span className="stat-number">10K+</span>
+            <span className="stat-label">Farmers</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">50K+</span>
+            <span className="stat-label">Customers</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">₹5Cr+</span>
+            <span className="stat-label">Trade Value</span>
+          </div>
         </div>
       </div>
     </div>

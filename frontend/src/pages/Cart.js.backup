@@ -1,0 +1,265 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
+import cartService from '../services/cartService';
+import guestService from '../services/guestService';
+import EmptyState from '../components/EmptyState';
+import './Cart.css';
+
+const Cart = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [cart, setCart] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updating, setUpdating] = useState({});
+
+  const isGuest = !user;
+  const isFarmer = user?.roles?.includes('FARMER');
+
+  // Block farmers from accessing cart
+  useEffect(() => {
+    if (isFarmer) {
+      toast.error('Farmers cannot use the cart feature');
+      navigate('/farmer/dashboard');
+      return;
+    }
+  }, [isFarmer, navigate]);
+
+  const fetchCart = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      if (isGuest) {
+        // Use guest cart from localStorage
+        const guestCart = guestService.getGuestCart();
+        setCart(guestCart);
+      } else {
+        // Use server cart for logged-in users
+        const data = await cartService.getCart();
+        setCart(data);
+      }
+    } catch (err) {
+      console.error('Error fetching cart:', err);
+      setError('Failed to load cart');
+    } finally {
+      setLoading(false);
+    }
+  }, [isGuest]);
+
+  useEffect(() => {
+    if (!isFarmer) {
+      fetchCart();
+    }
+  }, [isFarmer, fetchCart]);
+
+  // Listen for guest cart updates
+  useEffect(() => {
+    if (isGuest) {
+      const handleGuestCartUpdate = (event) => {
+        setCart(event.detail);
+      };
+      window.addEventListener('guestCartUpdated', handleGuestCartUpdate);
+      return () => window.removeEventListener('guestCartUpdated', handleGuestCartUpdate);
+    }
+  }, [isGuest]);
+
+  const handleUpdateQuantity = async (listingId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    setUpdating(prev => ({ ...prev, [listingId]: true }));
+    try {
+      let updatedCart;
+      if (isGuest) {
+        updatedCart = guestService.updateGuestCartItem(listingId, newQuantity);
+      } else {
+        updatedCart = await cartService.updateCartItem(listingId, newQuantity);
+      }
+      setCart(updatedCart);
+    } catch (err) {
+      console.error('Error updating quantity:', err);
+      toast.error('Failed to update quantity');
+    } finally {
+      setUpdating(prev => ({ ...prev, [listingId]: false }));
+    }
+  };
+
+  const handleRemoveItem = async (listingId) => {
+    setUpdating(prev => ({ ...prev, [listingId]: true }));
+    try {
+      let updatedCart;
+      if (isGuest) {
+        updatedCart = guestService.removeFromGuestCart(listingId);
+      } else {
+        updatedCart = await cartService.removeFromCart(listingId);
+      }
+      setCart(updatedCart);
+      toast.success('Item removed from cart');
+    } catch (err) {
+      console.error('Error removing item:', err);
+      toast.error('Failed to remove item');
+    } finally {
+      setUpdating(prev => ({ ...prev, [listingId]: false }));
+    }
+  };
+
+  const handleClearCart = async () => {
+    if (!window.confirm('Are you sure you want to clear your cart?')) return;
+    
+    try {
+      if (isGuest) {
+        guestService.clearGuestCart();
+      } else {
+        await cartService.clearCart();
+      }
+      setCart({ items: [], totalAmount: 0, totalItems: 0 });
+      toast.success('Cart cleared');
+    } catch (err) {
+      console.error('Error clearing cart:', err);
+      toast.error('Failed to clear cart');
+    }
+  };
+
+  const handleCheckout = () => {
+    if (isGuest) {
+      // Redirect to login with return URL
+      toast.info('Please login to proceed with checkout');
+      navigate('/login', { state: { from: '/checkout', message: 'Please login to complete your purchase' } });
+    } else {
+      navigate('/checkout');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="cart-container">
+        <div className="loading">Loading cart...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="cart-container">
+        <div className="error-message">{error}</div>
+        <button onClick={fetchCart} className="btn btn-primary">
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  const items = cart?.items || [];
+  const isEmpty = items.length === 0;
+
+  return (
+    <div className="cart-container">
+      <div className="cart-header">
+        <h1>🛒 Shopping Cart</h1>
+        {isGuest && (
+          <div className="guest-notice">
+            <span className="guest-badge">👤 Guest Mode</span>
+            <Link to="/login" state={{ from: '/cart' }} className="login-link">Login to save your cart</Link>
+          </div>
+        )}
+        {!isEmpty && (
+          <button onClick={handleClearCart} className="btn btn-danger btn-sm">
+            Clear Cart
+          </button>
+        )}
+      </div>
+
+      {isEmpty ? (
+        <EmptyState 
+          type="cart"
+          actionText="Browse Marketplace"
+          actionLink="/marketplace"
+        />
+      ) : (
+        <div className="cart-content">
+          <div className="cart-items">
+            {items.map(item => (
+              <div key={item.listingId} className={`cart-item ${updating[item.listingId] ? 'updating' : ''}`}>
+                <div className="item-image">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.productName || item.listingTitle} />
+                  ) : (
+                    <div className="placeholder-image">🌾</div>
+                  )}
+                </div>
+                
+                <div className="item-details">
+                  <Link to={`/marketplace/listing/${item.listingId}`} className="item-title">
+                    {item.productName || item.listingTitle || 'Product'}
+                  </Link>
+                  <div className="item-price">₹{(item.price || item.unitPrice)?.toFixed(2)} per {item.unit || 'unit'}</div>
+                  {item.sellerName && (
+                    <div className="item-seller">Sold by: {item.sellerName}</div>
+                  )}
+                </div>
+
+                <div className="item-quantity">
+                  <button 
+                    onClick={() => handleUpdateQuantity(item.listingId, item.quantity - 1)}
+                    disabled={item.quantity <= 1 || updating[item.listingId]}
+                    className="qty-btn"
+                  >
+                    −
+                  </button>
+                  <span className="qty-value">{item.quantity}</span>
+                  <button 
+                    onClick={() => handleUpdateQuantity(item.listingId, item.quantity + 1)}
+                    disabled={updating[item.listingId] || item.quantity >= (item.availableQuantity || 100)}
+                    className="qty-btn"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="item-subtotal">
+                  ₹{item.subtotal?.toFixed(2) || (item.quantity * (item.price || item.unitPrice)).toFixed(2)}
+                </div>
+
+                <button 
+                  onClick={() => handleRemoveItem(item.listingId)}
+                  disabled={updating[item.listingId]}
+                  className="btn-remove"
+                  title="Remove item"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="cart-summary">
+            <h3>Order Summary</h3>
+            <div className="summary-row">
+              <span>Items ({cart.totalItems})</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
+            </div>
+            <div className="summary-row">
+              <span>Shipping</span>
+              <span className="free-shipping">Calculated at checkout</span>
+            </div>
+            <div className="summary-divider"></div>
+            <div className="summary-row total">
+              <span>Subtotal</span>
+              <span>₹{cart.totalAmount?.toFixed(2)}</span>
+            </div>
+            <button onClick={handleCheckout} className="btn btn-primary btn-checkout">
+              {isGuest ? 'Login to Checkout' : 'Proceed to Checkout'}
+            </button>
+            <Link to="/marketplace" className="continue-shopping">
+              ← Continue Shopping
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Cart;

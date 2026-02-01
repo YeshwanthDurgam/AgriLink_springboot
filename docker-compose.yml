@@ -31,7 +31,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_auth
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
       JWT_EXPIRATION: 86400000
     ports:
       - "8081:8081"
@@ -52,7 +52,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_user
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8082:8082"
     depends_on:
@@ -72,7 +72,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_farm
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8083:8083"
     depends_on:
@@ -92,7 +92,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_marketplace
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
       USER_SERVICE_URL: http://user-service:8082
     ports:
       - "8084:8084"
@@ -115,7 +115,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_order
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8085:8085"
     depends_on:
@@ -135,7 +135,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_iot
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8086:8086"
     depends_on:
@@ -155,7 +155,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_notification
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits
+      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8087:8087"
     depends_on:

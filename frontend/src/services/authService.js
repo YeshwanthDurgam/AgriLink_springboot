@@ -106,6 +106,33 @@ const AuthService = {
     }
     return response.data;
   },
+
+  /**
+   * Request password reset email
+   * @param {string} email - User's email address
+   */
+  forgotPassword: async (email) => {
+    const response = await authApi.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  /**
+   * Validate password reset token
+   * @param {string} token - Reset token from email
+   */
+  validateResetToken: async (token) => {
+    const response = await authApi.get(`/auth/validate-reset-token?token=${token}`);
+    return response.data;
+  },
+
+  /**
+   * Reset password with token
+   * @param {Object} data - { token, newPassword, confirmPassword }
+   */
+  resetPassword: async (data) => {
+    const response = await authApi.post('/auth/reset-password', data);
+    return response.data;
+  },
 };
 
 export default AuthService;

@@ -234,18 +234,47 @@ const Register = () => {
 
       <div className="auth-banner">
         <div className="banner-content">
-          <h2>🌾 AgriLink</h2>
-          <h3>Grow Your Business</h3>
-          <p>
-            Whether you're a farmer looking to sell your produce or a buyer
-            seeking fresh products, AgriLink connects you to the right people.
+          <div className="logo-area">
+            <div className="logo-icon">🌱</div>
+            <h2>AgriLink</h2>
+            <h3>Grow • Sell • Prosper</h3>
+          </div>
+          <p className="tagline">
+            Whether you're a farmer selling fresh produce or a customer seeking
+            quality products, AgriLink connects you to the right marketplace.
           </p>
           <ul className="banner-features">
-            <li>✓ Free to join</li>
-            <li>✓ Verified buyers & sellers</li>
-            <li>✓ Competitive pricing</li>
-            <li>✓ 24/7 Support</li>
+            <li>
+              <span className="feature-icon">✨</span>
+              <span>100% Free to join & list</span>
+            </li>
+            <li>
+              <span className="feature-icon">✅</span>
+              <span>Verified buyers & sellers</span>
+            </li>
+            <li>
+              <span className="feature-icon">💰</span>
+              <span>Best prices guaranteed</span>
+            </li>
+            <li>
+              <span className="feature-icon">🛡️</span>
+              <span>24/7 dedicated support</span>
+            </li>
           </ul>
+        </div>
+        <div className="banner-stats">
+          <div className="stat-item">
+            <span className="stat-number">500+</span>
+            <span className="stat-label">Products</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">100+</span>
+            <span className="stat-label">Cities</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">4.8★</span>
+            <span className="stat-label">Rating</span>
+          </div>
         </div>
       </div>
     </div>

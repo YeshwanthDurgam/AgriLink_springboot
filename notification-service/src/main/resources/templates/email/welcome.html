@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to AgriLink!</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f7f6;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); padding: 30px 40px; text-align: center;">
+                            <span style="font-size: 48px;">🌱</span>
+                            <h1 style="color: #ffffff; margin: 10px 0 0 0; font-size: 28px; font-weight: 600;">Welcome
+                                to AgriLink!</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="color: #2e7d32; margin: 0 0 20px 0; font-size: 24px;">
+                                Hello <span th:text="${userName}">User</span>! 👋
+                            </h2>
+
+                            <p style="color: #495057; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                We're thrilled to have you join the AgriLink community! Whether you're a farmer looking
+                                to sell your fresh produce or a buyer seeking quality agricultural products, you've
+                                come to the right place.
+                            </p>
+
+                            <!-- Features -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin: 30px 0;">
+                                <tr>
+                                    <td style="background-color: #e8f5e9; border-radius: 8px; padding: 20px;">
+                                        <h3 style="color: #2e7d32; margin: 0 0 15px 0; font-size: 18px;">🚀 Get Started
+                                        </h3>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%">
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                    <span style="color: #495057; margin-left: 10px;">Complete your
+                                                        profile</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                    <span style="color: #495057; margin-left: 10px;">Browse fresh
+                                                        produce in the marketplace</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                    <span style="color: #495057; margin-left: 10px;">Connect directly
+                                                        with farmers</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #4caf50; font-size: 18px;">✓</span>
+                                                    <span style="color: #495057; margin-left: 10px;">Get farm-fresh
+                                                        products delivered</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Buttons -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin: 30px 0;">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <a th:href="${profileUrl}"
+                                            style="display: inline-block; background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 5px;">
+                                            Complete Profile
+                                        </a>
+                                        <a th:href="${marketplaceUrl}"
+                                            style="display: inline-block; background-color: #ffffff; color: #2e7d32; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; border: 2px solid #2e7d32; margin: 5px;">
+                                            Explore Marketplace
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p
+                                style="color: #6c757d; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+                                Need help? Just reply to this email and we'll be happy to assist you!
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef; text-align: center;">
+                            <p style="margin: 0; color: #adb5bd; font-size: 12px;">
+                                © <span th:text="${currentYear}">2026</span> AgriLink. All rights reserved.
+                            </p>
+                            <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
+                                Farm Fresh, Direct to You 🌾
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

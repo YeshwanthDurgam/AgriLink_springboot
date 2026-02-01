@@ -1,0 +1,397 @@
+/* ================================================================
+   Footer Component - Amazon/Flipkart Style
+   ================================================================ */
+
+.footer {
+  background: #232f3e;
+  color: white;
+}
+
+/* Back to Top */
+.footer-back-to-top {
+  background: #37475a;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.footer-back-to-top:hover {
+  background: #485769;
+}
+
+.footer-back-to-top span {
+  font-size: 14px;
+  color: white;
+}
+
+/* Trust Features */
+.footer-trust {
+  background: #1a1a2e;
+  padding: 30px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trust-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.trust-icon {
+  font-size: 32px;
+  color: #22c55e;
+}
+
+.trust-item h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 4px;
+}
+
+.trust-item p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* Main Footer */
+.footer-main {
+  padding: 50px 0 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+  gap: 40px;
+}
+
+/* Brand Column */
+.brand-column {
+  padding-right: 30px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.footer-logo .logo-icon {
+  font-size: 32px;
+}
+
+.footer-logo .logo-text {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #22c55e, #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-tagline {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-contact a,
+.footer-contact span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-contact a:hover {
+  color: #22c55e;
+}
+
+.footer-contact svg {
+  font-size: 16px;
+  color: #22c55e;
+}
+
+/* Footer Columns */
+.footer-column h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 16px;
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-column ul li {
+  margin-bottom: 10px;
+}
+
+.footer-column ul a {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-column ul a:hover {
+  color: #22c55e;
+  text-decoration: underline;
+}
+
+/* Social & App Section */
+.footer-social {
+  padding: 30px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-social .footer-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.social-links h4,
+.app-download h4,
+.payment-methods h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 12px;
+}
+
+.social-icons {
+  display: flex;
+  gap: 12px;
+}
+
+.social-icons a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: white;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.social-icons a:hover {
+  background: #22c55e;
+  transform: translateY(-2px);
+}
+
+.social-icons svg {
+  font-size: 18px;
+}
+
+.app-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.app-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.app-btn img {
+  height: 40px;
+  transition: transform 0.2s;
+}
+
+.app-btn:hover img {
+  transform: scale(1.05);
+}
+
+.payment-icons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.payment-icons span {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Bottom Bar */
+.footer-bottom {
+  padding: 20px 0;
+  background: #1a1a2e;
+}
+
+.footer-bottom .footer-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-legal {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-legal a {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-legal a:hover {
+  color: white;
+}
+
+.footer-copyright {
+  display: flex;
+  gap: 16px;
+}
+
+.footer-copyright p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* ============= RESPONSIVE ============= */
+@media (max-width: 1200px) {
+  .footer-container {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 30px;
+  }
+
+  .brand-column {
+    grid-column: span 3;
+    padding-right: 0;
+  }
+
+  .footer-social .footer-container {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 992px) {
+  .trust-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .footer-container {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .brand-column {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .trust-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .trust-item {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+  }
+
+  .footer-container {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .brand-column {
+    grid-column: span 1;
+  }
+
+  .footer-social .footer-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .footer-bottom .footer-container {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .footer-legal {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .footer-copyright {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-main {
+    padding: 30px 0 20px;
+  }
+
+  .footer-column h3 {
+    font-size: 14px;
+  }
+
+  .footer-column ul a {
+    font-size: 13px;
+  }
+
+  .app-buttons {
+    flex-direction: column;
+  }
+
+  .payment-icons {
+    gap: 8px;
+  }
+
+  .payment-icons span {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
