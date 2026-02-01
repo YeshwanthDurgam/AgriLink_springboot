@@ -56,8 +56,8 @@
   content: "";
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 200%;
+  left: 0;
+  width: 100%;
   height: 100%;
   background: linear-gradient(
     90deg,
@@ -66,14 +66,15 @@
     transparent
   );
   animation: shimmerBar 3s infinite;
+  will-change: transform;
 }
 
 @keyframes shimmerBar {
   0% {
-    transform: translateX(0);
+    transform: translateX(-100%);
   }
   100% {
-    transform: translateX(50%);
+    transform: translateX(100%);
   }
 }
 

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiMessageSquare, FiX, FiSend, FiChevronDown, FiUser } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiMessageSquare } from '@react-icons/all-files/fi/FiMessageSquare';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiSend } from '@react-icons/all-files/fi/FiSend';
+import { FiChevronDown } from '@react-icons/all-files/fi/FiChevronDown';
+import { FiUser } from '@react-icons/all-files/fi/FiUser';
 import { useAuth } from '../context/AuthContext';
 import messagingService from '../services/messagingService';
 import './ChatWidget.css';

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiHeart, FiStar, FiTrendingUp, FiZap, FiGift } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiTrendingUp } from '@react-icons/all-files/fi/FiTrendingUp';
+import { FiZap } from '@react-icons/all-files/fi/FiZap';
+import { FiGift } from '@react-icons/all-files/fi/FiGift';
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi } from '../services/api';
 import cartService from '../services/cartService';

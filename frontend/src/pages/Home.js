@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  FiChevronLeft, FiChevronRight, FiStar, FiShoppingCart, FiHeart, 
-  FiPackage, FiTruck, FiShield, FiCheckCircle, FiClock,
-  FiZap, FiMapPin, FiArrowRight
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiChevronLeft } from '@react-icons/all-files/fi/FiChevronLeft';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiCheckCircle } from '@react-icons/all-files/fi/FiCheckCircle';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiZap } from '@react-icons/all-files/fi/FiZap';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiArrowRight } from '@react-icons/all-files/fi/FiArrowRight';
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi } from '../services/api';
 import guestService from '../services/guestService';
@@ -381,7 +390,13 @@ const Home = () => {
                     </Link>
                   </div>
                   <div className="banner-image">
-                    <img src={slide.image} alt={slide.title} />
+                    <img 
+                      src={slide.image} 
+                      alt={slide.title} 
+                      width={600}
+                      height={400}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                    />
                   </div>
                 </div>
               ))}
@@ -424,7 +439,13 @@ const Home = () => {
                 className="category-strip-item"
               >
                 <div className="category-strip-image">
-                  <img src={category.image} alt={category.name} />
+                  <img 
+                    src={category.image} 
+                    alt={category.name}
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                  />
                 </div>
                 <span>{category.name}</span>
               </Link>
@@ -474,7 +495,13 @@ const Home = () => {
                 <div className="deal-of-day-box">
                   <div className="dotd-badge">🎯 Deal of the Day</div>
                   <div className="dotd-image" onClick={() => handleProductClick(dealOfTheDay)}>
-                    <img src={dealOfTheDay.imageUrl} alt={dealOfTheDay.title} />
+                    <img 
+                      src={dealOfTheDay.imageUrl} 
+                      alt={dealOfTheDay.title}
+                      width={280}
+                      height={280}
+                      loading="lazy"
+                    />
                     {dealOfTheDay.discount && dealOfTheDay.discount > 0 && (
                       <span className="dotd-discount">-{dealOfTheDay.discount}%</span>
                     )}
@@ -531,7 +558,13 @@ const Home = () => {
                 className="category-grid-card"
               >
                 <div className="category-grid-image">
-                  <img src={category.image} alt={category.name} />
+                  <img 
+                    src={category.image} 
+                    alt={category.name}
+                    width={200}
+                    height={200}
+                    loading="lazy"
+                  />
                 </div>
                 <h3>{category.name}</h3>
               </Link>

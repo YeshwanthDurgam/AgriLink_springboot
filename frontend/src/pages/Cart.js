@@ -6,11 +6,21 @@ import cartService from '../services/cartService';
 import guestService from '../services/guestService';
 import marketplaceService from '../services/marketplaceService';
 import EmptyState from '../components/EmptyState';
-import { 
-  FiShoppingCart, FiTrash2, FiHeart, FiCheck, FiTruck, 
-  FiShield, FiTag, FiChevronRight, FiMinus, FiPlus,
-  FiAlertCircle, FiGift, FiClock, FiPackage
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiTrash2 } from '@react-icons/all-files/fi/FiTrash2';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiTag } from '@react-icons/all-files/fi/FiTag';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiMinus } from '@react-icons/all-files/fi/FiMinus';
+import { FiPlus } from '@react-icons/all-files/fi/FiPlus';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiGift } from '@react-icons/all-files/fi/FiGift';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
 import './Cart.css';
 
 const Cart = () => {

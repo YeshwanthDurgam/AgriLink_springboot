@@ -12,17 +12,21 @@
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition:
+    transform 0.2s ease-out,
+    box-shadow 0.2s ease-out;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  /* content-visibility for better rendering performance */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
 }
 
 .product-card-v2:hover {
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.12),
-    0 8px 16px rgba(0, 0, 0, 0.08);
-  border-color: transparent;
+    0 12px 24px rgba(0, 0, 0, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Out of stock card styling */
@@ -58,7 +62,7 @@
 .skeleton-shimmer {
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
   background: linear-gradient(
@@ -72,10 +76,10 @@
 
 @keyframes shimmer {
   0% {
-    left: -100%;
+    transform: translateX(-100%);
   }
   100% {
-    left: 100%;
+    transform: translateX(100%);
   }
 }
 
@@ -87,9 +91,7 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition:
-    opacity 0.3s ease,
-    transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: opacity 0.2s ease-out;
 }
 
 .pc-image.loaded {
@@ -97,7 +99,7 @@
 }
 
 .product-card-v2:hover .pc-image {
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 
 .pc-no-image {

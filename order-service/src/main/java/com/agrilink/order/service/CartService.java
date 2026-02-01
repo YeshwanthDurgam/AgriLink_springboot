@@ -119,13 +119,11 @@ public class CartService {
     }
 
     /**
-     * Get cart item count
+     * Get cart item count - OPTIMIZED: doesn't load all items
      */
     @Transactional(readOnly = true)
     public int getCartItemCount(UUID userId) {
-        return cartRepository.findByUserIdWithItems(userId)
-                .map(Cart::getTotalItems)
-                .orElse(0);
+        return cartItemRepository.countByCartUserId(userId);
     }
 
     /**

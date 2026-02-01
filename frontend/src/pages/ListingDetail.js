@@ -1,12 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { toast } from 'react-toastify';
-import { 
-  FiHeart, FiShoppingCart, FiShare2, FiTruck, FiShield, FiRefreshCw,
-  FiCheck, FiChevronLeft, FiChevronRight, FiX, FiZoomIn, FiStar,
-  FiMapPin, FiClock, FiAward, FiPackage, FiMessageCircle, FiThumbsUp
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiShare2 } from '@react-icons/all-files/fi/FiShare2';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiRefreshCw } from '@react-icons/all-files/fi/FiRefreshCw';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiChevronLeft } from '@react-icons/all-files/fi/FiChevronLeft';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiZoomIn } from '@react-icons/all-files/fi/FiZoomIn';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiAward } from '@react-icons/all-files/fi/FiAward';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiMessageCircle } from '@react-icons/all-files/fi/FiMessageCircle';
+import { FiThumbsUp } from '@react-icons/all-files/fi/FiThumbsUp';
 import marketplaceService from '../services/marketplaceService';
 import cartService from '../services/cartService';
 import wishlistService from '../services/wishlistService';
@@ -22,6 +37,7 @@ const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { incrementCartCount, fetchCartCount } = useCart();
   
   // Core state
   const [listing, setListing] = useState(null);
@@ -207,6 +223,11 @@ const ListingDetail = () => {
       return;
     }
 
+    // OPTIMISTIC UI: Update cart count immediately (no API wait)
+    incrementCartCount(quantity);
+    setAddedToCart(true);
+    toast.success('Added to cart!');
+
     setActionLoading('cart');
     try {
       const price = listing.pricePerUnit || listing.price;
@@ -224,7 +245,6 @@ const ListingDetail = () => {
           quantity: listing.quantity,
           availableQuantity: listing.quantity ? parseInt(listing.quantity) : 100
         }, quantity);
-        toast.success('Added to cart!');
       } else {
         await cartService.addToCart({
           listingId: listing.id,
@@ -236,13 +256,16 @@ const ListingDetail = () => {
           unit: listing.quantityUnit || listing.unit || 'kg',
           availableQuantity: listing.quantity ? parseInt(listing.quantity) : null
         });
-        toast.success('Added to cart!');
+        // Sync cart count with server after successful API call
+        fetchCartCount();
       }
-      setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 3000);
     } catch (err) {
       console.error('Error adding to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error('Failed to add to cart. Please try again.');
+      setAddedToCart(false);
+      // Revert optimistic update on error
+      fetchCartCount();
     } finally {
       setActionLoading(null);
     }

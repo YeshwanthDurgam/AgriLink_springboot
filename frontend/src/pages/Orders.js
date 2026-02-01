@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  FiPackage, FiClock, FiCheck, FiX, FiTruck, FiRefreshCw,
-  FiShoppingBag, FiDollarSign, FiCalendar, FiMapPin, FiChevronRight,
-  FiEye, FiCheckCircle
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiRefreshCw } from '@react-icons/all-files/fi/FiRefreshCw';
+import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
+import { FiDollarSign } from '@react-icons/all-files/fi/FiDollarSign';
+import { FiCalendar } from '@react-icons/all-files/fi/FiCalendar';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiEye } from '@react-icons/all-files/fi/FiEye';
+import { FiCheckCircle } from '@react-icons/all-files/fi/FiCheckCircle';
 import orderService from '../services/orderService';
 import EmptyState from '../components/EmptyState';
 import './Orders.css';

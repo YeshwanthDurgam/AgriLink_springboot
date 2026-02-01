@@ -1,11 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import {
-  FiShoppingBag, FiSearch, FiGrid, FiList, FiShoppingCart, FiHeart,
-  FiChevronDown, FiChevronUp, FiX, FiStar, FiTruck, FiCheck,
-  FiChevronLeft, FiChevronRight, FiFilter
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
+import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
+import { FiGrid } from '@react-icons/all-files/fi/FiGrid';
+import { FiList } from '@react-icons/all-files/fi/FiList';
+import { FiChevronDown } from '@react-icons/all-files/fi/FiChevronDown';
+import { FiChevronUp } from '@react-icons/all-files/fi/FiChevronUp';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiChevronLeft } from '@react-icons/all-files/fi/FiChevronLeft';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiFilter } from '@react-icons/all-files/fi/FiFilter';
 import marketplaceService from '../services/marketplaceService';
 import wishlistService from '../services/wishlistService';
 import guestService from '../services/guestService';
@@ -95,8 +102,8 @@ const Marketplace = () => {
     sortBy: searchParams.get('sortBy') || 'createdAt,desc'
   });
 
-  // Active filters for display
-  const getActiveFilters = () => {
+  // Active filters for display - memoized
+  const getActiveFilters = useCallback(() => {
     const active = [];
     if (filters.categoryId) {
       const cat = categories.find(c => c.id === filters.categoryId || c.id === parseInt(filters.categoryId));
@@ -121,7 +128,7 @@ const Marketplace = () => {
       active.push({ key: 'search', label: `"${searchQuery}"` });
     }
     return active;
-  };
+  }, [filters, searchQuery, categories]);
 
   const removeFilter = (key) => {
     if (key === 'search') {
@@ -360,27 +367,17 @@ const Marketplace = () => {
     }
   };
 
+  // Memoized quick view handler to prevent re-renders
+  const handleQuickView = useCallback((listing) => {
+    window.location.href = `/marketplace/${listing.id}`;
+  }, []);
+
   const toggleSection = (section) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Generate rating stars
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating || 0);
-    for (let i = 0; i < 5; i++) {
-      stars.push(
-        <FiStar
-          key={i}
-          className={i < fullStars ? 'star filled' : 'star'}
-        />
-      );
-    }
-    return stars;
-  };
-
-  // Pagination numbers
-  const getPaginationNumbers = () => {
+  // Pagination numbers - memoized
+  const getPaginationNumbers = useCallback(() => {
     const pages = [];
     const maxVisible = 5;
     let start = Math.max(0, page - Math.floor(maxVisible / 2));
@@ -394,9 +391,10 @@ const Marketplace = () => {
       pages.push(i);
     }
     return pages;
-  };
+  }, [page, totalPages]);
 
-  const activeFilters = getActiveFilters();
+  // Memoize active filters to prevent recalculation
+  const activeFilters = useMemo(() => getActiveFilters(), [getActiveFilters]);
 
   return (
     <div className="marketplace-page">
@@ -725,10 +723,7 @@ const Marketplace = () => {
                     cartLoading={cartLoading[listing.id]}
                     onToggleWishlist={handleToggleWishlist}
                     onAddToCart={handleAddToCart}
-                    onQuickView={(listing) => {
-                      // Navigate to product detail for now, can be enhanced with modal later
-                      window.location.href = `/marketplace/${listing.id}`;
-                    }}
+                    onQuickView={handleQuickView}
                   />
                 ))}
               </div>

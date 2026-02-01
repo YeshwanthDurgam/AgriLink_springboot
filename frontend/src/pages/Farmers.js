@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FiSearch, FiMapPin, FiStar, FiHeart, FiMessageSquare, FiFilter, FiChevronDown, FiUsers, FiPackage, FiAward, FiCheck } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiMessageSquare } from '@react-icons/all-files/fi/FiMessageSquare';
+import { FiFilter } from '@react-icons/all-files/fi/FiFilter';
+import { FiChevronDown } from '@react-icons/all-files/fi/FiChevronDown';
+import { FiUsers } from '@react-icons/all-files/fi/FiUsers';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiAward } from '@react-icons/all-files/fi/FiAward';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
 import { useAuth } from '../context/AuthContext';
 import { authApi, userApi, marketplaceApi } from '../services/api';
 import { toast } from 'react-toastify';

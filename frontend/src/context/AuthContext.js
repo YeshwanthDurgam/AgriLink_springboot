@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AuthService from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -158,7 +158,8 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   }, []);
 
-  const value = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     loading,
     error,
@@ -169,7 +170,7 @@ export const AuthProvider = ({ children }) => {
     clearError,
     getDashboardRoute: () => getDashboardRoute(user),
     getUserDisplayName: () => getUserDisplayName(user),
-  };
+  }), [user, loading, error, login, register, logout, clearError]);
 
   return (
     <AuthContext.Provider value={value}>

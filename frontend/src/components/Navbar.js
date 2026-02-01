@@ -1,14 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  FiMenu, FiX, FiUser, FiLogOut, FiSearch, FiShoppingCart, FiHeart, 
-  FiMessageSquare, FiBell, FiChevronDown, FiShoppingBag, 
-  FiUsers, FiPackage, FiBarChart2, FiMap, FiMapPin,
-  FiHome, FiPercent, FiShield, FiHelpCircle, FiDollarSign,
-  FiChevronRight, FiTruck, FiClock
-} from 'react-icons/fi';
-import cartService from '../services/cartService';
+import { useCart } from '../context/CartContext';
+// Tree-shakeable individual icon imports
+import { FiMenu } from '@react-icons/all-files/fi/FiMenu';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiUser } from '@react-icons/all-files/fi/FiUser';
+import { FiLogOut } from '@react-icons/all-files/fi/FiLogOut';
+import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiMessageSquare } from '@react-icons/all-files/fi/FiMessageSquare';
+import { FiBell } from '@react-icons/all-files/fi/FiBell';
+import { FiChevronDown } from '@react-icons/all-files/fi/FiChevronDown';
+import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
+import { FiUsers } from '@react-icons/all-files/fi/FiUsers';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiBarChart2 } from '@react-icons/all-files/fi/FiBarChart2';
+import { FiMap } from '@react-icons/all-files/fi/FiMap';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiHome } from '@react-icons/all-files/fi/FiHome';
+import { FiPercent } from '@react-icons/all-files/fi/FiPercent';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiHelpCircle } from '@react-icons/all-files/fi/FiHelpCircle';
+import { FiDollarSign } from '@react-icons/all-files/fi/FiDollarSign';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
 import wishlistService from '../services/wishlistService';
 import guestService from '../services/guestService';
 import messagingService from '../services/messagingService';
@@ -33,6 +51,7 @@ const CATEGORY_ICONS = {
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { cartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -49,7 +68,6 @@ const Navbar = () => {
   
   // Data State
   const [categories, setCategories] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -117,16 +135,14 @@ const Navbar = () => {
     }
   }, []);
 
-  // Fetch counts for authenticated users
+  // Fetch counts for authenticated users (excluding cart - handled by CartContext)
   const fetchCounts = useCallback(async () => {
     try {
-      const [cartData, wishlistData, unreadData, notifData] = await Promise.all([
-        cartService.getCartCount().catch(() => ({ count: 0 })),
+      const [wishlistData, unreadData, notifData] = await Promise.all([
         wishlistService.getWishlistCount().catch(() => 0),
         messagingService.getUnreadCount().catch(() => 0),
         notificationService.getUnreadCount().catch(() => ({ count: 0 }))
       ]);
-      setCartCount(cartData?.count || 0);
       setWishlistCount(typeof wishlistData === 'number' ? wishlistData : (wishlistData?.count || 0));
       setUnreadMessages(typeof unreadData === 'number' ? unreadData : (unreadData?.count || 0));
       const notifCount = notifData?.data?.count || notifData?.count || notifData?.data || (typeof notifData === 'number' ? notifData : 0);
@@ -136,36 +152,30 @@ const Navbar = () => {
     }
   }, []);
 
-  // Fetch guest counts from localStorage
+  // Fetch guest wishlist count from localStorage (cart handled by CartContext)
   const fetchGuestCounts = useCallback(() => {
-    setCartCount(guestService.getGuestCartCount());
     setWishlistCount(guestService.getGuestWishlistCount());
   }, []);
 
-  // Fetch counts on mount and location change
+  // Fetch counts on mount only (not on every navigation to reduce API calls)
   useEffect(() => {
     if (isAuthenticated) {
       fetchCounts();
     } else {
       fetchGuestCounts();
     }
-  }, [isAuthenticated, location.pathname, fetchCounts, fetchGuestCounts]);
+  }, [isAuthenticated, fetchCounts, fetchGuestCounts]);
 
-  // Listen for guest cart/wishlist updates
+  // Listen for guest wishlist updates (cart handled by CartContext)
   useEffect(() => {
     if (!isAuthenticated) {
-      const handleGuestCartUpdate = (event) => {
-        setCartCount(event.detail?.totalItems || 0);
-      };
       const handleGuestWishlistUpdate = (event) => {
         setWishlistCount(event.detail?.length || 0);
       };
       
-      window.addEventListener('guestCartUpdated', handleGuestCartUpdate);
       window.addEventListener('guestWishlistUpdated', handleGuestWishlistUpdate);
       
       return () => {
-        window.removeEventListener('guestCartUpdated', handleGuestCartUpdate);
         window.removeEventListener('guestWishlistUpdated', handleGuestWishlistUpdate);
       };
     }

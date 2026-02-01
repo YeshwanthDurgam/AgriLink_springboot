@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  FiMapPin, FiStar, FiUsers, FiPackage, FiMail, FiPhone, 
-  FiCalendar, FiHeart, FiCheck, FiArrowLeft, FiShoppingCart
-} from 'react-icons/fi';
-import { FaTractor } from 'react-icons/fa';
+// Tree-shakeable individual icon imports
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiStar } from '@react-icons/all-files/fi/FiStar';
+import { FiUsers } from '@react-icons/all-files/fi/FiUsers';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiMail } from '@react-icons/all-files/fi/FiMail';
+import { FiPhone } from '@react-icons/all-files/fi/FiPhone';
+import { FiCalendar } from '@react-icons/all-files/fi/FiCalendar';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiArrowLeft } from '@react-icons/all-files/fi/FiArrowLeft';
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FaTractor } from '@react-icons/all-files/fa/FaTractor';
 import { useAuth } from '../context/AuthContext';
 import { authApi, userApi, marketplaceApi, farmApi } from '../services/api';
 import guestService from '../services/guestService';

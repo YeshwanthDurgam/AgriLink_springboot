@@ -1,10 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FiPackage, FiShoppingCart, FiHeart, FiSearch, FiShoppingBag,
-  FiMessageSquare, FiBell, FiUsers, FiMap, FiTruck, FiAlertCircle,
-  FiInbox, FiTrendingUp, FiGrid
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiShoppingCart } from '@react-icons/all-files/fi/FiShoppingCart';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
+import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
+import { FiMessageSquare } from '@react-icons/all-files/fi/FiMessageSquare';
+import { FiBell } from '@react-icons/all-files/fi/FiBell';
+import { FiUsers } from '@react-icons/all-files/fi/FiUsers';
+import { FiMap } from '@react-icons/all-files/fi/FiMap';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiInbox } from '@react-icons/all-files/fi/FiInbox';
+import { FiTrendingUp } from '@react-icons/all-files/fi/FiTrendingUp';
+import { FiGrid } from '@react-icons/all-files/fi/FiGrid';
 import './EmptyState.css';
 
 const EmptyState = ({ 

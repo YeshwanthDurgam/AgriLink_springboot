@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiBell, FiCheck, FiCheckCircle, FiTrash2, FiRefreshCw, FiX, FiAlertCircle, FiInfo, FiPackage, FiMessageSquare } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiBell } from '@react-icons/all-files/fi/FiBell';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiCheckCircle } from '@react-icons/all-files/fi/FiCheckCircle';
+import { FiTrash2 } from '@react-icons/all-files/fi/FiTrash2';
+import { FiRefreshCw } from '@react-icons/all-files/fi/FiRefreshCw';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiInfo } from '@react-icons/all-files/fi/FiInfo';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiMessageSquare } from '@react-icons/all-files/fi/FiMessageSquare';
 import notificationService from '../services/notificationService';
 import './NotificationCenter.css';
 

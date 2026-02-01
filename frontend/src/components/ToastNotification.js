@@ -1,8 +1,14 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { 
-  FiCheck, FiX, FiAlertCircle, FiInfo, FiPackage, FiTruck, 
-  FiCheckCircle, FiShoppingBag, FiBell
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiInfo } from '@react-icons/all-files/fi/FiInfo';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiCheckCircle } from '@react-icons/all-files/fi/FiCheckCircle';
+import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
+import { FiBell } from '@react-icons/all-files/fi/FiBell';
 import './ToastNotification.css';
 
 // Context for toast notifications

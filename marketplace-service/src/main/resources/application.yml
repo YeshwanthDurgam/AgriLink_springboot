@@ -9,6 +9,15 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    # HikariCP Connection Pool settings
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      pool-name: MarketplacePool
+      max-lifetime: 1800000
+      connection-timeout: 10000
+      keepalive-time: 60000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -17,6 +26,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
   flyway:
     enabled: true
     baseline-on-migrate: true

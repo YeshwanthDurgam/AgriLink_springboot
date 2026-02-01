@@ -1,9 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FiFacebook, FiTwitter, FiInstagram, FiYoutube, FiLinkedin,
-  FiMail, FiPhone, FiMapPin, FiHeart, FiShield, FiTruck, FiHeadphones
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiFacebook } from '@react-icons/all-files/fi/FiFacebook';
+import { FiTwitter } from '@react-icons/all-files/fi/FiTwitter';
+import { FiInstagram } from '@react-icons/all-files/fi/FiInstagram';
+import { FiYoutube } from '@react-icons/all-files/fi/FiYoutube';
+import { FiLinkedin } from '@react-icons/all-files/fi/FiLinkedin';
+import { FiMail } from '@react-icons/all-files/fi/FiMail';
+import { FiPhone } from '@react-icons/all-files/fi/FiPhone';
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiHeart } from '@react-icons/all-files/fi/FiHeart';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiHeadphones } from '@react-icons/all-files/fi/FiHeadphones';
 import './Footer.css';
 
 const Footer = () => {

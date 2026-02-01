@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  FiMapPin, FiCreditCard, FiShield, FiTruck, FiCheck, FiPlus, 
-  FiChevronRight, FiEdit2, FiClock, FiPackage, FiGift,
-  FiPercent, FiAlertCircle, FiLock, FiCheckCircle, FiTag
-} from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
+import { FiCreditCard } from '@react-icons/all-files/fi/FiCreditCard';
+import { FiShield } from '@react-icons/all-files/fi/FiShield';
+import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
+import { FiCheck } from '@react-icons/all-files/fi/FiCheck';
+import { FiPlus } from '@react-icons/all-files/fi/FiPlus';
+import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
+import { FiEdit2 } from '@react-icons/all-files/fi/FiEdit2';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
+import { FiGift } from '@react-icons/all-files/fi/FiGift';
+import { FiPercent } from '@react-icons/all-files/fi/FiPercent';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiLock } from '@react-icons/all-files/fi/FiLock';
+import { FiCheckCircle } from '@react-icons/all-files/fi/FiCheckCircle';
+import { FiTag } from '@react-icons/all-files/fi/FiTag';
 import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import addressService from '../services/addressService';

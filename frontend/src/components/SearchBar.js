@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiClock, FiTrendingUp, FiX, FiArrowRight } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
+import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiTrendingUp } from '@react-icons/all-files/fi/FiTrendingUp';
+import { FiX } from '@react-icons/all-files/fi/FiX';
+import { FiArrowRight } from '@react-icons/all-files/fi/FiArrowRight';
 import { marketplaceApi } from '../services/api';
 import './SearchBar.css';
 

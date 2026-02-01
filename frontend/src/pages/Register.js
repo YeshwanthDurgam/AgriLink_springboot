@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiUser } from 'react-icons/fi';
+// Tree-shakeable individual icon imports
+import { FiMail } from '@react-icons/all-files/fi/FiMail';
+import { FiLock } from '@react-icons/all-files/fi/FiLock';
+import { FiEye } from '@react-icons/all-files/fi/FiEye';
+import { FiEyeOff } from '@react-icons/all-files/fi/FiEyeOff';
+import { FiUser } from '@react-icons/all-files/fi/FiUser';
 import './Auth.css';
 
 const Register = () => {
