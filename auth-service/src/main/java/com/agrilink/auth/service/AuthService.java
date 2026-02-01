@@ -1,5 +1,6 @@
 package com.agrilink.auth.service;
 
+import com.agrilink.auth.client.NotificationClient;
 import com.agrilink.auth.dto.*;
 import com.agrilink.auth.entity.Role;
 import com.agrilink.auth.entity.User;
@@ -25,7 +26,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service handling authentication operations: registration, login, token generation.
+ * Service handling authentication operations: registration, login, token
+ * generation.
  */
 @Slf4j
 @Service
@@ -37,6 +39,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final NotificationClient notificationClient;
 
     /**
      * Register a new user with specified roles.
@@ -75,6 +78,10 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with id: {}", savedUser.getId());
 
+        // Send welcome email asynchronously
+        String userName = request.getEmail().split("@")[0]; // Use email prefix as name if no name provided
+        notificationClient.sendWelcomeEmail(savedUser.getEmail(), userName);
+
         return mapToUserDto(savedUser);
     }
 
@@ -88,9 +95,7 @@ public class AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
-                        request.getPassword()
-                )
-        );
+                        request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -106,7 +111,8 @@ public class AuthService {
 
         log.info("User logged in successfully: {}", request.getEmail());
 
-        return AuthResponse.of(token, user.getId(), user.getEmail(), null, roles, false, "PENDING", jwtTokenProvider.getExpirationTime());
+        return AuthResponse.of(token, user.getId(), user.getEmail(), null, roles, false, "PENDING",
+                jwtTokenProvider.getExpirationTime());
     }
 
     /**
