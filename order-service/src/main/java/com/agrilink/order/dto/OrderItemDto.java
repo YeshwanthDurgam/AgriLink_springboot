@@ -24,4 +24,5 @@ public class OrderItemDto {
     private String quantityUnit;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
+    private String imageUrl;
 }

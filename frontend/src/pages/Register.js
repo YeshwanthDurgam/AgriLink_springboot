@@ -81,8 +81,11 @@ const Register = () => {
     setSubmitting(false);
 
     if (result.success) {
-      toast.success('Registration successful! Please login.');
-      navigate('/login');
+      // Seamless signup like Amazon/Flipkart - redirect to login without excessive messages
+      navigate('/login', { 
+        state: { message: 'Account created! Please sign in.' },
+        replace: true 
+      });
     } else {
       if (result.validationErrors) {
         setErrors(result.validationErrors);

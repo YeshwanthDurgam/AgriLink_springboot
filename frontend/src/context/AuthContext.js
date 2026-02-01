@@ -110,15 +110,12 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Redirect to profile onboarding if profile not complete, otherwise to dashboard
+        // Redirect directly to dashboard like Amazon/Flipkart (no profile completion required)
         const dashboardRoute = getDashboardRoute(userData);
-        const redirectTo = userData.profileComplete === false 
-          ? '/profile/onboarding' 
-          : dashboardRoute;
         
         return { 
           success: true, 
-          redirectTo,
+          redirectTo: dashboardRoute,
           user: userData
         };
       }

@@ -1298,6 +1298,67 @@
   }
 }
 
+/* ============= NEW ARRIVAL & NO REVIEWS STYLES ============= */
+.product-new-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.new-arrival-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.product-new-badge .be-first {
+  color: #666;
+  font-size: 13px;
+}
+
+/* Related products new badge */
+.related-new {
+  margin: 4px 0;
+}
+
+.related-new .new-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.related-rating .review-count {
+  color: #666;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* No reviews yet section */
+.no-reviews-yet {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  text-align: center;
+  margin: 10px 0 20px;
+}
+
+.no-reviews-yet p {
+  color: #555;
+  font-size: 14px;
+  margin: 0;
+}
+
 @media (max-width: 992px) {
   .listing-detail-content {
     grid-template-columns: 1fr 1fr;

@@ -53,14 +53,20 @@ const BANNER_SLIDES = [
 ];
 
 const CATEGORY_IMAGES = {
+  // Match exact database category names
   'Vegetables': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300',
   'Fruits': 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=300',
   'Grains': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300',
+  'Grains & Cereals': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300',
   'Dairy': 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300',
+  'Dairy Products': 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300',
   'Spices': 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=300',
   'Pulses': 'https://images.unsplash.com/photo-1515543904506-2ef97737f375?w=300',
+  'Pulses & Legumes': 'https://images.unsplash.com/photo-1515543904506-2ef97737f375?w=300',
   'Organic': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300',
+  'Organic Products': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300',
   'Seeds': 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=300',
+  'Seeds & Saplings': 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=300',
   'Nuts': 'https://images.unsplash.com/photo-1608797178974-15b35a64ede9?w=300',
   'Herbs': 'https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300'
 };
@@ -200,25 +206,39 @@ const Home = () => {
   };
 
   const formatProducts = (listings) => {
-    return listings.map(listing => ({
-      id: listing.id,
-      title: listing.title,
-      price: parseFloat(listing.price) || 0,
-      originalPrice: parseFloat(listing.originalPrice) || Math.round(parseFloat(listing.price) * 1.2),
-      unit: listing.unit || listing.quantityUnit || 'kg',
-      imageUrl: listing.imageUrl || listing.images?.[0]?.imageUrl || 'https://via.placeholder.com/300',
-      images: listing.images,
-      sellerName: listing.sellerName || 'Local Farmer',
-      sellerId: listing.sellerId,
-      rating: listing.averageRating || listing.rating || 4.5,
-      reviewCount: listing.reviewCount || 0,
-      location: listing.location || 'India',
-      discount: listing.originalPrice 
-        ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
-        : Math.floor(Math.random() * 25) + 5,
-      quantity: listing.quantity,
-      quantityUnit: listing.quantityUnit || listing.unit
-    }));
+    return listings.map(listing => {
+      // Get the actual price from backend (pricePerUnit is the main field)
+      const price = parseFloat(listing.pricePerUnit) || parseFloat(listing.price) || 0;
+      
+      // Calculate original price: If discount exists, use it; otherwise use price as is
+      // For products with discount, calculate original from discount percentage
+      const discountPercent = listing.discountPercent || listing.discount || 0;
+      const originalPrice = discountPercent > 0 
+        ? Math.round(price / (1 - discountPercent / 100))
+        : price; // No fake original price if no discount
+      
+      return {
+        id: listing.id,
+        title: listing.title,
+        price: price,
+        originalPrice: originalPrice,
+        unit: listing.quantityUnit || listing.unit || 'kg',
+        imageUrl: listing.imageUrl || listing.images?.[0]?.imageUrl || 'https://via.placeholder.com/300',
+        images: listing.images,
+        sellerName: listing.sellerName || listing.sellerFarmName || 'AgriLink Farmer',
+        sellerId: listing.sellerId,
+        // Use actual rating from backend - don't default to 4.5
+        rating: parseFloat(listing.averageRating) || null,
+        reviewCount: listing.reviewCount || 0,
+        location: listing.location || 'India',
+        // Only show discount if there's an actual discount, not random
+        discount: discountPercent > 0 ? discountPercent : null,
+        quantity: listing.quantity,
+        quantityUnit: listing.quantityUnit || listing.unit,
+        categoryName: listing.categoryName,
+        organicCertified: listing.organicCertified
+      };
+    });
   };
 
   // ============= HANDLERS =============
@@ -316,8 +336,17 @@ const Home = () => {
   // ============= RENDER =============
   
   const currentBanner = BANNER_SLIDES[currentSlide];
-  const dealsProducts = topProducts.filter(p => p.discount > 10).slice(0, 6);
-  const dealOfTheDay = topProducts.find(p => p.discount > 15) || topProducts[0];
+  // Show top products as flash deals (these are the most viewed/trending)
+  const dealsProducts = topProducts.filter(p => p.price > 0).slice(0, 6);
+  // Deal of the day - pick best selling or product with highest rating
+  const dealOfTheDay = topProducts.length > 0 
+    ? topProducts.filter(p => p.price > 0).reduce((best, current) => {
+        // Prefer products with more reviews/higher ratings
+        const bestScore = (best.reviewCount || 0) * (parseFloat(best.rating) || 0);
+        const currentScore = (current.reviewCount || 0) * (parseFloat(current.rating) || 0);
+        return currentScore > bestScore ? current : best;
+      }, topProducts.filter(p => p.price > 0)[0])
+    : null;
 
   if (loading) {
     return (
@@ -441,18 +470,22 @@ const Home = () => {
               </div>
               
               {/* Deal of the Day */}
-              {dealOfTheDay && (
+              {dealOfTheDay && dealOfTheDay.price > 0 && (
                 <div className="deal-of-day-box">
                   <div className="dotd-badge">🎯 Deal of the Day</div>
                   <div className="dotd-image" onClick={() => handleProductClick(dealOfTheDay)}>
                     <img src={dealOfTheDay.imageUrl} alt={dealOfTheDay.title} />
-                    <span className="dotd-discount">-{dealOfTheDay.discount}%</span>
+                    {dealOfTheDay.discount && dealOfTheDay.discount > 0 && (
+                      <span className="dotd-discount">-{dealOfTheDay.discount}%</span>
+                    )}
                   </div>
                   <div className="dotd-info">
                     <h3>{dealOfTheDay.title}</h3>
                     <div className="dotd-price">
-                      <span className="dotd-current">₹{dealOfTheDay.price}</span>
-                      <span className="dotd-original">₹{dealOfTheDay.originalPrice}</span>
+                      <span className="dotd-current">₹{Number(dealOfTheDay.price).toFixed(0)}</span>
+                      {dealOfTheDay.originalPrice && dealOfTheDay.originalPrice > dealOfTheDay.price && (
+                        <span className="dotd-original">₹{Number(dealOfTheDay.originalPrice).toFixed(0)}</span>
+                      )}
                     </div>
                     <button 
                       className="dotd-add-btn"
@@ -765,42 +798,74 @@ const ProductCarousel = ({ title, subtitle, products, onAddToCart, onAddToWishli
 
 // Product Card Component
 const ProductCard = ({ product, onAddToCart, onAddToWishlist, onClick }) => {
+  const [imgError, setImgError] = React.useState(false);
+  
+  const handleImageError = (e) => {
+    setImgError(true);
+    e.target.style.display = 'none';
+  };
+
+  // Format price safely
+  const formatPrice = (price) => {
+    if (price === null || price === undefined || isNaN(price)) return '0';
+    return Number(price).toFixed(0);
+  };
+
   return (
-    <div className="product-card-v2" onClick={onClick}>
-      {product.discount > 0 && (
-        <span className="product-discount-badge">-{product.discount}%</span>
+    <div className="home-product-card" onClick={onClick}>
+      {product.discount && product.discount > 0 && (
+        <span className="home-discount-badge">-{product.discount}%</span>
       )}
       <button 
-        className="product-wishlist-btn"
+        className="home-wishlist-btn"
         onClick={(e) => onAddToWishlist(e, product)}
       >
         <FiHeart />
       </button>
       
-      <div className="product-image-v2">
-        <img src={product.imageUrl} alt={product.title} loading="lazy" />
+      <div className="home-product-image">
+        {!imgError && product.imageUrl ? (
+          <img 
+            src={product.imageUrl} 
+            alt={product.title} 
+            loading="lazy"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="home-image-placeholder">
+            <span>🌾</span>
+          </div>
+        )}
       </div>
       
-      <div className="product-info-v2">
-        <span className="product-seller">{product.sellerName}</span>
-        <h3 className="product-title-v2">{product.title}</h3>
+      <div className="home-product-info">
+        <span className="home-product-seller">{product.sellerName}</span>
+        <h3 className="home-product-title">{product.title}</h3>
         
-        <div className="product-rating-v2">
-          <FiStar className="star-filled" />
-          <span>{product.rating?.toFixed(1) || '4.5'}</span>
-          <span className="review-count">({product.reviewCount || 0})</span>
-        </div>
+        {/* Only show rating if there are reviews */}
+        {product.reviewCount > 0 && (
+          <div className="home-product-rating">
+            <FiStar className="star-filled" />
+            <span>{product.rating?.toFixed(1) || 'N/A'}</span>
+            <span className="review-count">({product.reviewCount})</span>
+          </div>
+        )}
+        {product.reviewCount === 0 && (
+          <div className="home-product-rating new-product">
+            <span className="new-badge">New</span>
+          </div>
+        )}
         
-        <div className="product-price-v2">
-          <span className="current-price">₹{product.price}</span>
-          {product.originalPrice > product.price && (
-            <span className="original-price">₹{product.originalPrice}</span>
+        <div className="home-product-price">
+          <span className="current-price">₹{formatPrice(product.price)}</span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="original-price">₹{formatPrice(product.originalPrice)}</span>
           )}
           <span className="price-unit">/{product.unit}</span>
         </div>
         
         <button 
-          className="add-cart-btn-v2"
+          className="home-add-cart-btn"
           onClick={(e) => onAddToCart(e, product)}
         >
           <FiShoppingCart /> Add
@@ -812,17 +877,38 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist, onClick }) => {
 
 // Deal Card Component
 const DealCard = ({ product, onAddToCart, onClick }) => {
+  const [imgError, setImgError] = React.useState(false);
+
+  // Format price safely
+  const formatPrice = (price) => {
+    if (price === null || price === undefined || isNaN(price)) return '0';
+    return Number(price).toFixed(0);
+  };
+  
   return (
     <div className="deal-card" onClick={onClick}>
       <div className="deal-card-image">
-        <img src={product.imageUrl} alt={product.title} loading="lazy" />
-        <span className="deal-discount">-{product.discount}%</span>
+        {!imgError && product.imageUrl ? (
+          <img 
+            src={product.imageUrl} 
+            alt={product.title} 
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="deal-image-placeholder">🌾</div>
+        )}
+        {product.discount && product.discount > 0 && (
+          <span className="deal-discount">-{product.discount}%</span>
+        )}
       </div>
       <div className="deal-card-info">
         <h4>{product.title}</h4>
         <div className="deal-price">
-          <span className="deal-current">₹{product.price}</span>
-          <span className="deal-original">₹{product.originalPrice}</span>
+          <span className="deal-current">₹{formatPrice(product.price)}</span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="deal-original">₹{formatPrice(product.originalPrice)}</span>
+          )}
         </div>
       </div>
     </div>
@@ -841,7 +927,9 @@ const FarmerCard = ({ farmer }) => {
       <h4 className="farmer-name">{farmer.sellerName || 'Local Farmer'}</h4>
       <div className="farmer-stats">
         <span><FiPackage /> {farmer.productCount || 0} Products</span>
-        <span><FiStar /> {farmer.averageRating?.toFixed(1) || '4.5'}</span>
+        {farmer.averageRating && farmer.averageRating > 0 && (
+          <span><FiStar /> {farmer.averageRating.toFixed(1)}</span>
+        )}
       </div>
       {farmer.location && (
         <span className="farmer-location">

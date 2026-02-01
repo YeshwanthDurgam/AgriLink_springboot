@@ -81,11 +81,10 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      toast.success('Login successful! Welcome back.');
-      
-      // Sync guest cart to server if there's guest data
+      // Seamless login like Amazon/Flipkart - no success message
+      // Sync guest cart to server silently if there's guest data
       if (guestService.hasGuestData()) {
-        await syncGuestDataToServer();
+        syncGuestDataToServer(); // Don't await - sync in background
       }
       
       // Determine redirect: use passed 'from' location, or role-based dashboard
@@ -98,12 +97,12 @@ const Login = () => {
     setSubmitting(false);
   };
 
-  // Sync guest cart and wishlist to server after login
+  // Sync guest cart and wishlist to server after login (silent sync like Amazon/Flipkart)
   const syncGuestDataToServer = async () => {
     try {
       const guestData = guestService.getDataToSync();
       
-      // Sync cart items
+      // Sync cart items silently
       if (guestData.cart.items.length > 0) {
         for (const item of guestData.cart.items) {
           try {
@@ -121,10 +120,10 @@ const Login = () => {
             console.warn('Could not sync cart item:', item.productName, err);
           }
         }
-        toast.success(`${guestData.cart.items.length} item(s) from your guest cart have been added`);
+        // Silent sync - no toast message
       }
       
-      // Sync wishlist items
+      // Sync wishlist items silently
       if (guestData.wishlist.length > 0) {
         for (const item of guestData.wishlist) {
           try {
@@ -133,15 +132,14 @@ const Login = () => {
             console.warn('Could not sync wishlist item:', item.productName, err);
           }
         }
-        toast.success(`${guestData.wishlist.length} item(s) from your guest wishlist have been added`);
+        // Silent sync - no toast message
       }
       
       // Clear guest data after successful sync
       guestService.clearAllGuestData();
     } catch (err) {
       console.error('Error syncing guest data:', err);
-      // Don't block login if sync fails, but notify user
-      toast.warning('Some items from your guest cart could not be synced');
+      // Silent failure - don't notify user
     }
   };
 

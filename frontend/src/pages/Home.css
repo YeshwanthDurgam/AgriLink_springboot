@@ -444,12 +444,22 @@
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 10px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
 }
 
 .deal-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.deal-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
 }
 
 .deal-discount {
@@ -643,43 +653,44 @@
   font-size: 20px;
 }
 
-/* ============= PRODUCT CARD V2 ============= */
-.product-card-v2 {
+/* ============= HOME PAGE PRODUCT CARD ============= */
+.home-product-card {
   flex: 0 0 220px;
-  background: white;
+  background: #ffffff !important;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
   scroll-snap-align: start;
   position: relative;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.product-card-v2:hover {
+.home-product-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
-.product-discount-badge {
+.home-discount-badge {
   position: absolute;
   top: 10px;
   left: 10px;
   background: #ef4444;
   color: white;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   z-index: 2;
 }
 
-.product-wishlist-btn {
+.home-wishlist-btn {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: white;
   border: none;
@@ -689,51 +700,63 @@
   justify-content: center;
   z-index: 2;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   color: #9ca3af;
 }
 
-.product-wishlist-btn:hover {
+.home-wishlist-btn:hover {
   background: #fef2f2;
   color: #ef4444;
+  transform: scale(1.1);
 }
 
-.product-image-v2 {
+.home-product-image {
   width: 100%;
   height: 160px;
   overflow: hidden;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-.product-image-v2 img {
+.home-product-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
 }
 
-.product-card-v2:hover .product-image-v2 img {
-  transform: scale(1.05);
+.home-product-card:hover .home-product-image img {
+  transform: scale(1.08);
 }
 
-.product-info-v2 {
+.home-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  font-size: 48px;
+}
+
+.home-product-info {
   padding: 14px;
+  background: #ffffff;
 }
 
-.product-seller {
+.home-product-seller {
   font-size: 11px;
-  color: #22c55e;
-  font-weight: 600;
+  color: #16a34a;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   display: block;
 }
 
-.product-title-v2 {
+.home-product-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #1f2937;
   margin: 0 0 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -743,31 +766,47 @@
   min-height: 39px;
 }
 
-.product-rating-v2 {
+.home-product-rating {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-bottom: 8px;
 }
 
-.product-rating-v2 .star-filled {
+.home-product-rating .star-filled {
   color: #fbbf24;
   fill: #fbbf24;
-  font-size: 13px;
+  font-size: 14px;
 }
 
-.product-rating-v2 span {
-  font-size: 12px;
+.home-product-rating span {
+  font-size: 13px;
   color: #374151;
   font-weight: 600;
 }
 
-.product-rating-v2 .review-count {
+.home-product-rating .review-count {
   color: #9ca3af !important;
   font-weight: 400 !important;
 }
 
-.product-price-v2 {
+/* New product badge for products without reviews */
+.home-product-rating.new-product {
+  height: 20px;
+}
+
+.home-product-rating .new-badge {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.home-product-price {
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -775,27 +814,27 @@
   flex-wrap: wrap;
 }
 
-.product-price-v2 .current-price {
-  font-size: 17px;
+.home-product-price .current-price {
+  font-size: 18px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #111827;
 }
 
-.product-price-v2 .original-price {
+.home-product-price .original-price {
   font-size: 13px;
   color: #9ca3af;
   text-decoration: line-through;
 }
 
-.product-price-v2 .price-unit {
+.home-product-price .price-unit {
   font-size: 12px;
   color: #6b7280;
 }
 
-.add-cart-btn-v2 {
+.home-add-cart-btn {
   width: 100%;
-  padding: 9px 14px;
-  background: #f0fdf4;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border: 1px solid #bbf7d0;
   border-radius: 8px;
@@ -809,12 +848,13 @@
   transition: all 0.3s ease;
 }
 
-.add-cart-btn-v2:hover {
-  background: #22c55e;
+.home-add-cart-btn:hover {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: white;
   border-color: #22c55e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
-
 /* ============= CATEGORY GRID ============= */
 .category-grid-section {
   padding: 40px 0;
@@ -1348,11 +1388,11 @@
     display: none;
   }
 
-  .product-card-v2 {
+  .home-product-card {
     flex: 0 0 180px;
   }
 
-  .product-image-v2 {
+  .home-product-image {
     height: 140px;
   }
 
@@ -1436,28 +1476,28 @@
     height: 80px;
   }
 
-  .product-card-v2 {
+  .home-product-card {
     flex: 0 0 160px;
   }
 
-  .product-image-v2 {
+  .home-product-image {
     height: 120px;
   }
 
-  .product-info-v2 {
+  .home-product-info {
     padding: 10px;
   }
 
-  .product-title-v2 {
+  .home-product-title {
     font-size: 13px;
     min-height: 36px;
   }
 
-  .product-price-v2 .current-price {
+  .home-product-price .current-price {
     font-size: 15px;
   }
 
-  .add-cart-btn-v2 {
+  .home-add-cart-btn {
     padding: 8px 10px;
     font-size: 12px;
   }

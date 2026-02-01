@@ -39,37 +39,40 @@ const ProductCard = ({
     return null;
   };
 
-  // Calculate discount percentage
+  // Calculate discount percentage - only if actual originalPrice exists
   const calculateDiscount = () => {
     if (listing.originalPrice && listing.originalPrice > getPrice()) {
       return Math.round((1 - getPrice() / listing.originalPrice) * 100);
     }
-    // Show a mock discount for display purposes (remove in production if not needed)
-    const randomDiscount = [10, 15, 20, 25, 30, 0, 0, 0, 0][listing.id?.length % 9 || 0];
-    return randomDiscount;
+    // Return discount from listing if available
+    if (listing.discount && listing.discount > 0) {
+      return listing.discount;
+    }
+    // No fake discounts
+    return 0;
   };
 
   // Get price with fallback
-  const getPrice = () => listing.price || listing.pricePerUnit || 0;
+  const getPrice = () => parseFloat(listing.pricePerUnit) || parseFloat(listing.price) || 0;
 
   // Get original price (for discount display)
   const getOriginalPrice = () => {
-    if (listing.originalPrice) return listing.originalPrice;
-    const discount = calculateDiscount();
-    if (discount > 0) {
-      return Math.round(getPrice() * 100 / (100 - discount));
-    }
+    if (listing.originalPrice && listing.originalPrice > getPrice()) return listing.originalPrice;
+    // No fake original prices - only show if there's actual discount
     return null;
   };
 
   // Get unit with fallback
   const getUnit = () => listing.unit || listing.quantityUnit || 'kg';
 
-  // Get rating
-  const getRating = () => listing.rating || listing.averageRating || 4.2;
+  // Get rating - return actual rating or null (no fake 4.2)
+  const getRating = () => {
+    const rating = parseFloat(listing.rating) || parseFloat(listing.averageRating);
+    return rating > 0 ? rating : null;
+  };
 
-  // Get review count
-  const getReviewCount = () => listing.reviewCount || Math.floor(Math.random() * 500) + 10;
+  // Get review count - return actual count only
+  const getReviewCount = () => listing.reviewCount || 0;
 
   // Get seller name
   const getSellerName = () => {
@@ -266,15 +269,21 @@ const ProductCard = ({
         {/* Title */}
         <h3 className="pc-title">{listing.title}</h3>
 
-        {/* Rating */}
-        <div className="pc-rating">
-          <div className="pc-rating-badge">
-            <span className="rating-value">{rating.toFixed(1)}</span>
-            <FiStar className="rating-star" />
+        {/* Rating - Only show if product has reviews */}
+        {rating && reviewCount > 0 ? (
+          <div className="pc-rating">
+            <div className="pc-rating-badge">
+              <span className="rating-value">{rating.toFixed(1)}</span>
+              <FiStar className="rating-star" />
+            </div>
+            <span className="pc-rating-divider">|</span>
+            <span className="pc-review-count">{reviewCount.toLocaleString()} reviews</span>
           </div>
-          <span className="pc-rating-divider">|</span>
-          <span className="pc-review-count">{reviewCount.toLocaleString()} reviews</span>
-        </div>
+        ) : (
+          <div className="pc-rating pc-new-product">
+            <span className="pc-new-badge">New Arrival</span>
+          </div>
+        )}
 
         {/* Price Section */}
         <div className="pc-price-section">

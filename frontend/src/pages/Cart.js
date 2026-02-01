@@ -432,7 +432,7 @@ const Cart = () => {
                 <h2>Recommended for you</h2>
                 <div className="recommendations-grid">
                   {recommendations.map(item => (
-                    <Link to={`/marketplace/listing/${item.id}`} key={item.id} className="recommendation-card">
+                    <Link to={`/marketplace/${item.id}`} key={item.id} className="recommendation-card">
                       <div className="recommendation-image">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.title} />
@@ -498,9 +498,9 @@ const Cart = () => {
                       </div>
 
                       <div className="item-image">
-                        <Link to={`/marketplace/listing/${item.listingId}`}>
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.productName || item.listingTitle} />
+                        <Link to={`/marketplace/${item.listingId}`}>
+                          {(item.imageUrl || item.listingImageUrl) ? (
+                            <img src={item.imageUrl || item.listingImageUrl} alt={item.productName || item.listingTitle} />
                           ) : (
                             <div className="placeholder-image">🌾</div>
                           )}
@@ -508,7 +508,7 @@ const Cart = () => {
                       </div>
                       
                       <div className="item-details">
-                        <Link to={`/marketplace/listing/${item.listingId}`} className="item-title">
+                        <Link to={`/marketplace/${item.listingId}`} className="item-title">
                           {item.productName || item.listingTitle || 'Product'}
                         </Link>
                         
@@ -755,18 +755,18 @@ const Cart = () => {
                   {savedForLater.map(item => (
                     <div key={item.listingId} className="saved-item">
                       <div className="saved-image">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.productName || item.listingTitle} />
+                        {(item.imageUrl || item.listingImageUrl) ? (
+                          <img src={item.imageUrl || item.listingImageUrl} alt={item.productName || item.listingTitle} />
                         ) : (
                           <div className="placeholder-image">🌾</div>
                         )}
                       </div>
                       <div className="saved-details">
-                        <Link to={`/marketplace/listing/${item.listingId}`} className="saved-title">
-                          {item.productName || item.listingTitle || 'Product'}
+                        <Link to={`/marketplace/${item.listingId}`} className="saved-title">
+                          {item.productName || item.listingTitle || item.title || 'Product'}
                         </Link>
                         <div className="saved-price">
-                          ₹{(item.price || item.unitPrice)?.toFixed(2)} / {item.unit || 'unit'}
+                          ₹{(item.pricePerUnit || item.unitPrice || item.price || 0).toFixed(2)} / {item.quantityUnit || item.unit || 'kg'}
                         </div>
                         <div className="saved-actions">
                           <button onClick={() => handleMoveToCart(item)} className="btn btn-move">
@@ -789,7 +789,7 @@ const Cart = () => {
                 <h2>Customers who bought these also bought</h2>
                 <div className="recommendations-grid">
                   {recommendations.map(item => (
-                    <Link to={`/marketplace/listing/${item.id}`} key={item.id} className="recommendation-card">
+                    <Link to={`/marketplace/${item.id}`} key={item.id} className="recommendation-card">
                       <div className="recommendation-image">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.title} />

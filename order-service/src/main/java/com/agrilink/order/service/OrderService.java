@@ -360,6 +360,7 @@ public class OrderService {
                 .quantityUnit(item.getQuantityUnit())
                 .unitPrice(item.getUnitPrice())
                 .subtotal(item.getSubtotal())
+                .imageUrl(item.getImageUrl())
                 .build();
     }
 }

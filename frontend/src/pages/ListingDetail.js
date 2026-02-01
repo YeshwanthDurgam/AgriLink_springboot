@@ -454,10 +454,11 @@ const ListingDetail = () => {
 
   const images = listing.images?.length > 0 ? listing.images : [{ imageUrl: null }];
   const price = listing.pricePerUnit || listing.price || 0;
-  const originalPrice = listing.originalPrice || price * 1.2;
-  const discount = Math.round((1 - price / originalPrice) * 100);
-  const avgRating = listingRating?.averageRating || listing.rating || 4.2;
-  const totalReviews = listingRating?.totalReviews || reviews.length || 0;
+  const originalPrice = listing.originalPrice || null;
+  const discount = originalPrice && originalPrice > price ? Math.round((1 - price / originalPrice) * 100) : 0;
+  const avgRating = listingRating?.averageRating || listing.averageRating || null;
+  const totalReviews = listingRating?.totalReviews || listing.reviewCount || reviews.length || 0;
+  const hasRating = avgRating !== null && totalReviews > 0;
 
   return (
     <div className="listing-detail-page">
@@ -584,16 +585,21 @@ const ListingDetail = () => {
           {/* Title */}
           <h1 className="product-title">{listing.title}</h1>
           
-          {/* Rating */}
-          <div className="product-rating-summary">
-            <div className="stars">{renderStars(avgRating)}</div>
-            <span className="rating-value">{avgRating.toFixed(1)}</span>
-            <Link to="#reviews" className="rating-count">
-              {totalReviews} ratings
-            </Link>
-            <span className="divider">|</span>
-            <span className="sold-count">500+ bought in past month</span>
-          </div>
+          {/* Rating - only show if product has reviews */}
+          {hasRating ? (
+            <div className="product-rating-summary">
+              <div className="stars">{renderStars(avgRating)}</div>
+              <span className="rating-value">{avgRating.toFixed(1)}</span>
+              <Link to="#reviews" className="rating-count">
+                {totalReviews} {totalReviews === 1 ? 'rating' : 'ratings'}
+              </Link>
+            </div>
+          ) : (
+            <div className="product-new-badge">
+              <span className="new-arrival-badge">✨ New Arrival</span>
+              <span className="be-first">Be the first to review this product</span>
+            </div>
+          )}
           
           {/* Price Section */}
           <div className="product-price-section">
@@ -887,10 +893,17 @@ const ListingDetail = () => {
                 </div>
                 <div className="related-info">
                   <h4>{product.title}</h4>
-                  <div className="related-rating">
-                    <FiStar className="star filled" />
-                    <span>{product.rating || '4.2'}</span>
-                  </div>
+                  {(product.averageRating || product.rating) && (product.reviewCount || product.totalReviews) > 0 ? (
+                    <div className="related-rating">
+                      <FiStar className="star filled" />
+                      <span>{(product.averageRating || product.rating).toFixed(1)}</span>
+                      <span className="review-count">({product.reviewCount || product.totalReviews})</span>
+                    </div>
+                  ) : (
+                    <div className="related-new">
+                      <span className="new-badge">New</span>
+                    </div>
+                  )}
                   <div className="related-price">
                     ₹{product.pricePerUnit || product.price}
                     <span>/{product.quantityUnit || 'kg'}</span>
@@ -906,13 +919,19 @@ const ListingDetail = () => {
       <section className="reviews-section" id="reviews">
         <div className="reviews-header">
           <h2>Customer Reviews</h2>
-          <div className="reviews-summary">
-            <div className="rating-big">
-              <span className="rating-number">{avgRating.toFixed(1)}</span>
-              <div className="rating-stars">{renderStars(avgRating)}</div>
-              <span className="rating-total">{totalReviews} global ratings</span>
+          {hasRating ? (
+            <div className="reviews-summary">
+              <div className="rating-big">
+                <span className="rating-number">{avgRating.toFixed(1)}</span>
+                <div className="rating-stars">{renderStars(avgRating)}</div>
+                <span className="rating-total">{totalReviews} {totalReviews === 1 ? 'rating' : 'ratings'}</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="no-reviews-yet">
+              <p>No reviews yet. Be the first to review this product!</p>
+            </div>
+          )}
           
           {user && !isCustomer() && (
             <p className="review-info-text">Only customers can write reviews</p>

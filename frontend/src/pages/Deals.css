@@ -344,6 +344,31 @@
   font-weight: 400;
 }
 
+/* New product badge */
+.deal-new-badge {
+  margin-bottom: 10px;
+}
+
+.deal-new-badge .new-tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Placeholder image for products without images */
+.deal-image .placeholder-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
 .deal-price {
   display: flex;
   align-items: baseline;

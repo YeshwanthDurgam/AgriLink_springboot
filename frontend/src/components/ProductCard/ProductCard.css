@@ -401,6 +401,24 @@
   color: #6b7280;
 }
 
+/* New Product Badge */
+.pc-rating.pc-new-product {
+  height: 24px;
+}
+
+.pc-new-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Price Section */
 .pc-price-section {
   margin: 4px 0;

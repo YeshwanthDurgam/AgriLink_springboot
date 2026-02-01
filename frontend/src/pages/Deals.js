@@ -50,30 +50,33 @@ const Deals = () => {
       const recentListings = recentRes?.data?.data || [];
       
       if (topListings.length > 0 || recentListings.length > 0) {
-        // Format listings as deals with calculated discounts
-        const formatAsDeal = (listing, type, index) => ({
-          id: listing.id || `${type}-${index}`,
-          title: listing.title,
-          originalPrice: parseFloat(listing.originalPrice) || parseFloat(listing.price) * 1.3,
-          discountedPrice: parseFloat(listing.price),
-          discount: listing.originalPrice 
-            ? Math.round((1 - parseFloat(listing.price) / parseFloat(listing.originalPrice)) * 100)
-            : Math.round(Math.random() * 20 + 10), // 10-30% fake discount for display
-          unit: listing.unit || 'kg',
-          imageUrl: listing.imageUrl || listing.images?.[0] || 'https://via.placeholder.com/300',
-          farmerName: listing.sellerName || listing.farmerName || 'Local Farmer',
-          rating: listing.rating || 4.5,
-          reviewCount: listing.reviewCount || 0,
-          stock: parseFloat(listing.quantity) || listing.availableQuantity || 0,
-          sold: listing.soldCount || 0,
-          sellerId: listing.sellerId
-        });
+        // Format listings as deals - only use real data from database
+        const formatAsDeal = (listing, type, index) => {
+          const price = parseFloat(listing.pricePerUnit) || parseFloat(listing.price) || 0;
+          const originalPrice = parseFloat(listing.originalPrice) || null;
+          const discount = originalPrice && originalPrice > price
+            ? Math.round((1 - price / originalPrice) * 100)
+            : null;
+          
+          return {
+            id: listing.id || `${type}-${index}`,
+            title: listing.title,
+            originalPrice: originalPrice,
+            discountedPrice: price,
+            discount: discount,
+            unit: listing.quantityUnit || listing.unit || 'kg',
+            imageUrl: listing.imageUrl || listing.images?.[0]?.imageUrl || null,
+            farmerName: listing.sellerName || listing.farmerName || 'Local Farmer',
+            rating: parseFloat(listing.averageRating) || parseFloat(listing.rating) || null,
+            reviewCount: listing.reviewCount || 0,
+            stock: parseFloat(listing.quantity) || listing.availableQuantity || 0,
+            sold: listing.soldCount || 0,
+            sellerId: listing.sellerId
+          };
+        };
         
-        // Use top listings for flash deals (highest discount impression)
-        setFlashDeals(topListings.slice(0, 6).map((l, i) => ({
-          ...formatAsDeal(l, 'flash', i),
-          discount: Math.min(formatAsDeal(l, 'flash', i).discount + 10, 50) // Boost discount for flash
-        })));
+        // Use top listings for flash deals
+        setFlashDeals(topListings.slice(0, 6).map((l, i) => formatAsDeal(l, 'flash', i)));
         
         // Use recent listings for daily deals
         setDailyDeals(recentListings.slice(0, 6).map((l, i) => formatAsDeal(l, 'daily', i)));
@@ -348,14 +351,18 @@ const Deals = () => {
 // Deal Card Component
 const DealCard = ({ deal, isFlash, onAddToCart, onAddToWishlist }) => {
   const navigate = useNavigate();
-  const stockPercentage = Math.round((deal.sold / (deal.sold + deal.stock)) * 100);
+  const stockPercentage = deal.sold > 0 ? Math.round((deal.sold / (deal.sold + deal.stock)) * 100) : 0;
+  const hasDiscount = deal.discount && deal.discount > 0;
+  const hasRating = deal.rating && deal.reviewCount > 0;
 
   return (
     <div className="deal-card" onClick={() => navigate(`/marketplace/${deal.id}`)}>
-      {/* Discount Badge */}
-      <span className={`discount-badge ${isFlash ? 'flash' : ''}`}>
-        -{deal.discount}%
-      </span>
+      {/* Discount Badge - only show if real discount exists */}
+      {hasDiscount && (
+        <span className={`discount-badge ${isFlash ? 'flash' : ''}`}>
+          -{deal.discount}%
+        </span>
+      )}
       
       {/* Wishlist Button */}
       <button 
@@ -370,7 +377,11 @@ const DealCard = ({ deal, isFlash, onAddToCart, onAddToWishlist }) => {
       
       {/* Product Image */}
       <div className="deal-image">
-        <img src={deal.imageUrl} alt={deal.title} />
+        {deal.imageUrl ? (
+          <img src={deal.imageUrl} alt={deal.title} />
+        ) : (
+          <div className="placeholder-image">🌾</div>
+        )}
         {isFlash && <span className="flash-badge"><FiZap /> Flash</span>}
       </div>
       
@@ -379,28 +390,38 @@ const DealCard = ({ deal, isFlash, onAddToCart, onAddToWishlist }) => {
         <span className="deal-farmer">{deal.farmerName}</span>
         <h3 className="deal-title">{deal.title}</h3>
         
-        <div className="deal-rating">
-          <FiStar className="star" />
-          <span>{deal.rating}</span>
-          <span className="review-count">({deal.reviewCount})</span>
-        </div>
+        {hasRating ? (
+          <div className="deal-rating">
+            <FiStar className="star" />
+            <span>{deal.rating.toFixed(1)}</span>
+            <span className="review-count">({deal.reviewCount})</span>
+          </div>
+        ) : (
+          <div className="deal-new-badge">
+            <span className="new-tag">✨ New</span>
+          </div>
+        )}
         
         <div className="deal-price">
           <span className="discounted-price">₹{deal.discountedPrice}</span>
-          <span className="original-price">₹{deal.originalPrice}</span>
+          {hasDiscount && deal.originalPrice && (
+            <span className="original-price">₹{deal.originalPrice}</span>
+          )}
           <span className="unit">/{deal.unit}</span>
         </div>
         
         {/* Stock Progress */}
-        <div className="stock-info">
-          <div className="stock-bar">
-            <div 
-              className="stock-fill" 
-              style={{ width: `${stockPercentage}%` }}
-            ></div>
+        {(deal.sold > 0 || deal.stock > 0) && (
+          <div className="stock-info">
+            <div className="stock-bar">
+              <div 
+                className="stock-fill" 
+                style={{ width: `${stockPercentage}%` }}
+              ></div>
+            </div>
+            <span className="stock-text">{deal.sold || 0} sold | {deal.stock} left</span>
           </div>
-          <span className="stock-text">{deal.sold} sold | {deal.stock} left</span>
-        </div>
+        )}
         
         <button 
           className="add-to-cart-btn"

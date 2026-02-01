@@ -245,6 +245,7 @@ public class CheckoutService {
                                         .quantityUnit(cartItem.getUnit())
                                         .unitPrice(cartItem.getUnitPrice())
                                         .subtotal(cartItem.getSubtotal())
+                                        .imageUrl(cartItem.getListingImageUrl())
                                         .build();
                         order.addItem(orderItem);
                 }

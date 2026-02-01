@@ -105,6 +105,32 @@
   );
 }
 
+/* Logged-in User Bar - Modern Minimal Style */
+.logged-in-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid #a7f3d0;
+  font-size: 0.9rem;
+  color: var(--agri-text-medium);
+}
+
+.logged-in-bar .logged-in-icon {
+  color: var(--agri-success);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.logged-in-bar strong {
+  color: var(--agri-primary-dark);
+  font-weight: 600;
+}
+
 .checkout-steps {
   display: flex;
   align-items: center;

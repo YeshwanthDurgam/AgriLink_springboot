@@ -465,37 +465,61 @@ const Checkout = () => {
           <span>Checkout</span>
         </div>
 
-        {/* Checkout Steps - Amazon Style */}
+        {/* Checkout Steps - Modern Style (only show if logged in, skip login step) */}
         <div className="checkout-steps-container">
-          <div className="checkout-steps">
-            <div className={`step ${currentStep >= 1 ? 'completed' : ''} ${currentStep === 1 ? 'active' : ''}`}>
-              <div className="step-number">
-                {currentStep > 1 ? <FiCheck /> : '1'}
+          {user ? (
+            <>
+              {/* Logged in user info bar */}
+              <div className="logged-in-bar">
+                <FiCheckCircle className="logged-in-icon" />
+                <span>Signed in as <strong>{user?.email}</strong></span>
               </div>
-              <span className="step-label">Login</span>
-            </div>
-            <div className="step-line"></div>
-            <div className={`step ${currentStep >= 2 ? 'completed' : ''} ${currentStep === 2 ? 'active' : ''}`}>
-              <div className="step-number">
-                {currentStep > 2 ? <FiCheck /> : '2'}
+              <div className="checkout-steps">
+                <div className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
+                  <div className="step-number">
+                    {currentStep > 2 ? <FiCheck /> : '1'}
+                  </div>
+                  <span className="step-label">Delivery Address</span>
+                </div>
+                <div className="step-line"></div>
+                <div className={`step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>
+                  <div className="step-number">
+                    {currentStep > 3 ? <FiCheck /> : '2'}
+                  </div>
+                  <span className="step-label">Order Summary</span>
+                </div>
+                <div className="step-line"></div>
+                <div className={`step ${currentStep >= 4 ? 'active' : ''} ${currentStep > 4 ? 'completed' : ''}`}>
+                  <div className="step-number">
+                    {currentStep > 4 ? <FiCheck /> : '3'}
+                  </div>
+                  <span className="step-label">Payment</span>
+                </div>
               </div>
-              <span className="step-label">Delivery Address</span>
-            </div>
-            <div className="step-line"></div>
-            <div className={`step ${currentStep >= 3 ? 'completed' : ''} ${currentStep === 3 ? 'active' : ''}`}>
-              <div className="step-number">
-                {currentStep > 3 ? <FiCheck /> : '3'}
+            </>
+          ) : (
+            <div className="checkout-steps">
+              <div className={`step ${currentStep === 1 ? 'active' : ''}`}>
+                <div className="step-number">1</div>
+                <span className="step-label">Login</span>
               </div>
-              <span className="step-label">Order Summary</span>
-            </div>
-            <div className="step-line"></div>
-            <div className={`step ${currentStep >= 4 ? 'completed' : ''} ${currentStep === 4 ? 'active' : ''}`}>
-              <div className="step-number">
-                {currentStep > 4 ? <FiCheck /> : '4'}
+              <div className="step-line"></div>
+              <div className="step">
+                <div className="step-number">2</div>
+                <span className="step-label">Delivery Address</span>
               </div>
-              <span className="step-label">Payment</span>
+              <div className="step-line"></div>
+              <div className="step">
+                <div className="step-number">3</div>
+                <span className="step-label">Order Summary</span>
+              </div>
+              <div className="step-line"></div>
+              <div className="step">
+                <div className="step-number">4</div>
+                <span className="step-label">Payment</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {error && (
@@ -509,38 +533,28 @@ const Checkout = () => {
         <div className="checkout-content">
           {/* Main Content - Left Side */}
           <div className="checkout-main">
-            {/* Step 1: Login (Already logged in) */}
-            <div className={`checkout-section ${currentStep === 1 ? 'active' : 'completed'}`}>
-              <div className="section-header">
-                <div className="section-number">1</div>
-                <h2>LOGIN</h2>
-                {currentStep > 1 && (
-                  <span className="section-status"><FiCheckCircle /> Done</span>
-                )}
-              </div>
-              {currentStep === 1 ? (
+            {/* Step 1: Login - Only show if not logged in */}
+            {!user && (
+              <div className="checkout-section active">
+                <div className="section-header">
+                  <div className="section-number">1</div>
+                  <h2>LOGIN OR SIGNUP</h2>
+                </div>
                 <div className="section-content">
                   <div className="login-prompt">
-                    <p>Please login to continue with checkout</p>
+                    <p>Please login or create an account to continue with checkout</p>
                     <Link to="/login" state={{ from: '/checkout' }} className="btn btn-primary">
                       Login / Sign Up
                     </Link>
                   </div>
                 </div>
-              ) : (
-                <div className="section-summary">
-                  <div className="user-info">
-                    <span className="user-name">{user?.name || 'User'}</span>
-                    <span className="user-email">{user?.email}</span>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Step 2: Delivery Address */}
+            {/* Step 1 (if logged in) / Step 2 (if not): Delivery Address */}
             <div className={`checkout-section ${currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : ''}`}>
               <div className="section-header">
-                <div className="section-number">2</div>
+                <div className="section-number">{user ? '1' : '2'}</div>
                 <h2>DELIVERY ADDRESS</h2>
                 {currentStep > 2 && (
                   <button onClick={() => setCurrentStep(2)} className="change-btn">
@@ -803,10 +817,10 @@ const Checkout = () => {
               ) : null}
             </div>
 
-            {/* Step 3: Order Summary */}
+            {/* Step 2 (if logged in) / Step 3 (if not): Order Summary */}
             <div className={`checkout-section ${currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : ''}`}>
               <div className="section-header">
-                <div className="section-number">3</div>
+                <div className="section-number">{user ? '2' : '3'}</div>
                 <h2>ORDER SUMMARY</h2>
                 {currentStep > 3 && (
                   <button onClick={() => setCurrentStep(3)} className="change-btn">
@@ -931,10 +945,10 @@ const Checkout = () => {
               ) : null}
             </div>
 
-            {/* Step 4: Payment */}
+            {/* Step 3 (if logged in) / Step 4 (if not): Payment */}
             <div className={`checkout-section ${currentStep === 4 ? 'active' : ''}`}>
               <div className="section-header">
-                <div className="section-number">4</div>
+                <div className="section-number">{user ? '3' : '4'}</div>
                 <h2>PAYMENT OPTIONS</h2>
               </div>
               
