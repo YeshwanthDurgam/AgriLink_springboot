@@ -219,16 +219,12 @@ const ListingDetail = () => {
 
   const handleAddToCart = async () => {
     if (user?.roles?.includes('FARMER')) {
-      toast.error('Farmers cannot place orders. Please use a customer account.');
       return;
     }
 
-    // OPTIMISTIC UI: Update cart count immediately (no API wait)
-    incrementCartCount(quantity);
     setAddedToCart(true);
-    toast.success('Added to cart!');
-
     setActionLoading('cart');
+    
     try {
       const price = listing.pricePerUnit || listing.price;
       const imageUrl = listing.images?.[0]?.imageUrl || listing.imageUrl || null;
@@ -245,6 +241,7 @@ const ListingDetail = () => {
           quantity: listing.quantity,
           availableQuantity: listing.quantity ? parseInt(listing.quantity) : 100
         }, quantity);
+        // guestService dispatches event which updates cart count
       } else {
         await cartService.addToCart({
           listingId: listing.id,
@@ -256,16 +253,13 @@ const ListingDetail = () => {
           unit: listing.quantityUnit || listing.unit || 'kg',
           availableQuantity: listing.quantity ? parseInt(listing.quantity) : null
         });
-        // Sync cart count with server after successful API call
-        fetchCartCount();
+        // Update cart count after successful add
+        incrementCartCount(quantity);
       }
       setTimeout(() => setAddedToCart(false), 3000);
     } catch (err) {
       console.error('Error adding to cart:', err);
-      toast.error('Failed to add to cart. Please try again.');
       setAddedToCart(false);
-      // Revert optimistic update on error
-      fetchCartCount();
     } finally {
       setActionLoading(null);
     }

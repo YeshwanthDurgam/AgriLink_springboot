@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
 // Tree-shakeable individual icon imports
 import { FiShoppingBag } from '@react-icons/all-files/fi/FiShoppingBag';
 import { FiSearch } from '@react-icons/all-files/fi/FiSearch';
@@ -18,6 +17,7 @@ import wishlistService from '../services/wishlistService';
 import guestService from '../services/guestService';
 import cartService from '../services/cartService';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import './Marketplace.css';
 
@@ -55,6 +55,7 @@ const RATING_OPTIONS = [4, 3, 2, 1];
 const Marketplace = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { incrementCartCount } = useCart();
 
   // Core state
   const [listings, setListings] = useState([]);
@@ -76,11 +77,11 @@ const Marketplace = () => {
     availability: false
   });
 
-  // Pagination
+  // Pagination - reduced default size for faster initial render
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [pageSize, setPageSize] = useState(24);
+  const [pageSize, setPageSize] = useState(12);
 
   // Initialize from URL params
   const initialCategoryId = searchParams.get('categoryId') || '';
@@ -275,7 +276,8 @@ const Marketplace = () => {
     setSearchParams(searchParams);
   };
 
-  const handleToggleWishlist = async (e, listing) => {
+  // Memoized wishlist handler to prevent unnecessary re-renders
+  const handleToggleWishlist = useCallback(async (e, listing) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -286,7 +288,6 @@ const Marketplace = () => {
       if (isInWishlist) {
         guestService.removeFromGuestWishlist(listingId);
         setWishlistIds(prev => prev.filter(id => id !== listingId));
-        toast.success('Removed from wishlist');
       } else {
         const wishlistItem = {
           id: listing.id,
@@ -299,7 +300,6 @@ const Marketplace = () => {
         };
         guestService.addToGuestWishlist(wishlistItem);
         setWishlistIds(prev => [...prev, listingId]);
-        toast.success('Added to wishlist');
       }
       return;
     }
@@ -310,20 +310,18 @@ const Marketplace = () => {
       if (isInWishlist) {
         await wishlistService.removeFromWishlist(listingId);
         setWishlistIds(prev => prev.filter(id => id !== listingId));
-        toast.success('Removed from wishlist');
       } else {
         await wishlistService.addToWishlist(listingId);
         setWishlistIds(prev => [...prev, listingId]);
-        toast.success('Added to wishlist');
       }
     } catch (error) {
       console.error('Error toggling wishlist:', error);
-      toast.error('Failed to update wishlist');
     } finally {
       setWishlistLoading(prev => ({ ...prev, [listingId]: false }));
     }
-  };
+  }, [user, wishlistIds]);
 
+  // Cart handler - NOT using useCallback to avoid stale closure issues
   const handleAddToCart = async (e, listing) => {
     e.preventDefault();
     e.stopPropagation();
@@ -333,20 +331,24 @@ const Marketplace = () => {
 
     try {
       if (!user) {
+        // Guest cart - format listing correctly for guestService
         const cartItem = {
           id: listing.id,
           listingId: listing.id,
           title: listing.title,
+          productName: listing.title,
           price: parseFloat(listing.pricePerUnit) || parseFloat(listing.price) || 0,
           imageUrl: listing.images?.[0]?.imageUrl || listing.imageUrl,
+          images: listing.images,
           unit: listing.unit || listing.quantityUnit || 'kg',
-          quantity: 1,
+          quantity: listing.quantity,
           sellerId: listing.sellerId,
           sellerName: listing.sellerName || listing.farmerName
         };
         guestService.addToGuestCart(cartItem);
-        toast.success('Added to cart!');
+        // guestService dispatches event which updates cart count
       } else {
+        // Authenticated - API call
         await cartService.addToCart({
           listingId: listing.id,
           sellerId: listing.sellerId || listing.farmerId,
@@ -357,11 +359,11 @@ const Marketplace = () => {
           unit: listing.unit || listing.quantityUnit || 'kg',
           availableQuantity: listing.quantity
         });
-        toast.success('Added to cart!');
+        // Update cart count after successful add
+        incrementCartCount(1);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart');
     } finally {
       setCartLoading(prev => ({ ...prev, [listingId]: false }));
     }

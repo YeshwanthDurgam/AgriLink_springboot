@@ -539,6 +539,8 @@
 .products-grid {
   display: grid;
   gap: 20px;
+  /* CSS containment for rendering performance */
+  contain: layout style;
 }
 
 .products-grid.grid {
@@ -555,12 +557,16 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   text-decoration: none;
   color: inherit;
   display: flex;
   flex-direction: column;
   position: relative;
+  /* CSS containment for better performance */
+  contain: layout style paint;
 }
 
 .products-grid.list .product-card {

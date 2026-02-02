@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import cartService from '../services/cartService';
 import guestService from '../services/guestService';
 import { useAuth } from './AuthContext';
@@ -16,81 +16,63 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [cartCount, setCartCount] = useState(0);
-  const [loading] = useState(false);
+  
+  // Use ref to always have access to latest setCartCount without recreating functions
+  const setCartCountRef = useRef(setCartCount);
+  setCartCountRef.current = setCartCount;
 
-  // Fetch cart count
+  // Fetch cart count from server/localStorage
   const fetchCartCount = useCallback(async () => {
     try {
       if (isAuthenticated) {
         const data = await cartService.getCartCount();
-        setCartCount(data?.count || 0);
+        setCartCountRef.current(data?.count || 0);
       } else {
-        setCartCount(guestService.getGuestCartCount());
+        setCartCountRef.current(guestService.getGuestCartCount());
       }
     } catch (err) {
       console.error('Error fetching cart count:', err);
     }
   }, [isAuthenticated]);
 
-  // Initial fetch
+  // Initial fetch on mount and when auth changes
   useEffect(() => {
     fetchCartCount();
-  }, [fetchCartCount]); // Refetch when auth state changes via fetchCartCount dependency
+  }, [fetchCartCount]);
 
-  // Optimistic increment (called immediately when adding to cart)
-  const incrementCartCount = useCallback((amount = 1) => {
-    setCartCount(prev => prev + amount);
-  }, []);
-
-  // Optimistic decrement (called when removing from cart)
-  const decrementCartCount = useCallback((amount = 1) => {
-    setCartCount(prev => Math.max(0, prev - amount));
-  }, []);
-
-  // Set exact count
-  const setCount = useCallback((count) => {
-    setCartCount(typeof count === 'number' ? count : 0);
-  }, []);
-
-  // Listen for cart update events from other components
+  // Listen for guest cart updates
   useEffect(() => {
-    const handleCartUpdate = (event) => {
-      const newCount = event.detail?.count;
-      if (typeof newCount === 'number') {
-        setCartCount(newCount);
-      } else {
-        // Refetch if count not provided
-        fetchCartCount();
-      }
-    };
-
     const handleGuestCartUpdate = (event) => {
       if (!isAuthenticated) {
-        setCartCount(event.detail?.totalItems || 0);
+        setCartCountRef.current(event.detail?.totalItems || 0);
       }
     };
 
-    window.addEventListener('cartUpdated', handleCartUpdate);
     window.addEventListener('guestCartUpdated', handleGuestCartUpdate);
-    
-    return () => {
-      window.removeEventListener('cartUpdated', handleCartUpdate);
-      window.removeEventListener('guestCartUpdated', handleGuestCartUpdate);
-    };
-  }, [isAuthenticated, fetchCartCount]);
+    return () => window.removeEventListener('guestCartUpdated', handleGuestCartUpdate);
+  }, [isAuthenticated]);
 
-  // Memoize context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({
-    cartCount,
-    loading,
-    fetchCartCount,
-    incrementCartCount,
-    decrementCartCount,
-    setCount
-  }), [cartCount, loading, fetchCartCount, incrementCartCount, decrementCartCount, setCount]);
+  // Stable function references using useCallback - these NEVER change
+  const incrementCartCount = useCallback((amount = 1) => {
+    setCartCountRef.current(prev => prev + amount);
+  }, []);
+
+  const decrementCartCount = useCallback((amount = 1) => {
+    setCartCountRef.current(prev => Math.max(0, prev - amount));
+  }, []);
+
+  const setCount = useCallback((count) => {
+    setCartCountRef.current(typeof count === 'number' ? count : 0);
+  }, []);
 
   return (
-    <CartContext.Provider value={value}>
+    <CartContext.Provider value={{
+      cartCount,
+      fetchCartCount,
+      incrementCartCount,
+      decrementCartCount,
+      setCount
+    }}>
       {children}
     </CartContext.Provider>
   );

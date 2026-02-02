@@ -41,6 +41,11 @@ const Cart = () => {
   const isGuest = !user;
   const isFarmer = user?.roles?.includes('FARMER');
 
+  // Scroll to top when page loads
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Available coupons for demo
   const AVAILABLE_COUPONS = {
     'FRESH10': { discount: 10, type: 'percentage', minOrder: 500, description: '10% off on orders above ₹500' },

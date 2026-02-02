@@ -17,9 +17,10 @@
     box-shadow 0.2s ease-out;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  /* content-visibility for better rendering performance */
+  /* Performance optimizations */
   content-visibility: auto;
   contain-intrinsic-size: 0 400px;
+  contain: layout style paint;
 }
 
 .product-card-v2:hover {
