@@ -16,6 +16,7 @@ const ProfileOnboarding = () => {
   const { user, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const farmPhotoInputRef = useRef(null);
   
   // Core states
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,8 @@ const ProfileOnboarding = () => {
   // Image upload states
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [farmPhotoPreview, setFarmPhotoPreview] = useState(null);
+  const [uploadingFarmPhoto, setUploadingFarmPhoto] = useState(false);
   
   // Determine user role
   const userRole = user?.roles?.includes('FARMER') ? 'FARMER' 
@@ -58,7 +61,7 @@ const ProfileOnboarding = () => {
   const getRequiredFields = useCallback(() => {
     const baseFields = ['name', 'phone', 'address', 'city', 'state', 'pincode'];
     if (userRole === 'FARMER') {
-      return [...baseFields, 'farmName'];
+      return [...baseFields, 'farmName', 'farmPhoto'];
     }
     return baseFields;
   }, [userRole]);
@@ -115,6 +118,11 @@ const ProfileOnboarding = () => {
         // Set image preview if exists
         if (profile.profilePhoto) {
           setImagePreview(profile.profilePhoto);
+        }
+        
+        // Set farm photo preview if exists
+        if (profile.farmPhoto) {
+          setFarmPhotoPreview(profile.farmPhoto);
         }
         
         // Check if profile is already complete
@@ -185,6 +193,48 @@ const ProfileOnboarding = () => {
     }
   };
 
+  // Handle farm photo upload
+  const handleFarmPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingFarmPhoto(true);
+
+    // Convert to base64 for preview and storage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setFarmPhotoPreview(base64String);
+      setFormData(prev => ({ ...prev, farmPhoto: base64String }));
+      setUploadingFarmPhoto(false);
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read image file');
+      setUploadingFarmPhoto(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFarmPhoto = () => {
+    setFarmPhotoPreview(null);
+    setFormData(prev => ({ ...prev, farmPhoto: '' }));
+    if (farmPhotoInputRef.current) {
+      farmPhotoInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -222,26 +272,26 @@ const ProfileOnboarding = () => {
       const response = await userApi.put(endpoint, payload);
       console.log('Profile update response:', response.data);
       
-      // For farmers, also create a farm in farm-service if farmName is provided
+      // For farmers, call the farm onboarding endpoint to create/update farm in farm-service
       if (userRole === 'FARMER' && formData.farmName) {
         try {
-          const farmsResponse = await FarmService.getMyFarms();
-          const existingFarms = farmsResponse?.data || [];
+          const farmOnboardingData = {
+            farmName: formData.farmName,
+            cropTypes: formData.cropTypes || '',
+            description: formData.farmBio || '',
+            farmImageUrl: formData.farmPhoto || '',
+            location: '',
+            city: formData.city || '',
+            state: formData.state || ''
+          };
           
-          if (existingFarms.length === 0) {
-            const farmData = {
-              name: formData.farmName,
-              description: formData.farmBio || '',
-              location: formData.city && formData.state 
-                ? `${formData.city}, ${formData.state}` 
-                : formData.city || formData.state || '',
-              totalArea: 0,
-              areaUnit: 'HECTARE'
-            };
-            await FarmService.createFarm(farmData);
-          }
+          console.log('Calling farm onboarding endpoint:', { ...farmOnboardingData, farmImageUrl: farmOnboardingData.farmImageUrl ? '[BASE64_IMAGE]' : undefined });
+          await FarmService.onboardFarm(farmOnboardingData);
+          console.log('Farm onboarding successful');
         } catch (farmErr) {
-          console.error('Could not create farm entry:', farmErr);
+          console.error('Farm onboarding error:', farmErr);
+          // Don't fail the whole process if farm creation fails
+          toast.warning('Profile saved, but farm creation had an issue. You can update your farm from the Farms page.');
         }
       }
       
@@ -713,6 +763,50 @@ const ProfileOnboarding = () => {
                   <div className="step-header">
                     <h2>Farm Details</h2>
                     <p>Tell us about your farm</p>
+                  </div>
+
+                  {/* Farm Photo Upload */}
+                  <div className="photo-upload-section farm-photo-section">
+                    <label className="section-label">
+                      Farm Photo <span className="required">*</span>
+                    </label>
+                    <div className="photo-preview farm-photo-preview">
+                      {uploadingFarmPhoto ? (
+                        <div className="photo-loading">
+                          <div className="loading-spinner-small"></div>
+                        </div>
+                      ) : farmPhotoPreview ? (
+                        <>
+                          <img src={farmPhotoPreview} alt="Farm" />
+                          <button 
+                            type="button" 
+                            className="remove-photo-btn"
+                            onClick={removeFarmPhoto}
+                          >
+                            <FiX />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="photo-placeholder farm-placeholder">
+                          <FaTractor />
+                          <span>Upload farm photo</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="photo-actions">
+                      <input
+                        ref={farmPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFarmPhotoUpload}
+                        className="hidden-input"
+                        id="farm-photo-input"
+                      />
+                      <label htmlFor="farm-photo-input" className="upload-btn">
+                        <FiCamera /> {farmPhotoPreview ? 'Change Photo' : 'Upload Photo'}
+                      </label>
+                      <span className="photo-hint">Show your farm to buyers (JPG, PNG up to 5MB)</span>
+                    </div>
                   </div>
 
                   <div className="form-fields">

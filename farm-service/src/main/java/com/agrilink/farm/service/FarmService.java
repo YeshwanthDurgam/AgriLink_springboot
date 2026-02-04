@@ -4,6 +4,7 @@ import com.agrilink.common.exception.ForbiddenException;
 import com.agrilink.common.exception.ResourceNotFoundException;
 import com.agrilink.farm.dto.CreateFarmRequest;
 import com.agrilink.farm.dto.FarmDto;
+import com.agrilink.farm.dto.FarmOnboardingRequest;
 import com.agrilink.farm.entity.Farm;
 import com.agrilink.farm.repository.FarmRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,8 @@ public class FarmService {
                 .areaUnit(request.getAreaUnit() != null ? request.getAreaUnit() : "HECTARE")
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .cropTypes(request.getCropTypes())
+                .farmImageUrl(request.getFarmImageUrl())
                 .active(true)
                 .build();
 
@@ -50,6 +53,75 @@ public class FarmService {
         log.info("Farm created with id: {}", savedFarm.getId());
 
         return mapToDto(savedFarm);
+    }
+
+    /**
+     * Create or update farm during profile onboarding.
+     * If farmer already has a farm, update it; otherwise create a new one.
+     */
+    @Transactional
+    public FarmDto createOrUpdateFarmOnboarding(UUID farmerId, FarmOnboardingRequest request) {
+        log.info("Processing farm onboarding for farmer: {}", farmerId);
+
+        // Check if farmer already has a farm
+        Farm farm = farmRepository.findFirstByFarmerIdOrderByCreatedAtAsc(farmerId)
+                .orElse(null);
+
+        if (farm != null) {
+            // Update existing farm
+            log.info("Updating existing farm: {} for farmer: {}", farm.getId(), farmerId);
+            farm.setName(request.getFarmName());
+            farm.setCropTypes(request.getCropTypes());
+            farm.setDescription(request.getDescription());
+            farm.setFarmImageUrl(request.getFarmImageUrl());
+            
+            // Build location from city and state if provided
+            String location = buildLocation(request.getLocation(), request.getCity(), request.getState());
+            if (location != null) {
+                farm.setLocation(location);
+            }
+        } else {
+            // Create new farm
+            log.info("Creating new farm for farmer: {}", farmerId);
+            String location = buildLocation(request.getLocation(), request.getCity(), request.getState());
+            
+            farm = Farm.builder()
+                    .farmerId(farmerId)
+                    .name(request.getFarmName())
+                    .cropTypes(request.getCropTypes())
+                    .description(request.getDescription())
+                    .farmImageUrl(request.getFarmImageUrl())
+                    .location(location)
+                    .areaUnit("HECTARE")
+                    .active(true)
+                    .build();
+        }
+
+        Farm savedFarm = farmRepository.save(farm);
+        log.info("Farm onboarding completed. Farm id: {}", savedFarm.getId());
+
+        return mapToDto(savedFarm);
+    }
+
+    /**
+     * Build location string from components.
+     */
+    private String buildLocation(String location, String city, String state) {
+        if (location != null && !location.isBlank()) {
+            return location;
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        if (city != null && !city.isBlank()) {
+            sb.append(city);
+        }
+        if (state != null && !state.isBlank()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(state);
+        }
+        return sb.length() > 0 ? sb.toString() : null;
     }
 
     /**
@@ -104,6 +176,8 @@ public class FarmService {
         if (request.getAreaUnit() != null) farm.setAreaUnit(request.getAreaUnit());
         if (request.getLatitude() != null) farm.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) farm.setLongitude(request.getLongitude());
+        if (request.getCropTypes() != null) farm.setCropTypes(request.getCropTypes());
+        if (request.getFarmImageUrl() != null) farm.setFarmImageUrl(request.getFarmImageUrl());
 
         Farm updatedFarm = farmRepository.save(farm);
         return mapToDto(updatedFarm);
@@ -134,6 +208,8 @@ public class FarmService {
                 .areaUnit(farm.getAreaUnit())
                 .latitude(farm.getLatitude())
                 .longitude(farm.getLongitude())
+                .cropTypes(farm.getCropTypes())
+                .farmImageUrl(farm.getFarmImageUrl())
                 .active(farm.isActive())
                 .fieldCount(farm.getFields() != null ? farm.getFields().size() : 0)
                 .createdAt(farm.getCreatedAt())

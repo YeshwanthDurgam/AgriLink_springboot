@@ -39,6 +39,12 @@ public class Farm {
     @Column(length = 500)
     private String location;
 
+    @Column(name = "crop_types", columnDefinition = "TEXT")
+    private String cropTypes;
+
+    @Column(name = "farm_image_url", columnDefinition = "TEXT")
+    private String farmImageUrl;
+
     @Column(name = "total_area", precision = 10, scale = 2)
     private BigDecimal totalArea;
 
