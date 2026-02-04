@@ -45,6 +45,13 @@
   justify-content: center;
   font-size: 40px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.farm-icon .farm-header-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .farm-header-info h1 {
@@ -66,6 +73,20 @@
   gap: 6px;
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.farm-crop-types {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--primary-color);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.farm-crop-types svg {
+  font-size: 16px;
 }
 
 .farm-header-actions {

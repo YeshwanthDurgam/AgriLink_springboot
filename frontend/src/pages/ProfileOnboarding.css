@@ -739,6 +739,55 @@
   color: var(--po-text-muted);
 }
 
+/* Farm Photo Section */
+.farm-photo-section {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.farm-photo-section .section-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--po-text);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.farm-photo-preview {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--po-radius);
+}
+
+.farm-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--po-radius);
+}
+
+.farm-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--po-primary-light);
+  color: var(--po-primary);
+  border-radius: var(--po-radius);
+}
+
+.farm-placeholder svg {
+  font-size: 48px;
+}
+
+.farm-placeholder span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* Form Fields */
 .form-fields {
   display: flex;

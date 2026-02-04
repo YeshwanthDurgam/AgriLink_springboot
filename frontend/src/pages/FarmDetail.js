@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FiArrowLeft, FiEdit2, FiTrash2, FiPlus, FiMapPin, FiSquare, FiCalendar } from 'react-icons/fi';
+import { FaSeedling } from 'react-icons/fa';
 import FarmService from '../services/farmService';
 import './FarmDetail.css';
 
@@ -98,14 +99,25 @@ const FarmDetail = () => {
         {/* Farm Header */}
         <div className="farm-header">
           <div className="farm-header-content">
-            <div className="farm-icon">🏡</div>
+            <div className="farm-icon">
+              {farm.farmImageUrl ? (
+                <img src={farm.farmImageUrl} alt={farm.name} className="farm-header-image" />
+              ) : (
+                '🏡'
+              )}
+            </div>
             <div className="farm-header-info">
               <h1>{farm.name}</h1>
               <div className="farm-meta">
                 <span><FiMapPin /> {farm.location || 'Location not set'}</span>
-                <span><FiSquare /> {farm.size ? `${farm.size} acres` : 'Size not set'}</span>
+                <span><FiSquare /> {farm.totalArea ? `${farm.totalArea} ${farm.areaUnit || 'hectares'}` : 'Size not set'}</span>
                 <span><FiCalendar /> Added {new Date(farm.createdAt).toLocaleDateString()}</span>
               </div>
+              {farm.cropTypes && (
+                <div className="farm-crop-types">
+                  <FaSeedling /> <span>{farm.cropTypes}</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="farm-header-actions">

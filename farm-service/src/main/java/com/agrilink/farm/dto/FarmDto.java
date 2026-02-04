@@ -33,6 +33,9 @@ public class FarmDto {
     @Size(max = 500, message = "Location must not exceed 500 characters")
     private String location;
 
+    private String cropTypes;
+    private String farmImageUrl;
+
     @Positive(message = "Total area must be positive")
     private BigDecimal totalArea;
 

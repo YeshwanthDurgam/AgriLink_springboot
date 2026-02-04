@@ -3,6 +3,7 @@ package com.agrilink.farm.controller;
 import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.farm.dto.CreateFarmRequest;
 import com.agrilink.farm.dto.FarmDto;
+import com.agrilink.farm.dto.FarmOnboardingRequest;
 import com.agrilink.farm.service.FarmService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -86,6 +87,37 @@ public class FarmController {
         UUID farmerId = getUserIdFromRequest(request, authentication);
         FarmDto farm = farmService.updateFarm(farmId, farmerId, createRequest);
         return ResponseEntity.ok(ApiResponse.success("Farm updated successfully", farm));
+    }
+
+    /**
+     * Create or update farm during profile onboarding.
+     * POST /api/v1/farms/onboarding
+     * 
+     * If the farmer already has a farm, it will be updated.
+     * Otherwise, a new farm will be created.
+     */
+    @PostMapping("/onboarding")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<FarmDto>> onboardFarm(
+            HttpServletRequest request,
+            Authentication authentication,
+            @Valid @RequestBody FarmOnboardingRequest onboardingRequest) {
+        log.info("=== Farm Onboarding Request Received ===");
+        log.info("Auth principal: {}", authentication != null ? authentication.getName() : "null");
+        log.info("Auth authorities: {}", authentication != null ? authentication.getAuthorities() : "null");
+        log.info("Request farmName: {}", onboardingRequest.getFarmName());
+        log.info("Request cropTypes: {}", onboardingRequest.getCropTypes());
+        log.info("Request city: {}, state: {}", onboardingRequest.getCity(), onboardingRequest.getState());
+        log.info("Request farmImageUrl present: {}", onboardingRequest.getFarmImageUrl() != null && !onboardingRequest.getFarmImageUrl().isEmpty());
+        
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        log.info("Resolved farmerId: {}", farmerId);
+        
+        FarmDto farm = farmService.createOrUpdateFarmOnboarding(farmerId, onboardingRequest);
+        log.info("Farm onboarding completed successfully. Farm ID: {}", farm.getId());
+        
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Farm onboarded successfully", farm));
     }
 
     /**
