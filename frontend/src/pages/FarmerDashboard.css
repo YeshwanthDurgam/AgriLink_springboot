@@ -38,6 +38,11 @@
   border-bottom: 3px solid #eab308;
 }
 
+.verification-banner.incomplete {
+  background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);
+  border-bottom: 3px solid #f59e0b;
+}
+
 .verification-banner.rejected {
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   border-bottom: 3px solid #ef4444;
@@ -57,6 +62,9 @@
 
 .verification-banner.pending .banner-icon {
   color: #ca8a04;
+}
+.verification-banner.incomplete .banner-icon {
+  color: #d97706;
 }
 .verification-banner.rejected .banner-icon {
   color: #dc2626;
@@ -294,6 +302,30 @@
   padding: 0.35rem 0.85rem;
   border-radius: 50px;
   font-weight: 600;
+}
+
+.profile-role .role-icon {
+  font-size: 0.9rem;
+}
+
+.profile-role.verified {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+}
+
+.profile-role.pending {
+  background: linear-gradient(135deg, #eab308 0%, #facc15 100%);
+  color: #713f12;
+}
+
+.profile-role.incomplete {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  color: #78350f;
+}
+
+.profile-role.rejected {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  color: white;
 }
 
 .profile-stats {

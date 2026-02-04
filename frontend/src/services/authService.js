@@ -6,6 +6,7 @@ const AuthService = {
    * @param {Object} userData - { email, password, roles }
    */
   register: async (userData) => {
+    console.log('[AuthService] Registering user:', userData.email);
     const response = await authApi.post('/auth/register', userData);
     return response.data;
   },
@@ -15,19 +16,24 @@ const AuthService = {
    * @param {Object} credentials - { email, password }
    */
   login: async (credentials) => {
+    console.log('[AuthService] Attempting login for:', credentials.email);
     const response = await authApi.post('/auth/login', credentials);
     if (response.data.success && response.data.data?.token) {
       localStorage.setItem('token', response.data.data.token);
-      // Store user data from login response
-      if (response.data.data.email && response.data.data.roles) {
-        const userData = {
-          email: response.data.data.email,
-          roles: Array.isArray(response.data.data.roles) 
-            ? response.data.data.roles 
-            : Array.from(response.data.data.roles)
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-      }
+      // Store complete user data from login response
+      const loginData = response.data.data;
+      const userData = {
+        id: loginData.userId,
+        email: loginData.email,
+        name: loginData.name || loginData.email?.split('@')[0] || 'User',
+        roles: Array.isArray(loginData.roles) 
+          ? loginData.roles 
+          : (loginData.roles ? Array.from(loginData.roles) : []),
+        profileComplete: loginData.profileComplete,
+        profileStatus: loginData.profileStatus
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      console.log('[AuthService] Login successful, user data stored:', userData);
     }
     return response.data;
   },
@@ -36,6 +42,7 @@ const AuthService = {
    * Logout user
    */
   logout: () => {
+    console.log('[AuthService] Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
@@ -45,18 +52,25 @@ const AuthService = {
    */
   getCurrentUser: async () => {
     try {
+      console.log('[AuthService] Fetching current user from /auth/me');
       const response = await authApi.get('/auth/me');
       if (response.data.success && response.data.data) {
-        // Normalize roles to array
+        // Normalize user data
         const userData = response.data.data;
         if (userData.roles && !Array.isArray(userData.roles)) {
           userData.roles = Array.from(userData.roles);
         }
+        // Ensure name exists
+        if (!userData.name && userData.email) {
+          userData.name = userData.email.split('@')[0];
+        }
+        console.log('[AuthService] Current user fetched successfully:', userData);
         return { success: true, data: userData };
       }
+      console.warn('[AuthService] getCurrentUser returned unsuccessful response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to get current user:', error);
+      console.error('[AuthService] Failed to get current user:', error.response?.status, error.message);
       return { success: false, message: 'Failed to get user data' };
     }
   },
@@ -73,11 +87,16 @@ const AuthService = {
         if (parsed.roles && !Array.isArray(parsed.roles)) {
           parsed.roles = Array.from(parsed.roles);
         }
+        // Ensure name exists
+        if (!parsed.name && parsed.email) {
+          parsed.name = parsed.email.split('@')[0];
+        }
+        console.log('[AuthService] Retrieved stored user:', parsed);
         return parsed;
       }
       return null;
     } catch (e) {
-      console.error('Error parsing stored user:', e);
+      console.error('[AuthService] Error parsing stored user:', e);
       return null;
     }
   },

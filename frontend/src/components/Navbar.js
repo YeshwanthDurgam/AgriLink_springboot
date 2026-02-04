@@ -28,6 +28,7 @@ import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
 import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
 import { FiClock } from '@react-icons/all-files/fi/FiClock';
 import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
+import { FiSettings } from '@react-icons/all-files/fi/FiSettings';
 import wishlistService from '../services/wishlistService';
 import guestService from '../services/guestService';
 import messagingService from '../services/messagingService';
@@ -91,9 +92,13 @@ const Navbar = () => {
   const [pincode, setPincode] = useState(() => {
     return localStorage.getItem('deliveryPincode') || '';
   });
+  
+  // Dropdown position state for fixed positioning
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 20 });
 
   // Refs
   const userMenuRef = useRef(null);
+  const accountBtnRef = useRef(null);
   const categoriesRef = useRef(null);
   const locationRef = useRef(null);
   const searchRef = useRef(null);
@@ -286,7 +291,9 @@ const Navbar = () => {
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
+      console.log('[DEBUG] Click outside detected, target:', event.target.className);
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        console.log('[DEBUG] Closing user menu - clicked outside');
         setUserMenuOpen(false);
       }
       if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
@@ -299,9 +306,35 @@ const Navbar = () => {
         setSearchFocused(false);
       }
     };
+    
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        console.log('[DEBUG] Escape key pressed, closing all menus');
+        setUserMenuOpen(false);
+        setCategoriesOpen(false);
+        setLocationMenuOpen(false);
+        setSearchFocused(false);
+      }
+    };
+    
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
   }, []);
+
+  // Calculate dropdown position when menu opens
+  useEffect(() => {
+    if (userMenuOpen && accountBtnRef.current) {
+      const rect = accountBtnRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: Math.max(20, window.innerWidth - rect.right)
+      });
+    }
+  }, [userMenuOpen]);
 
   // ============= HANDLERS =============
 
@@ -541,129 +574,8 @@ const Navbar = () => {
               </form>
             </div>
 
-            {/* Right: Account, Orders, Cart */}
+            {/* Right: Orders, Messages, Notifications, Wishlist, Cart, Account (Account at extreme right) */}
             <div className="navbar-right">
-              {/* Account Avatar Button */}
-              {isAuthenticated ? (
-                <div 
-                  className="user-menu-container" 
-                  ref={userMenuRef}
-                  onMouseEnter={() => setUserMenuOpen(true)}
-                  onMouseLeave={() => setUserMenuOpen(false)}
-                >
-                  <button 
-                    className="account-avatar-btn"
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    aria-label="Account menu"
-                  >
-                    <div className="navbar-avatar">
-                      {profilePhoto ? (
-                        <img src={profilePhoto} alt={displayName} className="navbar-avatar-img" />
-                      ) : (
-                        <span className="navbar-avatar-letter">{displayName.charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <FiChevronDown className={`avatar-chevron ${userMenuOpen ? 'open' : ''}`} />
-                  </button>
-                  
-                  {userMenuOpen && (
-                    <div className="account-dropdown">
-                      <div className="dropdown-header">
-                        <div className="user-avatar large">
-                          {displayName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="user-info">
-                          <span className="user-name">{displayName}</span>
-                          <span className={`user-role-badge ${userRole?.toLowerCase()}`}>
-                            {userRole || 'Customer'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="dropdown-columns">
-                        <div className="dropdown-column">
-                          <h4>Your Account</h4>
-                          <Link to="/profile" onClick={() => setUserMenuOpen(false)}>
-                            <FiUser /> Account Settings
-                          </Link>
-                          <Link to={getDashboardLink()} onClick={() => setUserMenuOpen(false)}>
-                            <FiHome /> Dashboard
-                          </Link>
-                          {userRole !== 'FARMER' && (
-                            <Link to="/orders" onClick={() => setUserMenuOpen(false)}>
-                              <FiPackage /> Your Orders
-                            </Link>
-                          )}
-                          {userRole !== 'FARMER' && (
-                            <Link to="/wishlist" onClick={() => setUserMenuOpen(false)}>
-                              <FiHeart /> Your Wishlist
-                            </Link>
-                          )}
-                        </div>
-                        
-                        <div className="dropdown-column">
-                          <h4>{userRole === 'FARMER' ? 'Farmer Tools' : 'Quick Links'}</h4>
-                          {userRole === 'FARMER' ? (
-                            <>
-                              <Link to="/farmer/products" onClick={() => setUserMenuOpen(false)}>
-                                <FiShoppingBag /> My Products
-                              </Link>
-                              <Link to="/farmer/orders" onClick={() => setUserMenuOpen(false)}>
-                                <FiDollarSign /> My Sales
-                              </Link>
-                              <Link to="/farms" onClick={() => setUserMenuOpen(false)}>
-                                <FiMap /> My Farms
-                              </Link>
-                              <Link to="/analytics" onClick={() => setUserMenuOpen(false)}>
-                                <FiBarChart2 /> Analytics
-                              </Link>
-                            </>
-                          ) : (
-                            <>
-                              <Link to="/deals" onClick={() => setUserMenuOpen(false)}>
-                                <FiPercent /> Today's Deals
-                              </Link>
-                              <Link to="/farmers" onClick={() => setUserMenuOpen(false)}>
-                                <FiUsers /> Browse Farmers
-                              </Link>
-                              <Link to="/messages" onClick={() => setUserMenuOpen(false)}>
-                                <FiMessageSquare /> Messages
-                              </Link>
-                              <Link to="/help" onClick={() => setUserMenuOpen(false)}>
-                                <FiHelpCircle /> Help Center
-                              </Link>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
-                        <>
-                          <div className="dropdown-divider"></div>
-                          <div className="dropdown-admin">
-                            <Link to={userRole === 'ADMIN' ? '/admin/dashboard' : '/manager/dashboard'} onClick={() => setUserMenuOpen(false)}>
-                              <FiShield /> {userRole === 'ADMIN' ? 'Admin Panel' : 'Manager Panel'}
-                            </Link>
-                          </div>
-                        </>
-                      )}
-                      
-                      <div className="dropdown-divider"></div>
-                      <button className="dropdown-logout" onClick={handleLogout}>
-                        <FiLogOut /> Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link to="/login" className="account-avatar-btn guest">
-                  <div className="navbar-avatar guest">
-                    <FiUser className="guest-icon" />
-                  </div>
-                  <span className="signin-text">Sign in</span>
-                </Link>
-              )}
-
               {/* Returns & Orders - Amazon Style */}
               {isAuthenticated && userRole !== 'FARMER' && (
                 <Link to="/orders" className="orders-btn">
@@ -723,6 +635,7 @@ const Navbar = () => {
                   className="navbar-icon-btn"
                   onClick={() => setShowNotifications(true)}
                   title="Notifications"
+                  aria-label="Notifications"
                 >
                   <FiBell />
                   {notificationCount > 0 && (
@@ -733,7 +646,7 @@ const Navbar = () => {
 
               {/* Wishlist */}
               {(!isAuthenticated || userRole !== 'FARMER') && (
-                <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist">
+                <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist" aria-label="Wishlist">
                   <FiHeart />
                   {wishlistCount > 0 && <span className="badge wishlist">{wishlistCount}</span>}
                 </Link>
@@ -741,7 +654,7 @@ const Navbar = () => {
 
               {/* Cart - Amazon Style */}
               {(!isAuthenticated || userRole !== 'FARMER') && (
-                <Link to="/cart" className="cart-btn">
+                <Link to="/cart" className="cart-btn" aria-label="Cart">
                   <div className="cart-icon-wrapper">
                     <FiShoppingCart className="cart-icon" />
                     <span className="cart-count">{cartCount}</span>
@@ -750,10 +663,166 @@ const Navbar = () => {
                 </Link>
               )}
 
+              {/* Account Section - Extreme Right */}
+              {isAuthenticated ? (
+                <div 
+                  className="user-menu-container account-section-right" 
+                  ref={userMenuRef}
+                >
+                  <button 
+                    type="button"
+                    ref={accountBtnRef}
+                    className="account-avatar-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('[DEBUG] Profile button clicked, current state:', userMenuOpen);
+                      setUserMenuOpen(prev => !prev);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('[DEBUG] Profile button keydown:', e.key);
+                        setUserMenuOpen(prev => !prev);
+                      }
+                      if (e.key === 'Escape') {
+                        setUserMenuOpen(false);
+                      }
+                    }}
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label={`Account menu for ${displayName}`}
+                  >
+                    <div className="navbar-avatar">
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt={displayName} className="navbar-avatar-img" />
+                      ) : (
+                        <span className="navbar-avatar-letter">{displayName.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <span className="account-user-name">{displayName}</span>
+                    <FiChevronDown className={`avatar-chevron ${userMenuOpen ? 'open' : ''}`} />
+                  </button>
+                  
+                  {userMenuOpen && (
+                    <div 
+                      className="account-dropdown"
+                      role="menu"
+                      aria-label="Account menu"
+                      style={{
+                        top: `${dropdownPosition.top}px`,
+                        right: `${dropdownPosition.right}px`
+                      }}
+                    >
+                      <div className="dropdown-header">
+                        <div className="user-avatar large">
+                          {profilePhoto ? (
+                            <img src={profilePhoto} alt={displayName} className="dropdown-avatar-img" />
+                          ) : (
+                            displayName.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="user-info">
+                          <span className="user-name">{displayName}</span>
+                          <span className="user-email">{user?.email}</span>
+                          <span className={`user-role-badge ${userRole?.toLowerCase()}`}>
+                            {userRole || 'Customer'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Primary Actions */}
+                      <div className="dropdown-section">
+                        <Link 
+                          to={getDashboardLink()} 
+                          onClick={() => setUserMenuOpen(false)}
+                          role="menuitem"
+                          tabIndex={0}
+                        >
+                          <FiHome /> Dashboard
+                        </Link>
+                        <Link 
+                          to="/profile" 
+                          onClick={() => setUserMenuOpen(false)}
+                          role="menuitem"
+                          tabIndex={0}
+                        >
+                          <FiUser /> Profile
+                        </Link>
+                        <Link 
+                          to="/settings" 
+                          onClick={() => setUserMenuOpen(false)}
+                          role="menuitem"
+                          tabIndex={0}
+                        >
+                          <FiSettings /> Settings
+                        </Link>
+                      </div>
+
+                      {/* Role-specific links */}
+                      <div className="dropdown-section">
+                        {userRole !== 'FARMER' && (
+                          <>
+                            <Link to="/orders" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                              <FiPackage /> Your Orders
+                            </Link>
+                            <Link to="/wishlist" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                              <FiHeart /> Your Wishlist
+                            </Link>
+                          </>
+                        )}
+                        {userRole === 'FARMER' && (
+                          <>
+                            <Link to="/farmer/products" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                              <FiShoppingBag /> My Products
+                            </Link>
+                            <Link to="/farmer/orders" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                              <FiDollarSign /> My Sales
+                            </Link>
+                            <Link to="/farms" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                              <FiMap /> My Farms
+                            </Link>
+                          </>
+                        )}
+                      </div>
+
+                      {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
+                        <div className="dropdown-section admin-section">
+                          <Link 
+                            to={userRole === 'ADMIN' ? '/admin/dashboard' : '/manager/dashboard'} 
+                            onClick={() => setUserMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <FiShield /> {userRole === 'ADMIN' ? 'Admin Panel' : 'Manager Panel'}
+                          </Link>
+                        </div>
+                      )}
+                      
+                      <div className="dropdown-divider"></div>
+                      <button 
+                        className="dropdown-logout" 
+                        onClick={handleLogout}
+                        role="menuitem"
+                        tabIndex={0}
+                      >
+                        <FiLogOut /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link to="/login" className="login-btn" aria-label="Sign in">
+                  <FiUser className="login-icon" />
+                  <span className="login-text">Login</span>
+                </Link>
+              )}
+
               {/* Mobile Menu Toggle */}
               <button 
                 className="mobile-menu-btn"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle mobile menu"
               >
                 {mobileMenuOpen ? <FiX /> : <FiMenu />}
               </button>

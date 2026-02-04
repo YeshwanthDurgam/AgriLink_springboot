@@ -204,7 +204,23 @@ const ProfileOnboarding = () => {
       if (userRole === 'FARMER') endpoint = '/profiles/farmer';
       else if (userRole === 'MANAGER') endpoint = '/profiles/manager';
 
-      await userApi.put(endpoint, formData);
+      // Build clean request payload - only send non-empty values
+      const payload = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          // Convert age to integer if it's a string
+          if (key === 'age' && value) {
+            payload[key] = parseInt(value, 10);
+          } else {
+            payload[key] = value;
+          }
+        }
+      });
+
+      console.log('Sending profile update request:', { endpoint, payload: { ...payload, profilePhoto: payload.profilePhoto ? '[BASE64_IMAGE]' : undefined } });
+
+      const response = await userApi.put(endpoint, payload);
+      console.log('Profile update response:', response.data);
       
       // For farmers, also create a farm in farm-service if farmName is provided
       if (userRole === 'FARMER' && formData.farmName) {
@@ -243,7 +259,40 @@ const ProfileOnboarding = () => {
       }
     } catch (err) {
       console.error('Error saving profile:', err);
-      toast.error(err.response?.data?.message || 'Failed to save profile');
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Failed to save profile';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      // Handle validation errors from backend
+      if (err.response?.data?.validationErrors) {
+        const validationErrors = err.response.data.validationErrors;
+        const errorMessages = [];
+        Object.entries(validationErrors).forEach(([field, messages]) => {
+          if (Array.isArray(messages)) {
+            errorMessages.push(`${field}: ${messages.join(', ')}`);
+          }
+        });
+        if (errorMessages.length > 0) {
+          errorMessage = errorMessages.join('; ');
+        }
+      } else if (err.response?.data?.errors) {
+        // Handle other error formats
+        const errors = err.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors.join(', ');
+        } else if (typeof errors === 'object') {
+          errorMessage = Object.values(errors).flat().join(', ');
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }

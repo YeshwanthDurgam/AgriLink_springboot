@@ -91,10 +91,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
         
+        // Provide more detail in error message for debugging
+        String detailMessage = ex.getMessage();
+        if (detailMessage == null || detailMessage.isEmpty()) {
+            detailMessage = "An unexpected error occurred";
+        }
+        
+        // Check for database-related errors
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            if (cause.getMessage() != null && cause.getMessage().contains("violates")) {
+                detailMessage = "Database constraint violation: " + cause.getMessage();
+                break;
+            }
+            cause = cause.getCause();
+        }
+        
         ErrorResponse errorResponse = ErrorResponse.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_ERROR",
-                "An unexpected error occurred",
+                detailMessage,
                 request.getRequestURI()
         );
         
