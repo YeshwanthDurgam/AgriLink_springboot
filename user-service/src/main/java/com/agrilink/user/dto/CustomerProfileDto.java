@@ -24,6 +24,8 @@ public class CustomerProfileDto {
     private String city;
     private String state;
     private String country;
+    private String address;
+    private String pincode;
     private ProfileStatus status;
     private boolean profileComplete;
     private LocalDateTime createdAt;

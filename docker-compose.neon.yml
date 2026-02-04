@@ -93,6 +93,9 @@ services:
       NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
       NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-webhook_secret}
     ports:
       - "8085:8085"
     networks:

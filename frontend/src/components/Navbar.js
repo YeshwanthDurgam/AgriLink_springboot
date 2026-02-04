@@ -27,11 +27,12 @@ import { FiDollarSign } from '@react-icons/all-files/fi/FiDollarSign';
 import { FiChevronRight } from '@react-icons/all-files/fi/FiChevronRight';
 import { FiTruck } from '@react-icons/all-files/fi/FiTruck';
 import { FiClock } from '@react-icons/all-files/fi/FiClock';
+import { FiAlertCircle } from '@react-icons/all-files/fi/FiAlertCircle';
 import wishlistService from '../services/wishlistService';
 import guestService from '../services/guestService';
 import messagingService from '../services/messagingService';
 import notificationService from '../services/notificationService';
-import { marketplaceApi } from '../services/api';
+import { marketplaceApi, userApi } from '../services/api';
 import NotificationCenter from './NotificationCenter';
 import './Navbar.css';
 
@@ -73,6 +74,16 @@ const Navbar = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Profile Completion State
+  const [profileCompletion, setProfileCompletion] = useState({
+    percentage: 100,
+    isComplete: true,
+    missingFields: []
+  });
+  
+  // Profile Photo State
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  
   // Location State
   const [deliveryLocation, setDeliveryLocation] = useState(() => {
     return localStorage.getItem('deliveryLocation') || 'Select Location';
@@ -86,6 +97,7 @@ const Navbar = () => {
   const categoriesRef = useRef(null);
   const locationRef = useRef(null);
   const searchRef = useRef(null);
+
 
   // Get user role
   const getUserRole = () => {
@@ -157,14 +169,104 @@ const Navbar = () => {
     setWishlistCount(guestService.getGuestWishlistCount());
   }, []);
 
+  // Fetch profile completion status for customers
+  const fetchProfileCompletion = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+    
+    // Determine user role
+    const role = user.roles?.includes('ADMIN') ? 'ADMIN' : 
+                 user.roles?.includes('FARMER') ? 'FARMER' : 'CUSTOMER';
+    
+    // For farmers, try to get their profile photo
+    if (role === 'FARMER') {
+      setProfileCompletion({ percentage: 100, isComplete: true, missingFields: [] });
+      try {
+        const response = await userApi.get('/profiles/farmer');
+        const profile = response?.data?.data || response?.data || {};
+        if (profile.profilePhoto) {
+          setProfilePhoto(profile.profilePhoto);
+        }
+      } catch (err) {
+        console.error('Error fetching farmer profile:', err);
+      }
+      return;
+    }
+    
+    // Admins don't need profile completion
+    if (role === 'ADMIN' || role === 'MANAGER') {
+      setProfileCompletion({ percentage: 100, isComplete: true, missingFields: [] });
+      return;
+    }
+
+    try {
+      const response = await userApi.get('/profiles/customer');
+      const profile = response?.data?.data || response?.data || {};
+      
+      // Calculate profile completion - must match ProfileOnboarding required fields
+      const requiredFields = [
+        { key: 'name', label: 'Name' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'address', label: 'Address' },
+        { key: 'city', label: 'City' },
+        { key: 'state', label: 'State' },
+        { key: 'pincode', label: 'Pincode' }
+      ];
+      
+      const missingFields = [];
+      let filledCount = 0;
+      
+      requiredFields.forEach(field => {
+        const value = profile[field.key];
+        if (value && value.toString().trim() !== '') {
+          filledCount++;
+        } else {
+          missingFields.push(field.label);
+        }
+      });
+      
+      const percentage = Math.round((filledCount / requiredFields.length) * 100);
+      
+      setProfileCompletion({
+        percentage,
+        isComplete: percentage === 100,
+        missingFields
+      });
+      
+      // Store profile photo if available
+      if (profile.profilePhoto) {
+        setProfilePhoto(profile.profilePhoto);
+      }
+    } catch (err) {
+      console.error('Error fetching profile completion:', err);
+      // Default to complete to avoid showing indicator on error
+      setProfileCompletion({ percentage: 100, isComplete: true, missingFields: [] });
+    }
+  }, [isAuthenticated, user]);
+
   // Fetch counts on mount only (not on every navigation to reduce API calls)
   useEffect(() => {
     if (isAuthenticated) {
       fetchCounts();
+      fetchProfileCompletion();
     } else {
       fetchGuestCounts();
     }
-  }, [isAuthenticated, fetchCounts, fetchGuestCounts]);
+  }, [isAuthenticated, fetchCounts, fetchGuestCounts, fetchProfileCompletion]);
+
+  // Listen for profile updates to refresh avatar photo
+  useEffect(() => {
+    const handleProfileUpdate = (event) => {
+      const newPhoto = event.detail?.profilePhoto;
+      if (newPhoto) {
+        setProfilePhoto(newPhoto);
+      }
+      // Also refresh profile completion
+      fetchProfileCompletion();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+  }, [fetchProfileCompletion]);
 
   // Listen for guest wishlist updates (cart handled by CartContext)
   useEffect(() => {
@@ -278,7 +380,10 @@ const Navbar = () => {
         {/* Top Bar - Announcement */}
         <div className="navbar-topbar">
           <div className="topbar-content">
-            <span>🎉 Free delivery on orders over ₹500 | Use code: FRESH20 for 20% off</span>
+            <span>🎉</span>
+            <span>Free delivery on orders over ₹500</span>
+            <span className="topbar-highlight">FRESH20</span>
+            <span>for 20% off</span>
           </div>
         </div>
 
@@ -297,6 +402,7 @@ const Navbar = () => {
                 <button 
                   className="location-btn"
                   onClick={() => setLocationMenuOpen(!locationMenuOpen)}
+                  aria-label="Select delivery location"
                 >
                   <FiMapPin className="location-icon" />
                   <div className="location-text">
@@ -437,17 +543,27 @@ const Navbar = () => {
 
             {/* Right: Account, Orders, Cart */}
             <div className="navbar-right">
-              {/* Account & Lists - Amazon Style */}
+              {/* Account Avatar Button */}
               {isAuthenticated ? (
-                <div className="user-menu-container" ref={userMenuRef}>
+                <div 
+                  className="user-menu-container" 
+                  ref={userMenuRef}
+                  onMouseEnter={() => setUserMenuOpen(true)}
+                  onMouseLeave={() => setUserMenuOpen(false)}
+                >
                   <button 
-                    className="account-btn"
+                    className="account-avatar-btn"
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    aria-label="Account menu"
                   >
-                    <div className="account-text">
-                      <span className="account-greeting">Hello, {displayName}</span>
-                      <span className="account-title">Account & Lists <FiChevronDown /></span>
+                    <div className="navbar-avatar">
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt={displayName} className="navbar-avatar-img" />
+                      ) : (
+                        <span className="navbar-avatar-letter">{displayName.charAt(0).toUpperCase()}</span>
+                      )}
                     </div>
+                    <FiChevronDown className={`avatar-chevron ${userMenuOpen ? 'open' : ''}`} />
                   </button>
                   
                   {userMenuOpen && (
@@ -540,11 +656,11 @@ const Navbar = () => {
                   )}
                 </div>
               ) : (
-                <Link to="/login" className="account-btn guest">
-                  <div className="account-text">
-                    <span className="account-greeting">Hello, Sign in</span>
-                    <span className="account-title">Account & Lists <FiChevronDown /></span>
+                <Link to="/login" className="account-avatar-btn guest">
+                  <div className="navbar-avatar guest">
+                    <FiUser className="guest-icon" />
                   </div>
+                  <span className="signin-text">Sign in</span>
                 </Link>
               )}
 
@@ -561,6 +677,43 @@ const Navbar = () => {
                 <Link to="/messages" className="navbar-icon-btn messages-btn" title="Messages">
                   <FiMessageSquare />
                   {unreadMessages > 0 && <span className="badge">{unreadMessages}</span>}
+                </Link>
+              )}
+
+              {/* Profile Completion Indicator - Circular with Progress Ring */}
+              {isAuthenticated && !profileCompletion.isComplete && (
+                <Link 
+                  to="/profile/onboarding" 
+                  className="profile-progress-indicator"
+                  title={`Complete your profile (${profileCompletion.percentage}%)`}
+                >
+                  <div className="profile-ring-wrapper">
+                    <svg className="progress-ring" viewBox="0 0 44 44">
+                      <circle 
+                        className="progress-ring-bg"
+                        cx="22" 
+                        cy="22" 
+                        r="18"
+                        fill="none"
+                        strokeWidth="3"
+                      />
+                      <circle 
+                        className="progress-ring-fill"
+                        cx="22" 
+                        cy="22" 
+                        r="18"
+                        fill="none"
+                        strokeWidth="3"
+                        strokeDasharray={`${(profileCompletion.percentage / 100) * 113.1} 113.1`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 22 22)"
+                      />
+                    </svg>
+                    <div className="profile-avatar-small">
+                      {user?.name?.charAt(0)?.toUpperCase() || displayName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  </div>
+                  <span className="profile-completion-label">{profileCompletion.percentage}%</span>
                 </Link>
               )}
 
@@ -727,6 +880,42 @@ const Navbar = () => {
                   <span className="user-role">{userRole}</span>
                 </div>
               </div>
+              
+              {/* Mobile Profile Completion Alert */}
+              {!profileCompletion.isComplete && (
+                <Link 
+                  to="/profile/onboarding" 
+                  className="mobile-profile-completion"
+                  onClick={closeMobileMenu}
+                >
+                  <div className="completion-content">
+                    <div className="completion-info">
+                      <div className="completion-title">
+                        <FiAlertCircle /> Complete Your Profile
+                      </div>
+                      <div className="completion-subtitle">
+                        {profileCompletion.missingFields.length > 0 
+                          ? `Missing: ${profileCompletion.missingFields.join(', ')}`
+                          : 'Finish setting up your account'}
+                      </div>
+                    </div>
+                    <div className="completion-progress">
+                      <svg viewBox="0 0 36 36" className="circular-chart">
+                        <path 
+                          className="circle-bg"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path 
+                          className="circle"
+                          strokeDasharray={`${profileCompletion.percentage}, 100`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <text x="18" y="20.35" className="percentage">{profileCompletion.percentage}%</text>
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
               
               <div className="mobile-user-links">
                 <Link to={getDashboardLink()} onClick={closeMobileMenu}>

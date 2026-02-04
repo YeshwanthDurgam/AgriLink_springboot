@@ -27,7 +27,8 @@ public class CustomerProfileRequest {
     @Max(value = 120, message = "Age must be less than 120")
     private Integer age;
     
-    @Size(max = 500, message = "Profile photo URL must be less than 500 characters")
+    // Allow large base64 images (up to ~5MB)
+    @Size(max = 10000000, message = "Profile photo is too large")
     private String profilePhoto;
     
     @Size(max = 100, message = "City must be less than 100 characters")
@@ -38,4 +39,11 @@ public class CustomerProfileRequest {
     
     @Size(max = 100, message = "Country must be less than 100 characters")
     private String country;
+
+    @Size(max = 500, message = "Address must be less than 500 characters")
+    private String address;
+
+    @Size(max = 10, message = "Pincode must be less than 10 characters")
+    @Pattern(regexp = "^[0-9]*$", message = "Pincode can only contain numbers")
+    private String pincode;
 }
