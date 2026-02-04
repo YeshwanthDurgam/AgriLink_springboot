@@ -9,10 +9,11 @@ import { useAuth } from '../context/AuthContext';
 import { marketplaceApi, orderApi, farmApi, userApi } from '../services/api';
 import './FarmerDashboard.css';
 
-const FarmerDashboard = () => {
+const FarmerDashboard = ({ farmerProfile: propProfile, verificationStatus: propStatus }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [profileStatus, setProfileStatus] = useState(null);
+  const [profileStatus, setProfileStatus] = useState(propStatus || null);
+  const [profileComplete, setProfileComplete] = useState(false);
   const [stats, setStats] = useState({
     totalProducts: 0,
     activeListings: 0,
@@ -30,17 +31,25 @@ const FarmerDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    fetchProfileStatus();
-  }, []);
+    if (!propStatus) {
+      fetchProfileStatus();
+    } else {
+      setProfileStatus(propStatus);
+      setProfileComplete(propProfile?.profileComplete || false);
+    }
+  }, [propStatus, propProfile]);
 
   const fetchProfileStatus = async () => {
     try {
       const res = await userApi.get('/profiles/farmer');
-      setProfileStatus(res.data?.data?.status || res.data?.status || null);
+      const profile = res.data?.data || res.data;
+      setProfileStatus(profile?.status || 'PENDING');
+      setProfileComplete(profile?.profileComplete || false);
     } catch (error) {
       // Profile might not exist yet
       console.log('Profile not found or error fetching:', error);
-      setProfileStatus(null);
+      setProfileStatus('PENDING');
+      setProfileComplete(false);
     }
   };
 
@@ -192,15 +201,43 @@ const FarmerDashboard = () => {
     { icon: FiSettings, label: 'Settings', path: '/settings' }
   ];
 
+  // Determine verification badge text
+  const getVerificationBadge = () => {
+    switch (profileStatus) {
+      case 'APPROVED':
+        return { text: 'Verified Farmer', icon: FiCheckCircle, className: 'verified' };
+      case 'REJECTED':
+        return { text: 'Verification Rejected', icon: FiXCircle, className: 'rejected' };
+      case 'PENDING':
+      default:
+        return { text: 'Unverified Farmer', icon: FiClock, className: 'pending' };
+    }
+  };
+
+  const verificationBadge = getVerificationBadge();
+  const isVerified = profileStatus === 'APPROVED';
+
   return (
     <div className="farmer-dashboard">
+      {/* Profile Incomplete Banner */}
+      {!profileComplete && (
+        <div className="verification-banner incomplete">
+          <FiAlertCircle className="banner-icon" />
+          <div className="banner-content">
+            <h4>Complete Your Profile</h4>
+            <p>Please complete your profile information to access all farmer features.</p>
+          </div>
+          <Link to="/profile/onboarding" className="banner-action">Complete Profile</Link>
+        </div>
+      )}
+
       {/* Verification Status Banner */}
-      {profileStatus === 'PENDING' && (
+      {profileComplete && profileStatus === 'PENDING' && (
         <div className="verification-banner pending">
           <FiClock className="banner-icon" />
           <div className="banner-content">
             <h4>Profile Verification Pending</h4>
-            <p>Your profile is under review. Some features like creating listings may be limited until approved.</p>
+            <p>Your profile is under review by our team. Some features like creating listings may be limited until approved.</p>
           </div>
           <Link to="/profile/onboarding" className="banner-action">View Profile</Link>
         </div>
@@ -249,8 +286,11 @@ const FarmerDashboard = () => {
               {user?.email?.charAt(0).toUpperCase() || 'F'}
             </div>
             <div className="profile-info">
-              <span className="profile-name">{user?.email?.split('@')[0] || 'Farmer'}</span>
-              <span className="profile-role">Verified Farmer</span>
+              <span className="profile-name">{user?.name || user?.email?.split('@')[0] || 'Farmer'}</span>
+              <span className={`profile-role ${verificationBadge.className}`}>
+                <verificationBadge.icon className="role-icon" />
+                {verificationBadge.text}
+              </span>
             </div>
             <div className="profile-stats">
               <div className="profile-stat">

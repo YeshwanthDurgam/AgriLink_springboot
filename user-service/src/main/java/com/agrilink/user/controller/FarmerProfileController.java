@@ -63,8 +63,21 @@ public class FarmerProfileController {
             HttpServletRequest request,
             Authentication authentication,
             @Valid @RequestBody FarmerProfileRequest profileRequest) {
+        log.info("Received profile update request. Auth: {}, Fields: name={}, phone={}, farmName={}, city={}, state={}, address={}, pincode={}",
+                authentication.getName(),
+                profileRequest.getName(),
+                profileRequest.getPhone(),
+                profileRequest.getFarmName(),
+                profileRequest.getCity(),
+                profileRequest.getState(),
+                profileRequest.getAddress(),
+                profileRequest.getPincode());
+        
         UUID userId = getUserIdFromRequest(request, authentication);
+        log.info("Resolved userId: {}", userId);
+        
         FarmerProfileDto profile = farmerProfileService.updateProfile(userId, profileRequest);
+        log.info("Profile updated successfully for user: {}", userId);
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", profile));
     }
 

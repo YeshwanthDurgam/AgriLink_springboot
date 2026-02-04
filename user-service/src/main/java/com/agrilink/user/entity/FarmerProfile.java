@@ -39,7 +39,7 @@ public class FarmerProfile {
 
     private Integer age;
 
-    @Column(name = "profile_photo", length = 500)
+    @Column(name = "profile_photo", columnDefinition = "TEXT")
     private String profilePhoto;
 
     @Column(length = 100)
@@ -51,13 +51,19 @@ public class FarmerProfile {
     @Column(length = 100)
     private String country;
 
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Column(length = 20)
+    private String pincode;
+
     @Column(name = "farm_name", length = 200)
     private String farmName;
 
     @Column(name = "crop_types", columnDefinition = "TEXT")
     private String cropTypes;
 
-    @Column(name = "farm_photo", length = 500)
+    @Column(name = "farm_photo", columnDefinition = "TEXT")
     private String farmPhoto;
 
     @Column(name = "farm_bio", columnDefinition = "TEXT")
@@ -98,8 +104,11 @@ public class FarmerProfile {
 
     public boolean isProfileComplete() {
         return name != null && !name.isBlank() &&
-               username != null && !username.isBlank() &&
                phone != null && !phone.isBlank() &&
+               address != null && !address.isBlank() &&
+               city != null && !city.isBlank() &&
+               state != null && !state.isBlank() &&
+               pincode != null && !pincode.isBlank() &&
                farmName != null && !farmName.isBlank();
     }
 }

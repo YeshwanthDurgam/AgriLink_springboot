@@ -109,9 +109,16 @@ public class AuthService {
         String rolesString = roles.stream().map(r -> "ROLE_" + r).collect(java.util.stream.Collectors.joining(","));
         String token = jwtTokenProvider.generateToken(user.getEmail(), rolesString, user.getId());
 
-        log.info("User logged in successfully: {}", request.getEmail());
+        // Generate display name from email prefix
+        String displayName = user.getEmail().split("@")[0];
+        // Capitalize first letter
+        if (displayName != null && !displayName.isEmpty()) {
+            displayName = displayName.substring(0, 1).toUpperCase() + displayName.substring(1);
+        }
 
-        return AuthResponse.of(token, user.getId(), user.getEmail(), null, roles, false, "PENDING",
+        log.info("User logged in successfully: {} (name: {})", request.getEmail(), displayName);
+
+        return AuthResponse.of(token, user.getId(), user.getEmail(), displayName, roles, false, "PENDING",
                 jwtTokenProvider.getExpirationTime());
     }
 
@@ -153,9 +160,17 @@ public class AuthService {
     }
 
     private UserDto mapToUserDto(User user) {
+        // Generate display name from email prefix
+        String displayName = user.getEmail().split("@")[0];
+        // Capitalize first letter
+        if (displayName != null && !displayName.isEmpty()) {
+            displayName = displayName.substring(0, 1).toUpperCase() + displayName.substring(1);
+        }
+        
         return UserDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .name(displayName)
                 .phone(user.getPhone())
                 .roles(user.getRoles().stream()
                         .map(Role::getName)

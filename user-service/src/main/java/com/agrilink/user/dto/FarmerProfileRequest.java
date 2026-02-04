@@ -27,7 +27,7 @@ public class FarmerProfileRequest {
     @Max(value = 120, message = "Age must be less than 120")
     private Integer age;
     
-    @Size(max = 500, message = "Profile photo URL must be less than 500 characters")
+    // No size limit - profile photo can be base64 encoded
     private String profilePhoto;
     
     @Size(max = 100, message = "City must be less than 100 characters")
@@ -39,12 +39,18 @@ public class FarmerProfileRequest {
     @Size(max = 100, message = "Country must be less than 100 characters")
     private String country;
     
+    @Size(max = 500, message = "Address must be less than 500 characters")
+    private String address;
+    
+    @Size(max = 20, message = "Pincode must be less than 20 characters")
+    private String pincode;
+    
     @Size(max = 200, message = "Farm name must be less than 200 characters")
     private String farmName;
     
     private String cropTypes;
     
-    @Size(max = 500, message = "Farm photo URL must be less than 500 characters")
+    // No size limit - farm photo can be base64 encoded
     private String farmPhoto;
     
     private String farmBio;

@@ -81,6 +81,8 @@ public class FarmerProfileService {
         if (request.getCity() != null) profile.setCity(request.getCity());
         if (request.getState() != null) profile.setState(request.getState());
         if (request.getCountry() != null) profile.setCountry(request.getCountry());
+        if (request.getAddress() != null) profile.setAddress(request.getAddress());
+        if (request.getPincode() != null) profile.setPincode(request.getPincode());
         if (request.getFarmName() != null) profile.setFarmName(request.getFarmName());
         if (request.getCropTypes() != null) profile.setCropTypes(request.getCropTypes());
         if (request.getFarmPhoto() != null) profile.setFarmPhoto(request.getFarmPhoto());
@@ -204,6 +206,8 @@ public class FarmerProfileService {
                 .city(profile.getCity())
                 .state(profile.getState())
                 .country(profile.getCountry())
+                .address(profile.getAddress())
+                .pincode(profile.getPincode())
                 .farmName(profile.getFarmName())
                 .cropTypes(profile.getCropTypes())
                 .farmPhoto(profile.getFarmPhoto())
