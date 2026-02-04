@@ -110,12 +110,18 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Redirect directly to dashboard like Amazon/Flipkart (no profile completion required)
-        const dashboardRoute = getDashboardRoute(userData);
+        // Like Amazon/Flipkart: customers go to home or previous page, farmers/admins go to dashboard
+        const roles = userData.roles || [];
+        let defaultRedirect = '/';
+        
+        // Only farmers, managers, and admins go to dashboard by default
+        if (roles.includes('FARMER') || roles.includes('MANAGER') || roles.includes('ADMIN')) {
+          defaultRedirect = getDashboardRoute(userData);
+        }
         
         return { 
           success: true, 
-          redirectTo: dashboardRoute,
+          redirectTo: defaultRedirect,
           user: userData
         };
       }

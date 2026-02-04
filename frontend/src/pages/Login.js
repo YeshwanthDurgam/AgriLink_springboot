@@ -40,8 +40,8 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated && !submitting) {
-      // If already authenticated, redirect
-      navigate(from || '/dashboard', { replace: true });
+      // If already authenticated, redirect to previous page or home (like Amazon/Flipkart)
+      navigate(from || '/', { replace: true });
     }
   }, [isAuthenticated, navigate, from, submitting]);
 
@@ -91,8 +91,9 @@ const Login = () => {
         syncGuestDataToServer(); // Don't await - sync in background
       }
       
-      // Determine redirect: use passed 'from' location, or role-based dashboard
-      const redirectTo = from || result.redirectTo || '/dashboard';
+      // Determine redirect: use passed 'from' location first, then role-based default
+      // Customers go to home/previous page, Farmers/Admins go to dashboard
+      const redirectTo = from || result.redirectTo || '/';
       navigate(redirectTo, { replace: true });
     } else {
       toast.error(result.message || 'Login failed. Please try again.');
