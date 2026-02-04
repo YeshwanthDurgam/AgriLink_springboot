@@ -39,7 +39,7 @@ public class CustomerProfile {
 
     private Integer age;
 
-    @Column(name = "profile_photo", length = 500)
+    @Column(name = "profile_photo", columnDefinition = "TEXT")
     private String profilePhoto;
 
     @Column(length = 100)
@@ -50,6 +50,12 @@ public class CustomerProfile {
 
     @Column(length = 100)
     private String country;
+
+    @Column(length = 500)
+    private String address;
+
+    @Column(length = 10)
+    private String pincode;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
@@ -66,7 +72,10 @@ public class CustomerProfile {
 
     public boolean isProfileComplete() {
         return name != null && !name.isBlank() &&
-               username != null && !username.isBlank() &&
-               phone != null && !phone.isBlank();
+               phone != null && !phone.isBlank() &&
+               address != null && !address.isBlank() &&
+               city != null && !city.isBlank() &&
+               state != null && !state.isBlank() &&
+               pincode != null && !pincode.isBlank();
     }
 }

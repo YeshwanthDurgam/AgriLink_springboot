@@ -33,10 +33,10 @@ buildNumber.properties
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
-.env.local
-*.env
+# # Environment
+# .env
+# .env.local
+# *.env
 
 # Build
 build/

@@ -75,6 +75,8 @@ public class CustomerProfileService {
         if (request.getCity() != null) profile.setCity(request.getCity());
         if (request.getState() != null) profile.setState(request.getState());
         if (request.getCountry() != null) profile.setCountry(request.getCountry());
+        if (request.getAddress() != null) profile.setAddress(request.getAddress());
+        if (request.getPincode() != null) profile.setPincode(request.getPincode());
 
         CustomerProfile savedProfile = customerProfileRepository.save(profile);
         log.info("Updated customer profile for user: {}", userId);
@@ -93,6 +95,8 @@ public class CustomerProfileService {
                 .city(profile.getCity())
                 .state(profile.getState())
                 .country(profile.getCountry())
+                .address(profile.getAddress())
+                .pincode(profile.getPincode())
                 .status(profile.getStatus())
                 .profileComplete(profile.isProfileComplete())
                 .createdAt(profile.getCreatedAt())

@@ -9,6 +9,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeSpeed;
+  overflow-x: hidden;
 }
 
 /* Image optimization defaults */
@@ -56,6 +57,8 @@ body {
   background-color: var(--background-color);
   color: var(--text-primary);
   line-height: 1.6;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 a {
