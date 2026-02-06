@@ -60,9 +60,6 @@ if [ -z "$1" ]; then
     start_service "order-service" "8085"
     sleep 5
     
-    start_service "iot-service" "8086"
-    sleep 5
-    
     start_service "notification-service" "8087"
     
     echo ""
@@ -74,7 +71,6 @@ if [ -z "$1" ]; then
     echo "  Farm Service:         http://localhost:8083"
     echo "  Marketplace Service:  http://localhost:8084"
     echo "  Order Service:        http://localhost:8085"
-    echo "  IoT Service:          http://localhost:8086"
     echo "  Notification Service: http://localhost:8087"
     echo ""
     echo "Press Ctrl+C to stop all services."

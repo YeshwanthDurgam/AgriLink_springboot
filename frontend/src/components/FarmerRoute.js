@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../services/api';
 
 /**
  * Protected route component for farmer-only pages.
+ * 
+ * CRITICAL: This component ALWAYS fetches fresh profile data from the backend.
+ * It NEVER trusts localStorage/sessionStorage for verification status.
+ * 
  * Checks:
  * 1. User is authenticated
  * 2. User has FARMER role
- * 3. Farmer profile is complete
- * 4. Farmer is verified (APPROVED status)
+ * 3. Farmer profile is complete (from backend)
+ * 4. Farmer is verified/APPROVED (from backend)
  * 
  * Redirects to profile onboarding if not complete/verified.
  */
@@ -19,34 +23,52 @@ const FarmerRoute = ({ children, requireVerification = true }) => {
   const [farmerProfile, setFarmerProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [fetchKey, setFetchKey] = useState(0);
 
   const isFarmer = user?.roles?.includes('FARMER');
 
+  // Force re-fetch profile data from backend
+  const fetchFarmerProfile = useCallback(async () => {
+    if (!isAuthenticated || !isFarmer) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('[FarmerRoute] Fetching fresh farmer profile from backend...');
+    setLoading(true);
+    
+    try {
+      const response = await userApi.get('/profiles/farmer');
+      const profile = response.data?.data || response.data;
+      console.log('[FarmerRoute] Profile fetched:', {
+        profileComplete: profile?.profileComplete,
+        status: profile?.status,
+        name: profile?.name
+      });
+      setFarmerProfile(profile);
+      setError(null);
+    } catch (err) {
+      console.error('[FarmerRoute] Error fetching farmer profile:', err);
+      // Profile doesn't exist yet - treat as incomplete
+      setFarmerProfile(null);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, isFarmer]);
+
+  // Fetch profile on mount AND when auth state changes
   useEffect(() => {
-    const fetchFarmerProfile = async () => {
-      if (!isAuthenticated || !isFarmer) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await userApi.get('/profiles/farmer');
-        const profile = response.data?.data || response.data;
-        setFarmerProfile(profile);
-      } catch (err) {
-        console.error('Error fetching farmer profile:', err);
-        // Profile doesn't exist yet - treat as incomplete
-        setFarmerProfile(null);
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!authLoading) {
       fetchFarmerProfile();
     }
-  }, [isAuthenticated, isFarmer, authLoading]);
+  }, [authLoading, fetchFarmerProfile, fetchKey]);
+
+  // Re-fetch when navigating to this route (important for multi-tab/port consistency)
+  useEffect(() => {
+    // Trigger re-fetch when location changes
+    setFetchKey(prev => prev + 1);
+  }, [location.pathname]);
 
   // Show loading while checking auth or fetching profile
   if (authLoading || loading) {

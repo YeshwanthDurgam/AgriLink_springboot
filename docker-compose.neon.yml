@@ -102,24 +102,6 @@ services:
       - agrilink-network
     restart: unless-stopped
 
-  # IoT Service (using Neon Database)
-  iot-service:
-    build:
-      context: ./iot-service
-      dockerfile: Dockerfile
-    container_name: agrilink-iot-service
-    environment:
-      SPRING_PROFILES_ACTIVE: neon
-      NEON_DATASOURCE_URL: ${IOT_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_iot?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
-    ports:
-      - "8086:8086"
-    networks:
-      - agrilink-network
-    restart: unless-stopped
-
   # Notification Service (using Neon Database)
   notification-service:
     build:

@@ -43,19 +43,15 @@ if "%1"=="" (
     start "Farm Service" cmd /c "cd farm-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon"
     timeout /t 5 /nobreak > nul
     
-    echo [4/7] Starting Marketplace Service...
+    echo [4/6] Starting Marketplace Service...
     start "Marketplace Service" cmd /c "cd marketplace-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon"
     timeout /t 5 /nobreak > nul
     
-    echo [5/7] Starting Order Service...
+    echo [5/6] Starting Order Service...
     start "Order Service" cmd /c "cd order-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon"
     timeout /t 5 /nobreak > nul
     
-    echo [6/7] Starting IoT Service...
-    start "IoT Service" cmd /c "cd iot-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon"
-    timeout /t 5 /nobreak > nul
-    
-    echo [7/7] Starting Notification Service...
+    echo [6/6] Starting Notification Service...
     start "Notification Service" cmd /c "cd notification-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon"
     
     echo.
@@ -67,7 +63,6 @@ if "%1"=="" (
     echo   Farm Service:         http://localhost:8083
     echo   Marketplace Service:  http://localhost:8084
     echo   Order Service:        http://localhost:8085
-    echo   IoT Service:          http://localhost:8086
     echo   Notification Service: http://localhost:8087
     
 ) else (

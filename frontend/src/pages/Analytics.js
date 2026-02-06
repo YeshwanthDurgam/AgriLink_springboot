@@ -1,15 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { FiHome, FiGrid, FiMaximize, FiTrendingUp, FiDollarSign, FiBarChart2, FiPackage, FiCalendar, FiTarget, FiDownload } from 'react-icons/fi';
 import analyticsService from '../services/analyticsService';
 import exportService from '../services/exportService';
 import './Analytics.css';
 
+// Lazy load the new insight components
+const DemandForecast = lazy(() => import('./DemandForecast'));
+const HarvestPlanning = lazy(() => import('./HarvestPlanning'));
+
 const Analytics = () => {
   useAuth(); // Ensure user is authenticated
-  const [activeTab, setActiveTab] = useState('farm');
+  const [activeTab, setActiveTab] = useState('insights');
   const [farmData, setFarmData] = useState(null);
   const [salesData, setSalesData] = useState(null);
-  const [sensorData, setSensorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -21,15 +25,16 @@ const Analytics = () => {
       switch (activeTab) {
         case 'farm':
           const farmResponse = await analyticsService.getDashboardSummary();
-          setFarmData(farmResponse.data);
+          setFarmData(farmResponse.data || farmResponse);
           break;
         case 'sales':
           const salesResponse = await analyticsService.getSalesAnalytics();
-          setSalesData(salesResponse.data);
+          setSalesData(salesResponse.data || salesResponse);
           break;
-        case 'sensors':
-          const sensorResponse = await analyticsService.getSensorAnalytics();
-          setSensorData(sensorResponse.data);
+        case 'insights':
+        case 'demandForecast':
+        case 'harvestPlanning':
+          // These tabs load their own data
           break;
         default:
           break;
@@ -98,28 +103,28 @@ const Analytics = () => {
         {/* Overview Cards */}
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon farms">🏠</div>
+            <div className="stat-icon farms"><FiHome size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">{farmData.totalFarms || 0}</span>
               <span className="stat-label">Total Farms</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon fields">🌾</div>
+            <div className="stat-icon fields"><FiGrid size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">{farmData.totalFields || 0}</span>
               <span className="stat-label">Total Fields</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon area">📐</div>
+            <div className="stat-icon area"><FiMaximize size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">{farmData.totalAreaManaged?.toFixed(1) || 0}</span>
               <span className="stat-label">Total Area ({farmData.areaUnit || 'HA'})</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon crops">🌱</div>
+            <div className="stat-icon crops"><FiCalendar size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">{farmData.activeCrops || 0}</span>
               <span className="stat-label">Active Crops</span>
@@ -220,7 +225,7 @@ const Analytics = () => {
             <div className="harvests-list">
               {farmData.recentHarvests.map((harvest, index) => (
                 <div key={index} className="harvest-item">
-                  <div className="harvest-icon">🌾</div>
+                  <div className="harvest-icon"><FiGrid size={20} /></div>
                   <div className="harvest-info">
                     <span className="harvest-crop">{harvest.cropName}</span>
                     <span className="harvest-farm">{harvest.farmName}</span>
@@ -246,14 +251,14 @@ const Analytics = () => {
         {/* Revenue Overview */}
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon revenue">💰</div>
+            <div className="stat-icon revenue"><FiDollarSign size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">${salesData.totalRevenue?.toFixed(2) || '0.00'}</span>
               <span className="stat-label">Total Revenue</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon monthly">📈</div>
+            <div className="stat-icon monthly"><FiTrendingUp size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">${salesData.totalRevenueThisMonth?.toFixed(2) || '0.00'}</span>
               <span className="stat-label">This Month</span>
@@ -265,14 +270,14 @@ const Analytics = () => {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon orders">📦</div>
+            <div className="stat-icon orders"><FiPackage size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">{salesData.totalOrders || 0}</span>
               <span className="stat-label">Total Orders</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon avg">💵</div>
+            <div className="stat-icon avg"><FiBarChart2 size={24} /></div>
             <div className="stat-content">
               <span className="stat-value">${salesData.averageOrderValue?.toFixed(2) || '0.00'}</span>
               <span className="stat-label">Avg Order Value</span>
@@ -381,194 +386,59 @@ const Analytics = () => {
     );
   };
 
-  const renderSensorAnalytics = () => {
-    if (!sensorData) return <div className="no-data">No sensor data available</div>;
+  // Loading component for lazy loaded sections
+  const SectionLoader = () => (
+    <div className="section-loading">
+      <div className="loading-spinner"></div>
+      <p>Loading...</p>
+    </div>
+  );
 
+  const renderFarmInsights = () => {
     return (
-      <div className="analytics-section">
-        {/* Device Overview */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon devices">📡</div>
-            <div className="stat-content">
-              <span className="stat-value">{sensorData.totalDevices || 0}</span>
-              <span className="stat-label">Total Devices</span>
-            </div>
+      <div className="analytics-section farm-insights">
+        <div className="insights-intro">
+          <h3>Welcome to Farm Insights</h3>
+          <p>Get agriculture-specific intelligence to make informed decisions about your farming operations.</p>
+        </div>
+        
+        <div className="insights-cards">
+          <div 
+            className="insight-card demand-forecast-card"
+            onClick={() => setActiveTab('demandForecast')}
+          >
+            <div className="insight-icon"><FiTrendingUp size={32} /></div>
+            <h4>Demand Forecast (Area-wise)</h4>
+            <p>Understand crop demand before planting. Get location-based market trends and price insights.</p>
+            <span className="explore-link">Explore →</span>
           </div>
-          <div className="stat-card online">
-            <div className="stat-icon online">✅</div>
-            <div className="stat-content">
-              <span className="stat-value">{sensorData.onlineDevices || 0}</span>
-              <span className="stat-label">Online</span>
-            </div>
+          
+          <div 
+            className="insight-card harvest-planning-card"
+            onClick={() => setActiveTab('harvestPlanning')}
+          >
+            <div className="insight-icon"><FiCalendar size={32} /></div>
+            <h4>Harvesting & Crop Planning</h4>
+            <p>Weather-informed guidance on cultivation, irrigation, fertilizers, and harvest timing.</p>
+            <span className="explore-link">Explore →</span>
           </div>
-          <div className="stat-card offline">
-            <div className="stat-icon offline">⚠️</div>
-            <div className="stat-content">
-              <span className="stat-value">{sensorData.offlineDevices || 0}</span>
-              <span className="stat-label">Offline</span>
+        </div>
+        
+        <div className="quick-stats">
+          <h4>Quick Overview</h4>
+          <div className="stats-row">
+            <div className="quick-stat">
+              <span className="stat-emoji"><FiHome size={20} /></span>
+              <span className="stat-label">Farm Analytics</span>
+              <button className="stat-btn" onClick={() => setActiveTab('farm')}>View →</button>
             </div>
-          </div>
-          <div className="stat-card alerts">
-            <div className="stat-icon alerts">🚨</div>
-            <div className="stat-content">
-              <span className="stat-value">{sensorData.totalAlertsToday || 0}</span>
-              <span className="stat-label">Alerts Today</span>
+            <div className="quick-stat">
+              <span className="stat-emoji"><FiDollarSign size={20} /></span>
+              <span className="stat-label">Sales Reports</span>
+              <button className="stat-btn" onClick={() => setActiveTab('sales')}>View →</button>
             </div>
           </div>
         </div>
-
-        {/* Current Conditions */}
-        {sensorData.currentConditions && (
-          <div className="analytics-card full-width">
-            <h3>Current Conditions</h3>
-            <div className={`conditions-status ${sensorData.currentConditions.overallStatus?.toLowerCase()}`}>
-              {sensorData.currentConditions.overallStatus}
-            </div>
-            <div className="conditions-grid">
-              {sensorData.currentConditions.temperature && (
-                <div className="condition-item">
-                  <span className="condition-icon">🌡️</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.temperature}°C
-                  </span>
-                  <span className="condition-label">Temperature</span>
-                </div>
-              )}
-              {sensorData.currentConditions.humidity && (
-                <div className="condition-item">
-                  <span className="condition-icon">💧</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.humidity}%
-                  </span>
-                  <span className="condition-label">Humidity</span>
-                </div>
-              )}
-              {sensorData.currentConditions.soilMoisture && (
-                <div className="condition-item">
-                  <span className="condition-icon">🌱</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.soilMoisture}%
-                  </span>
-                  <span className="condition-label">Soil Moisture</span>
-                </div>
-              )}
-              {sensorData.currentConditions.soilPh && (
-                <div className="condition-item">
-                  <span className="condition-icon">🧪</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.soilPh}
-                  </span>
-                  <span className="condition-label">Soil pH</span>
-                </div>
-              )}
-              {sensorData.currentConditions.rainfall && (
-                <div className="condition-item">
-                  <span className="condition-icon">🌧️</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.rainfall} mm
-                  </span>
-                  <span className="condition-label">Rainfall</span>
-                </div>
-              )}
-              {sensorData.currentConditions.windSpeed && (
-                <div className="condition-item">
-                  <span className="condition-icon">💨</span>
-                  <span className="condition-value">
-                    {sensorData.currentConditions.windSpeed} km/h
-                  </span>
-                  <span className="condition-label">Wind Speed</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Temperature History Chart */}
-        {sensorData.temperatureHistory?.length > 0 && (
-          <div className="analytics-card full-width">
-            <h3>Temperature (24h)</h3>
-            <div className="line-chart">
-              {sensorData.temperatureHistory.map((point, index) => {
-                const maxTemp = Math.max(...sensorData.temperatureHistory.map(p => p.value || 0));
-                const minTemp = Math.min(...sensorData.temperatureHistory.map(p => p.value || 0));
-                const range = maxTemp - minTemp || 1;
-                const height = ((point.value - minTemp) / range * 80) + 10;
-                return (
-                  <div key={index} className="chart-point-container">
-                    <div 
-                      className="chart-point" 
-                      style={{ bottom: `${height}%` }}
-                      title={`${point.value}°C at ${point.timestamp}`}
-                    />
-                    {index < sensorData.temperatureHistory.length - 1 && (
-                      <div className="chart-line" />
-                    )}
-                    <span className="point-label">{point.timestamp}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Device List */}
-        {sensorData.sensorSummaries?.length > 0 && (
-          <div className="analytics-card full-width">
-            <h3>Devices</h3>
-            <div className="devices-list">
-              {sensorData.sensorSummaries.map((device, index) => (
-                <div key={index} className={`device-item ${device.status?.toLowerCase()}`}>
-                  <div className="device-icon">
-                    {device.deviceType === 'TEMPERATURE_SENSOR' && '🌡️'}
-                    {device.deviceType === 'HUMIDITY_SENSOR' && '💧'}
-                    {device.deviceType === 'SOIL_SENSOR' && '🌱'}
-                    {device.deviceType === 'WEATHER_STATION' && '🌤️'}
-                    {!['TEMPERATURE_SENSOR', 'HUMIDITY_SENSOR', 'SOIL_SENSOR', 'WEATHER_STATION'].includes(device.deviceType) && '📡'}
-                  </div>
-                  <div className="device-info">
-                    <span className="device-name">{device.deviceName}</span>
-                    <span className="device-type">{device.deviceType?.replace(/_/g, ' ')}</span>
-                  </div>
-                  <div className="device-reading">
-                    {device.lastReading && (
-                      <span className="reading-value">
-                        {device.lastReading} {device.unit}
-                      </span>
-                    )}
-                    <span className="reading-time">{device.lastUpdated}</span>
-                  </div>
-                  <div className={`device-status ${device.status?.toLowerCase()}`}>
-                    {device.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Active Alerts */}
-        {sensorData.activeAlerts?.length > 0 && (
-          <div className="analytics-card full-width">
-            <h3>Active Alerts</h3>
-            <div className="alerts-list">
-              {sensorData.activeAlerts.map((alert, index) => (
-                <div key={index} className={`alert-item ${alert.severity?.toLowerCase()}`}>
-                  <div className="alert-icon">
-                    {alert.severity === 'CRITICAL' && '🚨'}
-                    {alert.severity === 'WARNING' && '⚠️'}
-                    {alert.severity === 'INFO' && 'ℹ️'}
-                  </div>
-                  <div className="alert-info">
-                    <span className="alert-message">{alert.message}</span>
-                    <span className="alert-device">{alert.deviceName}</span>
-                  </div>
-                  <div className="alert-time">{alert.triggeredAt}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -576,54 +446,67 @@ const Analytics = () => {
   return (
     <div className="analytics-container">
       <div className="analytics-header">
-        <h1>Analytics Dashboard</h1>
-        <p>Monitor your farm performance, sales, and IoT sensors</p>
+        <h1><FiBarChart2 size={28} /> Farm Insights</h1>
+        <p>Agriculture-focused analytics and intelligence for your farming operations</p>
       </div>
 
       <div className="analytics-tabs">
         <button 
+          className={`tab ${activeTab === 'insights' ? 'active' : ''}`}
+          onClick={() => setActiveTab('insights')}
+        >
+          <FiTarget size={16} /> Overview
+        </button>
+        <button 
+          className={`tab ${activeTab === 'demandForecast' ? 'active' : ''}`}
+          onClick={() => setActiveTab('demandForecast')}
+        >
+          <FiTrendingUp size={16} /> Demand Forecast
+        </button>
+        <button 
+          className={`tab ${activeTab === 'harvestPlanning' ? 'active' : ''}`}
+          onClick={() => setActiveTab('harvestPlanning')}
+        >
+          <FiCalendar size={16} /> Harvest Planning
+        </button>
+        <button 
           className={`tab ${activeTab === 'farm' ? 'active' : ''}`}
           onClick={() => setActiveTab('farm')}
         >
-          🏠 Farm Analytics
+          <FiHome size={16} /> Farm Analytics
         </button>
         <button 
           className={`tab ${activeTab === 'sales' ? 'active' : ''}`}
           onClick={() => setActiveTab('sales')}
         >
-          💰 Sales Reports
-        </button>
-        <button 
-          className={`tab ${activeTab === 'sensors' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sensors')}
-        >
-          📡 IoT Sensors
+          <FiDollarSign size={16} /> Sales Reports
         </button>
       </div>
 
-      {/* Export Buttons */}
-      <div className="export-section">
-        <span className="export-label">📥 Export Data:</span>
-        {activeTab === 'farm' && (
-          <>
-            <button 
-              className="export-btn" 
-              onClick={() => handleExport('farms')}
-              disabled={exporting}
-            >
-              Farms CSV
-            </button>
-            <button 
-              className="export-btn" 
-              onClick={() => handleExport('fields')}
-              disabled={exporting}
-            >
-              Fields CSV
-            </button>
-            <button 
-              className="export-btn" 
-              onClick={() => handleExport('crops')}
-              disabled={exporting}
+      {/* Export Buttons - only for farm and sales tabs */}
+      {(activeTab === 'farm' || activeTab === 'sales') && (
+        <div className="export-section">
+          <span className="export-label"><FiDownload size={16} /> Export Data:</span>
+          {activeTab === 'farm' && (
+            <>
+              <button 
+                className="export-btn" 
+                onClick={() => handleExport('farms')}
+                disabled={exporting}
+              >
+                Farms CSV
+              </button>
+              <button 
+                className="export-btn" 
+                onClick={() => handleExport('fields')}
+                disabled={exporting}
+              >
+                Fields CSV
+              </button>
+              <button 
+                className="export-btn" 
+                onClick={() => handleExport('crops')}
+                disabled={exporting}
             >
               Crops CSV
             </button>
@@ -655,17 +538,28 @@ const Analytics = () => {
           </>
         )}
         {exporting && <span className="export-loading">Exporting...</span>}
-      </div>
+        </div>
+      )}
 
       {error && <div className="error-message">{error}</div>}
 
-      {loading ? (
+      {loading && (activeTab === 'farm' || activeTab === 'sales') ? (
         <div className="loading">Loading analytics data...</div>
       ) : (
         <div className="analytics-content">
+          {activeTab === 'insights' && renderFarmInsights()}
+          {activeTab === 'demandForecast' && (
+            <Suspense fallback={<SectionLoader />}>
+              <DemandForecast />
+            </Suspense>
+          )}
+          {activeTab === 'harvestPlanning' && (
+            <Suspense fallback={<SectionLoader />}>
+              <HarvestPlanning />
+            </Suspense>
+          )}
           {activeTab === 'farm' && renderFarmAnalytics()}
           {activeTab === 'sales' && renderSalesAnalytics()}
-          {activeTab === 'sensors' && renderSensorAnalytics()}
         </div>
       )}
     </div>

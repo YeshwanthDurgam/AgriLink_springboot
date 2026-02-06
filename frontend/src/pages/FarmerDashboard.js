@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiPackage, FiShoppingBag, FiTrendingUp, FiDollarSign, FiUsers, FiBarChart2,
   FiPlus, FiMessageSquare, FiStar, FiAlertCircle, FiChevronRight, FiMap,
-  FiCpu, FiSettings, FiEye, FiEdit2, FiClock, FiCheckCircle, FiXCircle, FiUser
+  FiSettings, FiEye, FiEdit2, FiClock, FiCheckCircle, FiXCircle, FiUser, FiSun
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { marketplaceApi, orderApi, farmApi, userApi } from '../services/api';
@@ -31,23 +31,22 @@ const FarmerDashboard = ({ farmerProfile: propProfile, verificationStatus: propS
 
   useEffect(() => {
     fetchDashboardData();
-    if (!propStatus) {
-      fetchProfileStatus();
-    } else {
-      setProfileStatus(propStatus);
-      setProfileComplete(propProfile?.profileComplete || false);
-    }
-  }, [propStatus, propProfile]);
+    // CRITICAL: ALWAYS fetch fresh profile status from backend
+    // Never rely solely on props which may be stale
+    fetchProfileStatus();
+  }, []);
 
   const fetchProfileStatus = async () => {
     try {
+      console.log('[FarmerDashboard] Fetching fresh profile status from backend...');
       const res = await userApi.get('/profiles/farmer');
       const profile = res.data?.data || res.data;
+      console.log('[FarmerDashboard] Profile status:', profile?.status, 'Complete:', profile?.profileComplete);
       setProfileStatus(profile?.status || 'PENDING');
       setProfileComplete(profile?.profileComplete || false);
     } catch (error) {
       // Profile might not exist yet
-      console.log('Profile not found or error fetching:', error);
+      console.log('[FarmerDashboard] Profile not found or error fetching:', error);
       setProfileStatus('PENDING');
       setProfileComplete(false);
     }
@@ -196,7 +195,7 @@ const FarmerDashboard = ({ farmerProfile: propProfile, verificationStatus: propS
     { icon: FiMessageSquare, label: 'Chats', path: '/messages' },
     { icon: FiShoppingBag, label: 'My Products', path: '/farmer/products', count: stats.totalProducts },
     { icon: FiPackage, label: 'My Sales', path: '/farmer/orders', badge: stats.pendingOrders > 0 },
-    { icon: FiDollarSign, label: 'Income', path: '/analytics' },
+    { icon: FiSun, label: 'Farm Insights', path: '/analytics' },
     { icon: FiUsers, label: 'Followers', path: '/farmer/followers', count: stats.followers },
     { icon: FiSettings, label: 'Settings', path: '/settings' }
   ];
@@ -449,13 +448,13 @@ const FarmerDashboard = ({ farmerProfile: propProfile, verificationStatus: propS
               <FiMap className="action-icon" />
               <span>Add Farm</span>
             </Link>
-            <Link to="/devices/add" className="action-card">
-              <FiCpu className="action-icon" />
-              <span>Add IoT Device</span>
-            </Link>
             <Link to="/analytics" className="action-card">
-              <FiBarChart2 className="action-icon" />
-              <span>View Analytics</span>
+              <FiSun className="action-icon" />
+              <span>Farm Insights</span>
+            </Link>
+            <Link to="/analytics" className="action-card" state={{ tab: 'demandForecast' }}>
+              <FiTrendingUp className="action-icon" />
+              <span>Demand Forecast</span>
             </Link>
           </section>
         </main>
