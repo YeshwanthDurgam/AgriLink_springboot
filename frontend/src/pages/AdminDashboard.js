@@ -4,8 +4,9 @@ import {
   FaUsers, FaTractor, FaShoppingCart, FaChartLine, FaExclamationTriangle,
   FaCog, FaBan, FaCheckCircle, FaEye, FaTrash, FaUserShield, FaBell,
   FaComments, FaFileAlt, FaDollarSign, FaClipboardList, FaArrowUp, FaArrowDown,
-  FaSearch, FaFilter, FaCalendarAlt, FaUserTie
+  FaSearch, FaFilter, FaCalendarAlt, FaUserTie, FaIdCard
 } from 'react-icons/fa';
+import { FiFileText, FiExternalLink, FiAlertTriangle } from 'react-icons/fi';
 import { userApi, orderApi, marketplaceApi } from '../services/api';
 import { toast } from 'react-toastify';
 import './AdminDashboard.css';
@@ -86,7 +87,11 @@ const AdminDashboard = () => {
         owner: f.name || 'Unknown',
         location: f.city ? `${f.city}, ${f.state}` : 'Unknown',
         applied: f.createdAt,
-        docs: !!f.certificates
+        docs: !!f.certificates,
+        verificationDocument: f.verificationDocument || null,
+        documentType: f.documentType || null,
+        documentUploadedAt: f.documentUploadedAt || null,
+        hasDocument: !!f.verificationDocument
       })));
       
       // Format sellers as users for display
@@ -496,14 +501,53 @@ const AdminDashboard = () => {
                         <span className="farm-name">{farmer.name}</span>
                         <span className="farm-owner">{farmer.owner} • {farmer.location}</span>
                         <span className="farm-date">Applied: {farmer.applied ? new Date(farmer.applied).toLocaleDateString() : 'N/A'}</span>
+                        
+                        {/* Verification Document Section */}
+                        <div className="document-verification-section">
+                          <span className="doc-label"><FaIdCard /> Verification Document:</span>
+                          {farmer.hasDocument ? (
+                            <div className="doc-preview-inline">
+                              <span className="doc-type-badge">{farmer.documentType?.replace('_', ' ') || 'Document'}</span>
+                              {farmer.verificationDocument?.includes('application/pdf') || 
+                               farmer.verificationDocument?.endsWith('.pdf') ? (
+                                <a 
+                                  href={farmer.verificationDocument} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="doc-link"
+                                >
+                                  <FiFileText /> View PDF
+                                </a>
+                              ) : (
+                                <a 
+                                  href={farmer.verificationDocument} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="doc-link"
+                                >
+                                  <FiExternalLink /> View Image
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="no-doc-warning">
+                              <FiAlertTriangle /> Not uploaded
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="approval-status">
-                        <span className={`docs-status ${farmer.docs ? 'complete' : 'incomplete'}`}>
-                          {farmer.docs ? '✓ Docs Complete' : '⚠ Missing Docs'}
+                        <span className={`docs-status ${farmer.hasDocument ? 'complete' : 'incomplete'}`}>
+                          {farmer.hasDocument ? '✓ Document Uploaded' : '⚠ No Document'}
                         </span>
                       </div>
                       <div className="approval-actions">
-                        <button className="approve-btn" onClick={() => handleFarmerApproval(farmer.id, true)}>
+                        <button 
+                          className="approve-btn" 
+                          onClick={() => handleFarmerApproval(farmer.id, true)}
+                          disabled={!farmer.hasDocument}
+                          title={!farmer.hasDocument ? 'Cannot approve without verification document' : 'Approve farmer'}
+                        >
                           <FaCheckCircle /> Approve
                         </button>
                         <button className="reject-btn" onClick={() => handleFarmerApproval(farmer.id, false)}>

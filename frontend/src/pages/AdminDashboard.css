@@ -904,3 +904,77 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Document Verification Section */
+.document-verification-section {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.doc-preview-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-type-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 4px 10px;
+  background: #dcfce7;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.doc-link:hover {
+  background: #bbf7d0;
+}
+
+.no-doc-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  background: #fee2e2;
+  border-radius: 6px;
+}
+
+.approve-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #9ca3af;
+}
+
+.approve-btn:disabled:hover {
+  background: #9ca3af;
+}

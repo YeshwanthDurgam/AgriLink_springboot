@@ -53,6 +53,7 @@ const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
 const Farms = lazy(() => import('./pages/Farms'));
 const FarmDetail = lazy(() => import('./pages/FarmDetail'));
 const CreateFarm = lazy(() => import('./pages/CreateFarm'));
+const EditFarm = lazy(() => import('./pages/EditFarm'));
 
 // Farmer management pages
 const CreateListing = lazy(() => import('./pages/CreateListing'));
@@ -181,6 +182,11 @@ const AppContent = () => {
               <Route path="/farms/:id" element={
                 <FarmerRoute requireVerification={false}>
                   <FarmDetail />
+                </FarmerRoute>
+              } />
+              <Route path="/farms/:id/edit" element={
+                <FarmerRoute requireVerification={false}>
+                  <EditFarm />
                 </FarmerRoute>
               } />
               <Route path="/orders" element={

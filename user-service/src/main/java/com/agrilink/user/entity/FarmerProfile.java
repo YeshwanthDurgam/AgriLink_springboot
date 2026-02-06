@@ -86,6 +86,15 @@ public class FarmerProfile {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Column(name = "verification_document", columnDefinition = "TEXT")
+    private String verificationDocument;
+
+    @Column(name = "document_uploaded_at")
+    private LocalDateTime documentUploadedAt;
+
+    @Column(name = "document_type", length = 50)
+    private String documentType;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -109,6 +118,11 @@ public class FarmerProfile {
                city != null && !city.isBlank() &&
                state != null && !state.isBlank() &&
                pincode != null && !pincode.isBlank() &&
-               farmName != null && !farmName.isBlank();
+               farmName != null && !farmName.isBlank() &&
+               verificationDocument != null && !verificationDocument.isBlank();
+    }
+
+    public boolean hasDocument() {
+        return verificationDocument != null && !verificationDocument.isBlank();
     }
 }

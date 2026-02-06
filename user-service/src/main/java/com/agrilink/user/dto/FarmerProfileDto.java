@@ -31,6 +31,10 @@ public class FarmerProfileDto {
     private String farmPhoto;
     private String farmBio;
     private String certificates;
+    private String verificationDocument;
+    private LocalDateTime documentUploadedAt;
+    private String documentType;
+    private boolean hasDocument;
     private ProfileStatus status;
     private UUID approvedBy;
     private LocalDateTime approvedAt;

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FaUsers, FaTractor, FaCheckCircle, FaTimesCircle, FaEye, FaCog,
-  FaBell, FaComments, FaSearch, FaClipboardList, FaUserShield
+  FaBell, FaComments, FaSearch, FaClipboardList, FaUserShield, FaIdCard
 } from 'react-icons/fa';
-import { FiUser, FiSettings, FiMessageSquare } from 'react-icons/fi';
+import { FiUser, FiSettings, FiMessageSquare, FiFile, FiFileText, FiExternalLink, FiAlertTriangle } from 'react-icons/fi';
 import { userApi, marketplaceApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './ManagerDashboard.css';
@@ -237,11 +237,66 @@ const ManagerDashboard = () => {
                         <p>@{farmer.username || 'N/A'}</p>
                         <p>{farmer.city}, {farmer.state}</p>
                         <p className="farm-name">{farmer.farmName}</p>
+                        
+                        {/* Verification Document Section */}
+                        <div className="document-section">
+                          <h5><FaIdCard /> Verification Document</h5>
+                          {farmer.verificationDocument ? (
+                            <div className="document-preview-card">
+                              <span className="document-type-badge">
+                                {farmer.documentType?.replace('_', ' ') || 'Document'}
+                              </span>
+                              {farmer.verificationDocument.includes('application/pdf') || 
+                               farmer.verificationDocument.endsWith('.pdf') ? (
+                                <div className="pdf-document">
+                                  <FiFileText className="pdf-icon" />
+                                  <a 
+                                    href={farmer.verificationDocument} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="view-document-btn"
+                                  >
+                                    <FiExternalLink /> View PDF
+                                  </a>
+                                </div>
+                              ) : (
+                                <div className="image-document">
+                                  <img 
+                                    src={farmer.verificationDocument} 
+                                    alt="Verification Document" 
+                                    className="document-thumbnail"
+                                    onClick={() => window.open(farmer.verificationDocument, '_blank')}
+                                  />
+                                  <a 
+                                    href={farmer.verificationDocument} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="view-document-btn"
+                                  >
+                                    <FiExternalLink /> View Full Size
+                                  </a>
+                                </div>
+                              )}
+                              {farmer.documentUploadedAt && (
+                                <span className="upload-date">
+                                  Uploaded: {new Date(farmer.documentUploadedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="no-document-warning">
+                              <FiAlertTriangle className="warning-icon" />
+                              <span>No document uploaded</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="farmer-actions">
                         <button 
                           className="btn-approve"
                           onClick={() => handleApproval(farmer.id, true)}
+                          disabled={!farmer.verificationDocument}
+                          title={!farmer.verificationDocument ? 'Cannot approve without verification document' : 'Approve farmer'}
                         >
                           <FaCheckCircle /> Approve
                         </button>

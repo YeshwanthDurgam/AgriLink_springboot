@@ -15,10 +15,16 @@ const notificationService = {
     return response.data;
   },
 
-  // Get unread count
+  // Get unread count - safely handles notification service being down
   getUnreadCount: async () => {
-    const response = await notificationApi.get('/notifications/count');
-    return response.data;
+    try {
+      const response = await notificationApi.get('/notifications/count');
+      return response.data;
+    } catch (error) {
+      // Silently fail if notification service is down
+      console.debug('[notificationService] Notification service unavailable, returning 0 count');
+      return { count: 0 };
+    }
   },
 
   // Mark notification as read
