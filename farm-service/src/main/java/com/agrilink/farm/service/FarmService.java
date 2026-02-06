@@ -198,6 +198,17 @@ public class FarmService {
     }
 
     private FarmDto mapToDto(Farm farm) {
+        // Avoid lazy loading fields collection - use 0 as default
+        // If field count is needed, use a separate repository query
+        int fieldCount = 0;
+        try {
+            if (farm.getFields() != null) {
+                fieldCount = farm.getFields().size();
+            }
+        } catch (Exception e) {
+            log.debug("Could not load fields for farm {}: {}", farm.getId(), e.getMessage());
+        }
+        
         return FarmDto.builder()
                 .id(farm.getId())
                 .farmerId(farm.getFarmerId())
@@ -211,7 +222,7 @@ public class FarmService {
                 .cropTypes(farm.getCropTypes())
                 .farmImageUrl(farm.getFarmImageUrl())
                 .active(farm.isActive())
-                .fieldCount(farm.getFields() != null ? farm.getFields().size() : 0)
+                .fieldCount(fieldCount)
                 .createdAt(farm.getCreatedAt())
                 .updatedAt(farm.getUpdatedAt())
                 .build();

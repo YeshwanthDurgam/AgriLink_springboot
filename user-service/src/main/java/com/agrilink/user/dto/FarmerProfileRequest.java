@@ -56,4 +56,11 @@ public class FarmerProfileRequest {
     private String farmBio;
     
     private String certificates;
+
+    // Verification document - base64 encoded PDF or image
+    // Accepted: Aadhaar, Government ID, Land ownership proof
+    private String verificationDocument;
+
+    // Type of document: AADHAAR, GOV_ID, LAND_PROOF, OTHER
+    private String documentType;
 }

@@ -34,8 +34,25 @@ const FarmService = {
    * @param {Object} farmData
    */
   updateFarm: async (farmId, farmData) => {
-    const response = await farmApi.put(`/farms/${farmId}`, farmData);
-    return response.data;
+    try {
+      console.log(`FarmService.updateFarm - Making PUT request to /farms/${farmId}`);
+      console.log('FarmService.updateFarm - Farm data:', { 
+        ...farmData, 
+        farmImageUrl: farmData.farmImageUrl ? '[IMAGE_PRESENT]' : '[NO_IMAGE]' 
+      });
+      const response = await farmApi.put(`/farms/${farmId}`, farmData);
+      console.log('FarmService.updateFarm - Success:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('FarmService.updateFarm - Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        isNetworkError: !error.response
+      });
+      throw error;
+    }
   },
 
   /**

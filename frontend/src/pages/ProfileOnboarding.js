@@ -7,9 +7,9 @@ import { toast } from 'react-toastify';
 import { 
   FiUser, FiPhone, FiMapPin, FiCamera, FiSave, FiArrowRight, FiArrowLeft,
   FiCheckCircle, FiAlertCircle, FiEdit3, FiUpload, FiX, FiShoppingBag,
-  FiTruck, FiAward, FiHeart, FiZap
+  FiTruck, FiAward, FiHeart, FiZap, FiFile, FiFileText, FiTrash2, FiAlertTriangle
 } from 'react-icons/fi';
-import { FaTractor, FaSeedling } from 'react-icons/fa';
+import { FaTractor, FaSeedling, FaIdCard } from 'react-icons/fa';
 import './ProfileOnboarding.css';
 
 const ProfileOnboarding = () => {
@@ -54,14 +54,23 @@ const ProfileOnboarding = () => {
     cropTypes: '',
     farmPhoto: '',
     farmBio: '',
-    certificates: ''
+    certificates: '',
+    // Verification document (required for farmers)
+    verificationDocument: '',
+    documentType: 'AADHAAR'
   });
+
+  // Document upload states
+  const [documentPreview, setDocumentPreview] = useState(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const documentInputRef = useRef(null);
 
   // Define required fields based on role
   const getRequiredFields = useCallback(() => {
     const baseFields = ['name', 'phone', 'address', 'city', 'state', 'pincode'];
     if (userRole === 'FARMER') {
-      return [...baseFields, 'farmName', 'farmPhoto'];
+      // Verification document is MANDATORY for farmers
+      return [...baseFields, 'farmName', 'farmPhoto', 'verificationDocument'];
     }
     return baseFields;
   }, [userRole]);
@@ -111,7 +120,9 @@ const ProfileOnboarding = () => {
           cropTypes: profile.cropTypes || '',
           farmPhoto: profile.farmPhoto || '',
           farmBio: profile.farmBio || '',
-          certificates: profile.certificates || ''
+          certificates: profile.certificates || '',
+          verificationDocument: profile.verificationDocument || '',
+          documentType: profile.documentType || 'AADHAAR'
         };
         setFormData(newFormData);
         
@@ -123,6 +134,11 @@ const ProfileOnboarding = () => {
         // Set farm photo preview if exists
         if (profile.farmPhoto) {
           setFarmPhotoPreview(profile.farmPhoto);
+        }
+
+        // Set document preview if exists
+        if (profile.verificationDocument) {
+          setDocumentPreview(profile.verificationDocument);
         }
         
         // Check if profile is already complete
@@ -235,6 +251,54 @@ const ProfileOnboarding = () => {
     }
   };
 
+  // Handle verification document upload
+  const handleDocumentUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type - accept images and PDF
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload an image (JPG, PNG) or PDF file');
+      return;
+    }
+
+    // Validate file size (max 10MB for documents)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Document size should be less than 10MB');
+      return;
+    }
+
+    setUploadingDocument(true);
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setDocumentPreview(base64String);
+      setFormData(prev => ({ ...prev, verificationDocument: base64String }));
+      setUploadingDocument(false);
+      
+      // Show warning if profile was already verified
+      if (profileStatus === 'APPROVED') {
+        toast.warning('Re-uploading document will reset your verification status to Pending');
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read document file');
+      setUploadingDocument(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeDocument = () => {
+    setDocumentPreview(null);
+    setFormData(prev => ({ ...prev, verificationDocument: '' }));
+    if (documentInputRef.current) {
+      documentInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -243,7 +307,20 @@ const ProfileOnboarding = () => {
     const missing = required.filter(field => !formData[field]?.toString().trim());
     
     if (missing.length > 0) {
-      toast.error(`Please fill in all required fields: ${missing.join(', ')}`);
+      // Make error message more user-friendly
+      const fieldLabels = {
+        verificationDocument: 'Verification Document',
+        farmName: 'Farm Name',
+        farmPhoto: 'Farm Photo'
+      };
+      const missingLabels = missing.map(f => fieldLabels[f] || f);
+      toast.error(`Please fill in all required fields: ${missingLabels.join(', ')}`);
+      return;
+    }
+
+    // Extra validation for farmers - document is mandatory
+    if (userRole === 'FARMER' && !formData.verificationDocument) {
+      toast.error('Please upload a verification document (Aadhaar/Government ID/Land proof)');
       return;
     }
 
@@ -863,6 +940,94 @@ const ProfileOnboarding = () => {
                         placeholder="Organic, FSSAI, etc."
                       />
                     </div>
+                  </div>
+
+                  {/* Verification Document Upload Section */}
+                  <div className="document-upload-section">
+                    <h4 className="section-subtitle">
+                      <FaIdCard className="field-icon" /> Verification Document <span className="required">*</span>
+                    </h4>
+                    <p className="section-info">
+                      Upload your Aadhaar Card, Government ID, or Land Ownership Proof for verification.
+                    </p>
+                    
+                    {/* Document Type Selector */}
+                    <div className="field">
+                      <label htmlFor="documentType">Document Type</label>
+                      <select
+                        id="documentType"
+                        name="documentType"
+                        value={formData.documentType}
+                        onChange={handleChange}
+                        className="document-type-select"
+                      >
+                        <option value="">Select document type...</option>
+                        <option value="AADHAAR">Aadhaar Card</option>
+                        <option value="GOV_ID">Government ID (PAN, Voter ID, etc.)</option>
+                        <option value="LAND_PROOF">Land Ownership Proof</option>
+                        <option value="OTHER">Other Document</option>
+                      </select>
+                    </div>
+
+                    {/* Document Preview */}
+                    <div className="document-preview-container">
+                      {documentPreview ? (
+                        <div className="document-preview">
+                          {documentPreview.endsWith('.pdf') || documentPreview.includes('application/pdf') ? (
+                            <div className="pdf-preview">
+                              <FiFileText className="pdf-icon" />
+                              <span>PDF Document Uploaded</span>
+                              <a href={documentPreview} target="_blank" rel="noopener noreferrer" className="view-link">
+                                View Document
+                              </a>
+                            </div>
+                          ) : (
+                            <img src={documentPreview} alt="Verification Document" className="document-image" />
+                          )}
+                          <button type="button" className="remove-document-btn" onClick={removeDocument}>
+                            <FiTrash2 /> Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="document-placeholder">
+                          <FiFile className="placeholder-icon" />
+                          <span>No document uploaded</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload Button */}
+                    <div className="document-actions">
+                      <input
+                        ref={documentInputRef}
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleDocumentUpload}
+                        className="hidden-input"
+                        id="document-input"
+                        disabled={uploadingDocument}
+                      />
+                      <label htmlFor="document-input" className={`upload-btn document-upload-btn ${uploadingDocument ? 'uploading' : ''}`}>
+                        {uploadingDocument ? (
+                          <>
+                            <span className="loading-spinner-small"></span> Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <FiUpload /> {documentPreview ? 'Change Document' : 'Upload Document'}
+                          </>
+                        )}
+                      </label>
+                      <span className="document-hint">PDF or Image (JPG, PNG) up to 10MB</span>
+                    </div>
+
+                    {/* Re-verification Warning */}
+                    {documentPreview && formData.status === 'APPROVED' && (
+                      <div className="reupload-warning">
+                        <FiAlertTriangle className="warning-icon" />
+                        <span>Re-uploading this document will require admin re-verification. Your verified status will change to PENDING.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
