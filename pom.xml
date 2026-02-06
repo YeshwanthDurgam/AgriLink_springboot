@@ -25,7 +25,6 @@
         <module>farm-service</module>
         <module>marketplace-service</module>
         <module>order-service</module>
-        <module>iot-service</module>
         <module>notification-service</module>
     </modules>
 

@@ -22,15 +22,17 @@ const AuthService = {
       localStorage.setItem('token', response.data.data.token);
       // Store complete user data from login response
       const loginData = response.data.data;
+      // CRITICAL: Do NOT store profileComplete or profileStatus in localStorage
+      // These must always be fetched fresh from the backend to ensure consistency
       const userData = {
         id: loginData.userId,
         email: loginData.email,
         name: loginData.name || loginData.email?.split('@')[0] || 'User',
         roles: Array.isArray(loginData.roles) 
           ? loginData.roles 
-          : (loginData.roles ? Array.from(loginData.roles) : []),
-        profileComplete: loginData.profileComplete,
-        profileStatus: loginData.profileStatus
+          : (loginData.roles ? Array.from(loginData.roles) : [])
+        // profileComplete and profileStatus are intentionally NOT cached
+        // FarmerRoute fetches these fresh from backend on every access
       };
       localStorage.setItem('user', JSON.stringify(userData));
       console.log('[AuthService] Login successful, user data stored:', userData);

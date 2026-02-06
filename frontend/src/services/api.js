@@ -7,7 +7,6 @@ const API_URLS = {
   farm: process.env.REACT_APP_FARM_API_URL || 'http://localhost:8083/api/v1',
   marketplace: process.env.REACT_APP_MARKETPLACE_API_URL || 'http://localhost:8084/api/v1',
   order: process.env.REACT_APP_ORDER_API_URL || 'http://localhost:8085/api/v1',
-  iot: process.env.REACT_APP_IOT_API_URL || 'http://localhost:8086/api/v1',
   notification: process.env.REACT_APP_NOTIFICATION_API_URL || 'http://localhost:8087/api/v1',
 };
 
@@ -73,7 +72,6 @@ export const userApi = createApiInstance(API_URLS.user);
 export const farmApi = createApiInstance(API_URLS.farm);
 export const marketplaceApi = createApiInstance(API_URLS.marketplace);
 export const orderApi = createApiInstance(API_URLS.order);
-export const iotApi = createApiInstance(API_URLS.iot);
 export const notificationApi = createApiInstance(API_URLS.notification);
 
 export default {
@@ -82,6 +80,5 @@ export default {
   farm: farmApi,
   marketplace: marketplaceApi,
   order: orderApi,
-  iot: iotApi,
   notification: notificationApi,
 };

@@ -701,3 +701,179 @@
     flex-direction: column;
   }
 }
+
+/* Farm Insights Section */
+.farm-insights {
+  padding: 24px 0;
+}
+
+.insights-intro {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.insights-intro h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.insights-intro p {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.insights-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.insight-card {
+  background: linear-gradient(145deg, #ffffff, #f9fafb);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.insight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.insight-card.demand-forecast-card:hover {
+  border-color: #16a34a;
+}
+
+.insight-card.harvest-planning-card:hover {
+  border-color: #f59e0b;
+}
+
+.insight-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.insight-card h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.insight-card p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.explore-link {
+  color: #16a34a;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.insight-card.harvest-planning-card .explore-link {
+  color: #f59e0b;
+}
+
+.quick-stats {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.quick-stats h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.quick-stat {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-emoji {
+  font-size: 1.5rem;
+}
+
+.quick-stat .stat-label {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.stat-btn {
+  padding: 6px 12px;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.stat-btn:hover {
+  background: #15803d;
+}
+
+/* Section Loading */
+.section-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #16a34a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Farm Insights */
+@media (max-width: 768px) {
+  .insights-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    flex-direction: column;
+  }
+
+  .quick-stat {
+    min-width: 100%;
+  }
+}

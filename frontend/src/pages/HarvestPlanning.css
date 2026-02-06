@@ -1,0 +1,615 @@
+.harvest-planning-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.harvest-planning-section .section-header {
+  margin-bottom: 20px;
+}
+
+.harvest-planning-section .section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.harvest-planning-section .section-header h2 svg {
+  color: #f59e0b;
+}
+
+/* Controls */
+.harvest-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.harvest-controls .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.harvest-controls .control-group label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.harvest-select,
+.harvest-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.harvest-select:focus,
+.harvest-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.harvest-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: flex-end;
+  min-width: 140px;
+}
+
+.harvest-btn:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.harvest-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.harvest-planning-section .spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Error */
+.harvest-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+/* Results */
+.guidance-results {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 20px;
+}
+
+.guidance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.guidance-crop-info h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.guidance-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.harvest-planning-section .simulated-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Weather Section */
+.weather-section {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.weather-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 16px 0;
+}
+
+.weather-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.weather-card.current {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 180px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.weather-icon {
+  width: 24px;
+  height: 24px;
+  color: #f59e0b;
+}
+
+.temp-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.weather-condition {
+  font-size: 0.875rem;
+  color: #374151;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.weather-details {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.weather-details span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.forecast-strip {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.forecast-day {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  min-width: 80px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.day-name {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.day-temp {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.day-rain {
+  display: block;
+  font-size: 0.7rem;
+  color: #3b82f6;
+  margin-top: 4px;
+}
+
+.weather-advisory {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.weather-advisory svg {
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Readiness Section */
+.readiness-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.readiness-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.readiness-meter {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.readiness-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.readiness-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.readiness-days {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.readiness-indicators strong {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+
+.readiness-indicators ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.readiness-indicators li {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+/* Tools Section */
+.tools-section {
+  margin-bottom: 24px;
+}
+
+.tools-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.tool-card {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.tool-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.tool-priority {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.tool-category {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.tool-purpose {
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+/* Fertilizer Section */
+.fertilizer-section {
+  margin-bottom: 24px;
+}
+
+.fertilizer-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.fertilizer-table {
+  background: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fertilizer-header,
+.fertilizer-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr 1fr 1.5fr;
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+}
+
+.fertilizer-header {
+  background: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.fertilizer-row {
+  font-size: 0.85rem;
+  color: #1f2937;
+  border-top: 1px solid #e5e7eb;
+}
+
+.fert-name {
+  font-weight: 500;
+}
+
+.fert-type {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* Irrigation Section */
+.irrigation-section {
+  background: #f0fdf4;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.irrigation-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #166534;
+  margin: 0 0 16px 0;
+}
+
+.irrigation-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.irrigation-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.irr-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.irr-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.irrigation-advice {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.irrigation-tips strong {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+}
+
+.irrigation-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.irrigation-tips li {
+  font-size: 0.85rem;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+/* Tips Section */
+.tips-section {
+  background: #fffbeb;
+  border-radius: 12px;
+  padding: 20px;
+  border-left: 4px solid #f59e0b;
+}
+
+.tips-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #b45309;
+  margin: 0 0 12px 0;
+}
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tips-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.tips-list li svg {
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Placeholder */
+.guidance-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.guidance-placeholder .placeholder-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .harvest-controls {
+    flex-direction: column;
+  }
+
+  .harvest-controls .control-group {
+    min-width: 100%;
+  }
+
+  .harvest-btn {
+    width: 100%;
+  }
+
+  .guidance-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .weather-cards {
+    flex-direction: column;
+  }
+
+  .forecast-strip {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .fertilizer-header,
+  .fertilizer-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .fertilizer-row {
+    padding: 16px;
+  }
+
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -14,7 +14,6 @@ public class CreateSchemas {
             "farm_schema",
             "marketplace_schema",
             "order_schema",
-            "iot_schema",
             "notification_schema"
         };
         

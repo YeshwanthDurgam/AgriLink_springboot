@@ -38,9 +38,6 @@ CREATE SCHEMA IF NOT EXISTS marketplace;
 -- Order Schema
 CREATE SCHEMA IF NOT EXISTS orders;
 
--- IoT Schema
-CREATE SCHEMA IF NOT EXISTS iot;
-
 -- Notification Schema
 CREATE SCHEMA IF NOT EXISTS notification;
 
@@ -54,7 +51,6 @@ GRANT ALL ON SCHEMA users TO PUBLIC;
 GRANT ALL ON SCHEMA farm TO PUBLIC;
 GRANT ALL ON SCHEMA marketplace TO PUBLIC;
 GRANT ALL ON SCHEMA orders TO PUBLIC;
-GRANT ALL ON SCHEMA iot TO PUBLIC;
 GRANT ALL ON SCHEMA notification TO PUBLIC;
 
 -- =====================================================
@@ -63,4 +59,4 @@ GRANT ALL ON SCHEMA notification TO PUBLIC;
 -- Run this to verify schemas were created
 SELECT schema_name 
 FROM information_schema.schemata 
-WHERE schema_name IN ('auth', 'users', 'farm', 'marketplace', 'orders', 'iot', 'notification');
+WHERE schema_name IN ('auth', 'users', 'farm', 'marketplace', 'orders', 'notification');

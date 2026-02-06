@@ -124,26 +124,6 @@ services:
     networks:
       - agrilink-network
 
-  # IoT Service
-  iot-service:
-    build:
-      context: ./iot-service
-      dockerfile: Dockerfile
-    container_name: agrilink-iot-service
-    environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_iot
-      SPRING_DATASOURCE_USERNAME: agrilink
-      SPRING_DATASOURCE_PASSWORD: agrilink123
-      JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
-    ports:
-      - "8086:8086"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - agrilink-network
-
   # Notification Service
   notification-service:
     build:

@@ -26,10 +26,6 @@ echo Starting order-service on port 8085...
 start "order-service" cmd /k "cd order-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon -DskipTests"
 timeout /t 10 /nobreak >nul
 
-echo Starting iot-service on port 8086...
-start "iot-service" cmd /k "cd iot-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon -DskipTests"
-timeout /t 10 /nobreak >nul
-
 echo Starting notification-service on port 8087...
 start "notification-service" cmd /k "cd notification-service && mvn spring-boot:run -Dspring-boot.run.profiles=neon -DskipTests"
 
@@ -43,6 +39,5 @@ echo   user-service:         8082
 echo   farm-service:         8083
 echo   marketplace-service:  8084
 echo   order-service:        8085
-echo   iot-service:          8086
 echo   notification-service: 8087
 echo ============================================

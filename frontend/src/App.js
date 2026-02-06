@@ -63,7 +63,6 @@ const FarmerFollowers = lazy(() => import('./pages/FarmerFollowers'));
 const FarmerOrders = lazy(() => import('./pages/FarmerOrders'));
 
 // Other pages
-const Devices = lazy(() => import('./pages/Devices'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -232,11 +231,6 @@ const AppContent = () => {
               <Route path="/checkout" element={
                 <PrivateRoute>
                   <Checkout />
-                </PrivateRoute>
-              } />
-              <Route path="/devices" element={
-                <PrivateRoute>
-                  <Devices />
                 </PrivateRoute>
               } />
               <Route path="/messages" element={
