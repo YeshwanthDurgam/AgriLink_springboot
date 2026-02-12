@@ -15,7 +15,7 @@ import { FiZap } from '@react-icons/all-files/fi/FiZap';
 import { FiMapPin } from '@react-icons/all-files/fi/FiMapPin';
 import { FiArrowRight } from '@react-icons/all-files/fi/FiArrowRight';
 import { useAuth } from '../context/AuthContext';
-import { marketplaceApi } from '../services/api';
+import { marketplaceApi, userApi } from '../services/api';
 import guestService from '../services/guestService';
 import { toast } from 'react-toastify';
 import SearchBar from '../components/SearchBar';
@@ -84,8 +84,11 @@ const RECENTLY_VIEWED_KEY = 'agrilink_recently_viewed';
 
 // ============= MAIN COMPONENT =============
 const Home = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  
+  // Check if user is a farmer
+  const isFarmer = user?.roles?.includes('FARMER') || user?.roles?.includes('ROLE_FARMER');
   
   // State management
   const [categories, setCategories] = useState([]);
@@ -159,7 +162,7 @@ const Home = () => {
         marketplaceApi.get('/categories').catch(() => null),
         marketplaceApi.get('/listings/top?limit=12').catch(() => null),
         marketplaceApi.get('/listings/recent?limit=12').catch(() => null),
-        marketplaceApi.get('/listings/sellers').catch(() => null)
+        userApi.get('/profiles/farmer/approved').catch(() => null)
       ]);
 
       // Process categories
@@ -186,9 +189,19 @@ const Home = () => {
         setRecentProducts(formatProducts(recentRes.data.data));
       }
 
-      // Process farmers
+      // Process farmers - map approved farmers to FarmerCard format
       if (farmersRes?.data?.data) {
-        setFarmers(farmersRes.data.data.slice(0, 8));
+        const approvedFarmers = farmersRes.data.data.slice(0, 4).map(farmer => ({
+          id: farmer.userId,
+          sellerId: farmer.userId,
+          sellerName: farmer.name || 'Farmer',
+          productCount: 0,
+          averageRating: 0,
+          location: farmer.farmName 
+            ? `${farmer.farmName}${farmer.city ? ', ' + farmer.city : ''}` 
+            : (farmer.city && farmer.state ? `${farmer.city}, ${farmer.state}` : farmer.city || farmer.state || '')
+        }));
+        setFarmers(approvedFarmers);
       }
 
     } catch (err) {
@@ -655,7 +668,7 @@ const Home = () => {
             </div>
             <div className="farmers-carousel">
               {farmers.map(farmer => (
-                <FarmerCard key={farmer.sellerId} farmer={farmer} />
+                <FarmerCard key={farmer.id || farmer.sellerId} farmer={farmer} />
               ))}
             </div>
           </div>
@@ -700,31 +713,62 @@ const Home = () => {
       )}
 
       {/* ============= BECOME A SELLER CTA ============= */}
-      <section className="seller-cta-section">
-        <div className="section-container">
-          <div className="seller-cta-content">
-            <div className="seller-cta-text">
-              <h2>Are You a Farmer?</h2>
-              <p>Join thousands of farmers selling directly to consumers. No middlemen, full control over your prices.</p>
-              <ul className="seller-benefits">
-                <li><FiCheckCircle /> Zero commission on sales</li>
-                <li><FiCheckCircle /> Direct customer relationships</li>
-                <li><FiCheckCircle /> IoT-powered farm management</li>
-                <li><FiCheckCircle /> 24/7 seller support</li>
-              </ul>
-              <Link to="/register?role=FARMER" className="seller-cta-btn">
-                Start Selling Today <FiArrowRight />
-              </Link>
-            </div>
-            <div className="seller-cta-image">
-              <img 
-                src="https://images.unsplash.com/photo-1595855759920-86582396756a?w=600" 
-                alt="Happy Farmer" 
-              />
+      {!isFarmer && (
+        <section className="seller-cta-section">
+          <div className="section-container">
+            <div className="seller-cta-content">
+              <div className="seller-cta-text">
+                <h2>Are You a Farmer?</h2>
+                <p>Join thousands of farmers selling directly to consumers. No middlemen, full control over your prices.</p>
+                <ul className="seller-benefits">
+                  <li><FiCheckCircle /> Zero commission on sales</li>
+                  <li><FiCheckCircle /> Direct customer relationships</li>
+                  <li><FiCheckCircle /> IoT-powered farm management</li>
+                  <li><FiCheckCircle /> 24/7 seller support</li>
+                </ul>
+                <Link to="/register?role=FARMER" className="seller-cta-btn">
+                  Start Selling Today <FiArrowRight />
+                </Link>
+              </div>
+              <div className="seller-cta-image">
+                <img 
+                  src="https://images.unsplash.com/photo-1595855759920-86582396756a?w=600" 
+                  alt="Happy Farmer" 
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Show Farmer Dashboard CTA for farmers */}
+      {isFarmer && (
+        <section className="seller-cta-section farmer-dashboard-cta">
+          <div className="section-container">
+            <div className="seller-cta-content">
+              <div className="seller-cta-text">
+                <h2>Manage Your Farm</h2>
+                <p>Access your dashboard to manage products, orders, and view farm analytics.</p>
+                <ul className="seller-benefits">
+                  <li><FiCheckCircle /> Manage your listings</li>
+                  <li><FiCheckCircle /> Track orders and sales</li>
+                  <li><FiCheckCircle /> IoT farm monitoring</li>
+                  <li><FiCheckCircle /> Customer messages</li>
+                </ul>
+                <Link to="/farmer/dashboard" className="seller-cta-btn">
+                  Go to Dashboard <FiArrowRight />
+                </Link>
+              </div>
+              <div className="seller-cta-image">
+                <img 
+                  src="https://images.unsplash.com/photo-1595855759920-86582396756a?w=600" 
+                  alt="Farm Management" 
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ============= APP DOWNLOAD BANNER ============= */}
       <section className="app-download-section">
@@ -951,16 +995,18 @@ const DealCard = ({ product, onAddToCart, onClick }) => {
 // Farmer Card Component
 const FarmerCard = ({ farmer }) => {
   const navigate = useNavigate();
+  const farmerId = farmer.id || farmer.sellerId;
+  const farmerName = farmer.sellerName || farmer.name || 'Farmer';
   
   return (
-    <div className="farmer-card-v2" onClick={() => navigate(`/farmers/${farmer.sellerId}`)}>
+    <div className="farmer-card-v2" onClick={() => navigate(`/farmers/${farmerId}`)}>
       <div className="farmer-avatar">
-        {farmer.sellerName?.charAt(0)?.toUpperCase() || 'F'}
+        {farmerName?.charAt(0)?.toUpperCase() || 'F'}
       </div>
-      <h4 className="farmer-name">{farmer.sellerName || 'Local Farmer'}</h4>
+      <h4 className="farmer-name">{farmerName}</h4>
       <div className="farmer-stats">
         <span><FiPackage /> {farmer.productCount || 0} Products</span>
-        {farmer.averageRating && farmer.averageRating > 0 && (
+        {farmer.averageRating > 0 && (
           <span><FiStar /> {farmer.averageRating.toFixed(1)}</span>
         )}
       </div>
