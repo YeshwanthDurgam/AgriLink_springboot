@@ -28,6 +28,9 @@ const Farmers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('rating');
   const [filterLocation, setFilterLocation] = useState('');
+  
+  // Check if user is a farmer
+  const isFarmer = user?.roles?.includes('FARMER') || user?.roles?.includes('ROLE_FARMER');
   const [filterCategory, setFilterCategory] = useState('');
   const [followedFarmers, setFollowedFarmers] = useState([]);
 
@@ -333,16 +336,31 @@ const Farmers = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="farmers-cta">
-        <div className="cta-content">
-          <h2>Are You a Farmer?</h2>
-          <p>Join AgriLink and start selling directly to consumers. Zero commission, full control over your products.</p>
-          <Link to="/register?role=FARMER" className="cta-button">
-            Register as a Farmer
-          </Link>
-        </div>
-      </section>
+      {/* CTA Section - Only show for non-farmers */}
+      {!isFarmer && (
+        <section className="farmers-cta">
+          <div className="cta-content">
+            <h2>Are You a Farmer?</h2>
+            <p>Join AgriLink and start selling directly to consumers. Zero commission, full control over your products.</p>
+            <Link to="/register?role=FARMER" className="cta-button">
+              Register as a Farmer
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Farmer Dashboard CTA - Only show for farmers */}
+      {isFarmer && (
+        <section className="farmers-cta">
+          <div className="cta-content">
+            <h2>Manage Your Farm</h2>
+            <p>Access your dashboard to manage products, track orders, and grow your business.</p>
+            <Link to="/farmer/dashboard" className="cta-button">
+              Go to Dashboard
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

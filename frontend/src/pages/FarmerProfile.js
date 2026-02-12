@@ -46,33 +46,73 @@ const FarmerProfile = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch farmer auth data
-      const authResponse = await authApi.get('/auth/farmers');
-      const farmers = authResponse?.data?.data || authResponse?.data || [];
-      const farmerData = farmers.find(f => f.id === farmerId);
+      console.log('[FarmerProfile] Fetching details for farmerId:', farmerId);
 
-      if (!farmerData) {
-        setError('Farmer not found');
-        return;
+      // Primary: Fetch approved farmer profile from user-service
+      // The farmerId is the userId from the approved farmers list
+      let farmerProfileData = null;
+      
+      try {
+        const approvedResponse = await userApi.get('/profiles/farmer/approved');
+        const approvedFarmers = approvedResponse?.data?.data || [];
+        console.log('[FarmerProfile] Approved farmers:', approvedFarmers.length);
+        
+        // Find farmer by userId (which is what Farmers.js passes as id)
+        farmerProfileData = approvedFarmers.find(f => f.userId === farmerId);
+        console.log('[FarmerProfile] Found farmer profile:', farmerProfileData);
+      } catch (err) {
+        console.warn('[FarmerProfile] Could not fetch approved farmers:', err);
       }
 
-      setFarmer(farmerData);
-
-      // Fetch farmer profile from user-service
-      try {
-        const profileResponse = await userApi.get(`/users/${farmerId}/profile`);
-        const profileData = profileResponse?.data?.data || profileResponse?.data;
-        setProfile(profileData);
-      } catch (err) {
-        console.warn('Could not fetch farmer profile:', err);
-        // Use default profile data
-        setProfile({
-          firstName: farmerData.email?.split('@')[0] || 'Farmer',
-          lastName: '',
-          city: '',
-          state: '',
-          bio: ''
+      // If found in approved farmers, use that data
+      if (farmerProfileData) {
+        // Set farmer data (basic info)
+        setFarmer({
+          id: farmerProfileData.userId,
+          email: farmerProfileData.username || '',
+          enabled: true,
+          createdAt: farmerProfileData.createdAt
         });
+
+        // Set profile data (detailed info)
+        setProfile({
+          firstName: farmerProfileData.name || 'Farmer',
+          lastName: '',
+          farmName: farmerProfileData.farmName,
+          city: farmerProfileData.city,
+          state: farmerProfileData.state,
+          country: farmerProfileData.country,
+          bio: farmerProfileData.farmBio,
+          profilePictureUrl: farmerProfileData.profilePhoto,
+          farmPhoto: farmerProfileData.farmPhoto,
+          cropTypes: farmerProfileData.cropTypes
+        });
+      } else {
+        // Fallback: Try to fetch from auth service
+        try {
+          const authResponse = await authApi.get('/auth/farmers');
+          const farmers = authResponse?.data?.data || authResponse?.data || [];
+          const authFarmerData = farmers.find(f => f.id === farmerId);
+          
+          if (authFarmerData) {
+            setFarmer(authFarmerData);
+            setProfile({
+              firstName: authFarmerData.name || authFarmerData.email?.split('@')[0] || 'Farmer',
+              lastName: '',
+              city: '',
+              state: '',
+              bio: ''
+            });
+          } else {
+            console.error('[FarmerProfile] Farmer not found in any source');
+            setError('Farmer not found');
+            return;
+          }
+        } catch (authErr) {
+          console.error('[FarmerProfile] Auth fallback failed:', authErr);
+          setError('Farmer not found');
+          return;
+        }
       }
 
       // Fetch seller stats from marketplace-service (has aggregated rating/reviews)
@@ -297,7 +337,7 @@ const FarmerProfile = () => {
       <section className="farmer-details-section">
         <div className="farmer-cover-image">
           <img 
-            src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200" 
+            src={profile?.farmPhoto || "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200"} 
             alt="Farm cover" 
           />
         </div>
@@ -308,7 +348,7 @@ const FarmerProfile = () => {
               src={profile?.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(farmerName)}&background=2d6a4f&color=fff&size=150`}
               alt={farmerName}
             />
-            {farmer?.enabled && (
+            {(farmer?.enabled !== false) && (
               <span className="verified-badge-large" title="Verified Farmer">
                 <FiCheck />
               </span>
