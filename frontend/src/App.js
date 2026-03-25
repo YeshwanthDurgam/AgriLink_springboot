@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './components/ToastNotification';
 import PrivateRoute from './components/PrivateRoute';
+import FarmerRoute from './components/FarmerRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthLayout from './components/AuthLayout';
@@ -52,6 +53,7 @@ const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
 const Farms = lazy(() => import('./pages/Farms'));
 const FarmDetail = lazy(() => import('./pages/FarmDetail'));
 const CreateFarm = lazy(() => import('./pages/CreateFarm'));
+const EditFarm = lazy(() => import('./pages/EditFarm'));
 
 // Farmer management pages
 const CreateListing = lazy(() => import('./pages/CreateListing'));
@@ -61,7 +63,6 @@ const FarmerFollowers = lazy(() => import('./pages/FarmerFollowers'));
 const FarmerOrders = lazy(() => import('./pages/FarmerOrders'));
 
 // Other pages
-const Devices = lazy(() => import('./pages/Devices'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -158,9 +159,9 @@ const AppContent = () => {
                 </PrivateRoute>
               } />
               <Route path="/farmer/dashboard" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <FarmerDashboard />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/admin/dashboard" element={
                 <PrivateRoute>
@@ -168,19 +169,24 @@ const AppContent = () => {
                 </PrivateRoute>
               } />
               <Route path="/farms" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <Farms />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/farms/create" element={
-                <PrivateRoute>
+                <FarmerRoute>
                   <CreateFarm />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/farms/:id" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <FarmDetail />
-                </PrivateRoute>
+                </FarmerRoute>
+              } />
+              <Route path="/farms/:id/edit" element={
+                <FarmerRoute requireVerification={false}>
+                  <EditFarm />
+                </FarmerRoute>
               } />
               <Route path="/orders" element={
                 <PrivateRoute>
@@ -198,38 +204,33 @@ const AppContent = () => {
                 </PrivateRoute>
               } />
               <Route path="/marketplace/create" element={
-                <PrivateRoute>
+                <FarmerRoute>
                   <CreateListing />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/marketplace/edit/:id" element={
-                <PrivateRoute>
+                <FarmerRoute>
                   <EditListing />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/farmer/products" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <FarmerProducts />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/farmer/followers" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <FarmerFollowers />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/farmer/orders" element={
-                <PrivateRoute>
+                <FarmerRoute requireVerification={false}>
                   <FarmerOrders />
-                </PrivateRoute>
+                </FarmerRoute>
               } />
               <Route path="/checkout" element={
                 <PrivateRoute>
                   <Checkout />
-                </PrivateRoute>
-              } />
-              <Route path="/devices" element={
-                <PrivateRoute>
-                  <Devices />
                 </PrivateRoute>
               } />
               <Route path="/messages" element={

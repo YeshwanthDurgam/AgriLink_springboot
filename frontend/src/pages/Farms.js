@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FiPlus, FiSearch, FiFilter, FiMapPin, FiSquare, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FaSeedling } from 'react-icons/fa';
 import FarmService from '../services/farmService';
 import './Farms.css';
 
@@ -115,7 +116,11 @@ const Farms = () => {
               {filteredFarms.map((farm) => (
                 <div key={farm.id} className="farm-card">
                   <div className="farm-card-image">
-                    🏡
+                    {farm.farmImageUrl ? (
+                      <img src={farm.farmImageUrl} alt={farm.name} className="farm-image" />
+                    ) : (
+                      <div className="farm-image-placeholder">🏡</div>
+                    )}
                   </div>
                   <div className="farm-card-content">
                     <h3>{farm.name}</h3>
@@ -124,9 +129,15 @@ const Farms = () => {
                         <FiMapPin className="detail-icon" />
                         {farm.location || 'Location not set'}
                       </p>
+                      {farm.cropTypes && (
+                        <p>
+                          <FaSeedling className="detail-icon" />
+                          {farm.cropTypes}
+                        </p>
+                      )}
                       <p>
                         <FiSquare className="detail-icon" />
-                        {farm.size ? `${farm.size} acres` : 'Size not set'}
+                        {farm.totalArea ? `${farm.totalArea} ${farm.areaUnit || 'hectares'}` : 'Size not set'}
                       </p>
                     </div>
                     {farm.description && (

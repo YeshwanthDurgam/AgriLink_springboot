@@ -34,8 +34,25 @@ const FarmService = {
    * @param {Object} farmData
    */
   updateFarm: async (farmId, farmData) => {
-    const response = await farmApi.put(`/farms/${farmId}`, farmData);
-    return response.data;
+    try {
+      console.log(`FarmService.updateFarm - Making PUT request to /farms/${farmId}`);
+      console.log('FarmService.updateFarm - Farm data:', { 
+        ...farmData, 
+        farmImageUrl: farmData.farmImageUrl ? '[IMAGE_PRESENT]' : '[NO_IMAGE]' 
+      });
+      const response = await farmApi.put(`/farms/${farmId}`, farmData);
+      console.log('FarmService.updateFarm - Success:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('FarmService.updateFarm - Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        isNetworkError: !error.response
+      });
+      throw error;
+    }
   },
 
   /**
@@ -91,6 +108,33 @@ const FarmService = {
   getFarmStats: async () => {
     const response = await farmApi.get('/farms/stats');
     return response.data;
+  },
+
+  /**
+   * Onboard a farm during profile setup
+   * Creates a new farm or updates existing one for the farmer
+   * @param {Object} farmData - { farmName, cropTypes, description, farmImageUrl, location, city, state }
+   */
+  onboardFarm: async (farmData) => {
+    try {
+      console.log('FarmService.onboardFarm - Making request to /farms/onboarding');
+      console.log('FarmService.onboardFarm - Farm data:', { 
+        ...farmData, 
+        farmImageUrl: farmData.farmImageUrl ? '[BASE64_IMAGE_PRESENT]' : '[NO_IMAGE]' 
+      });
+      const response = await farmApi.post('/farms/onboarding', farmData);
+      console.log('FarmService.onboardFarm - Success:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('FarmService.onboardFarm - Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        isNetworkError: !error.response
+      });
+      throw error;
+    }
   },
 };
 

@@ -3,6 +3,7 @@ package com.agrilink.farm.controller;
 import com.agrilink.common.dto.ApiResponse;
 import com.agrilink.farm.dto.CreateFarmRequest;
 import com.agrilink.farm.dto.FarmDto;
+import com.agrilink.farm.dto.FarmOnboardingRequest;
 import com.agrilink.farm.service.FarmService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -53,8 +54,15 @@ public class FarmController {
     public ResponseEntity<ApiResponse<List<FarmDto>>> getFarms(
             HttpServletRequest request,
             Authentication authentication) {
+        log.info("=== GET /api/v1/farms - Request received ===");
         UUID farmerId = getUserIdFromRequest(request, authentication);
+        log.info("Farmer ID from JWT: {}", farmerId);
+        
+        long startTime = System.currentTimeMillis();
         List<FarmDto> farms = farmService.getFarmsByFarmer(farmerId);
+        long duration = System.currentTimeMillis() - startTime;
+        
+        log.info("=== GET /api/v1/farms - Completed in {}ms, returning {} farms ===", duration, farms.size());
         return ResponseEntity.ok(ApiResponse.success(farms));
     }
 
@@ -83,9 +91,52 @@ public class FarmController {
             Authentication authentication,
             @PathVariable UUID farmId,
             @Valid @RequestBody CreateFarmRequest createRequest) {
+        log.info("=== Farm Update Request Received ===");
+        log.info("Farm ID: {}", farmId);
+        log.info("Auth principal: {}", authentication != null ? authentication.getName() : "null");
+        log.info("Request name: {}", createRequest.getName());
+        log.info("Request cropTypes: {}", createRequest.getCropTypes());
+        log.info("Request location: {}", createRequest.getLocation());
+        log.info("Request totalArea: {} {}", createRequest.getTotalArea(), createRequest.getAreaUnit());
+        log.info("Request has image: {}", createRequest.getFarmImageUrl() != null && !createRequest.getFarmImageUrl().isEmpty());
+        
         UUID farmerId = getUserIdFromRequest(request, authentication);
+        log.info("Farmer ID from request: {}", farmerId);
+        
         FarmDto farm = farmService.updateFarm(farmId, farmerId, createRequest);
+        log.info("=== Farm Update Successful === Farm ID: {}", farm.getId());
         return ResponseEntity.ok(ApiResponse.success("Farm updated successfully", farm));
+    }
+
+    /**
+     * Create or update farm during profile onboarding.
+     * POST /api/v1/farms/onboarding
+     * 
+     * If the farmer already has a farm, it will be updated.
+     * Otherwise, a new farm will be created.
+     */
+    @PostMapping("/onboarding")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<FarmDto>> onboardFarm(
+            HttpServletRequest request,
+            Authentication authentication,
+            @Valid @RequestBody FarmOnboardingRequest onboardingRequest) {
+        log.info("=== Farm Onboarding Request Received ===");
+        log.info("Auth principal: {}", authentication != null ? authentication.getName() : "null");
+        log.info("Auth authorities: {}", authentication != null ? authentication.getAuthorities() : "null");
+        log.info("Request farmName: {}", onboardingRequest.getFarmName());
+        log.info("Request cropTypes: {}", onboardingRequest.getCropTypes());
+        log.info("Request city: {}, state: {}", onboardingRequest.getCity(), onboardingRequest.getState());
+        log.info("Request farmImageUrl present: {}", onboardingRequest.getFarmImageUrl() != null && !onboardingRequest.getFarmImageUrl().isEmpty());
+        
+        UUID farmerId = getUserIdFromRequest(request, authentication);
+        log.info("Resolved farmerId: {}", farmerId);
+        
+        FarmDto farm = farmService.createOrUpdateFarmOnboarding(farmerId, onboardingRequest);
+        log.info("Farm onboarding completed successfully. Farm ID: {}", farm.getId());
+        
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Farm onboarded successfully", farm));
     }
 
     /**

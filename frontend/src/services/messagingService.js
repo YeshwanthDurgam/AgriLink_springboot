@@ -75,10 +75,16 @@ const messagingService = {
     return response.data;
   },
 
-  // Get unread count
+  // Get unread count - safely handles notification service being down
   getUnreadCount: async () => {
-    const response = await notificationApi.get('/messages/unread-count');
-    return response.data?.data?.count || 0;
+    try {
+      const response = await notificationApi.get('/messages/unread-count');
+      return response.data?.data?.count || 0;
+    } catch (error) {
+      // Silently fail if notification service is down - return 0 as default
+      console.debug('[messagingService] Notification service unavailable, returning 0 unread count');
+      return 0;
+    }
   },
 
   // Contact admin/support

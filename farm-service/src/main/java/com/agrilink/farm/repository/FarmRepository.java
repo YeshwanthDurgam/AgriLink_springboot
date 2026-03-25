@@ -23,4 +23,14 @@ public interface FarmRepository extends JpaRepository<Farm, UUID> {
     Optional<Farm> findByIdAndFarmerId(UUID id, UUID farmerId);
     
     boolean existsByIdAndFarmerId(UUID id, UUID farmerId);
+    
+    /**
+     * Find the first farm for a farmer (for onboarding update-or-create logic)
+     */
+    Optional<Farm> findFirstByFarmerIdOrderByCreatedAtAsc(UUID farmerId);
+    
+    /**
+     * Check if farmer has any active farms
+     */
+    boolean existsByFarmerIdAndActiveTrue(UUID farmerId);
 }

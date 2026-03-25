@@ -81,13 +81,36 @@ public class FarmerProfileService {
         if (request.getCity() != null) profile.setCity(request.getCity());
         if (request.getState() != null) profile.setState(request.getState());
         if (request.getCountry() != null) profile.setCountry(request.getCountry());
+        if (request.getAddress() != null) profile.setAddress(request.getAddress());
+        if (request.getPincode() != null) profile.setPincode(request.getPincode());
         if (request.getFarmName() != null) profile.setFarmName(request.getFarmName());
         if (request.getCropTypes() != null) profile.setCropTypes(request.getCropTypes());
         if (request.getFarmPhoto() != null) profile.setFarmPhoto(request.getFarmPhoto());
         if (request.getFarmBio() != null) profile.setFarmBio(request.getFarmBio());
         if (request.getCertificates() != null) profile.setCertificates(request.getCertificates());
 
-        // If profile was rejected and is now being updated, set back to pending
+        // Handle verification document upload
+        // CRITICAL: If document is uploaded (new or re-upload), reset status to PENDING
+        if (request.getVerificationDocument() != null && !request.getVerificationDocument().isBlank()) {
+            boolean isNewDocument = profile.getVerificationDocument() == null || 
+                                    !profile.getVerificationDocument().equals(request.getVerificationDocument());
+            
+            if (isNewDocument) {
+                log.info("Verification document uploaded/re-uploaded for user: {}. Resetting status to PENDING.", userId);
+                profile.setVerificationDocument(request.getVerificationDocument());
+                profile.setDocumentUploadedAt(LocalDateTime.now());
+                if (request.getDocumentType() != null) {
+                    profile.setDocumentType(request.getDocumentType());
+                }
+                // ALWAYS reset to PENDING when document changes - even if previously APPROVED
+                profile.setStatus(ProfileStatus.PENDING);
+                profile.setApprovedBy(null);
+                profile.setApprovedAt(null);
+                profile.setRejectionReason(null);
+            }
+        }
+
+        // If profile was rejected and is now being updated (without new document), set back to pending
         if (profile.getStatus() == ProfileStatus.REJECTED) {
             profile.setStatus(ProfileStatus.PENDING);
             profile.setRejectionReason(null);
@@ -204,11 +227,17 @@ public class FarmerProfileService {
                 .city(profile.getCity())
                 .state(profile.getState())
                 .country(profile.getCountry())
+                .address(profile.getAddress())
+                .pincode(profile.getPincode())
                 .farmName(profile.getFarmName())
                 .cropTypes(profile.getCropTypes())
                 .farmPhoto(profile.getFarmPhoto())
                 .farmBio(profile.getFarmBio())
                 .certificates(profile.getCertificates())
+                .verificationDocument(profile.getVerificationDocument())
+                .documentUploadedAt(profile.getDocumentUploadedAt())
+                .documentType(profile.getDocumentType())
+                .hasDocument(profile.hasDocument())
                 .status(profile.getStatus())
                 .approvedBy(profile.getApprovedBy())
                 .approvedAt(profile.getApprovedAt())

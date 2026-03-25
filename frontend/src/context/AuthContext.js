@@ -53,28 +53,39 @@ export const AuthProvider = ({ children }) => {
   // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {
+      console.log('[AuthContext] Initializing auth state...');
       try {
         const token = AuthService.getToken();
         if (token) {
+          console.log('[AuthContext] Token found, checking for stored user...');
           const storedUser = AuthService.getStoredUser();
           if (storedUser) {
+            console.log('[AuthContext] Using stored user:', storedUser);
             setUser(storedUser);
-          } else {
-            // If we have a token but no user, fetch user data
-            try {
-              const response = await AuthService.getCurrentUser();
-              if (response.success) {
-                setUser(response.data);
-                localStorage.setItem('user', JSON.stringify(response.data));
-              }
-            } catch (err) {
-              console.error('Failed to fetch user data:', err);
-              AuthService.logout();
-            }
           }
+          // Always try to fetch fresh user data from backend
+          try {
+            console.log('[AuthContext] Fetching fresh user data from backend...');
+            const response = await AuthService.getCurrentUser();
+            if (response.success && response.data) {
+              const freshUser = {
+                ...storedUser,
+                ...response.data,
+                name: response.data.name || response.data.email?.split('@')[0] || storedUser?.name || 'User'
+              };
+              console.log('[AuthContext] Fresh user data loaded:', freshUser);
+              setUser(freshUser);
+              localStorage.setItem('user', JSON.stringify(freshUser));
+            }
+          } catch (err) {
+            console.error('[AuthContext] Failed to fetch fresh user data:', err);
+            // Keep using stored user if fetch fails
+          }
+        } else {
+          console.log('[AuthContext] No token found, user is not authenticated');
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error('[AuthContext] Auth initialization error:', err);
         // Clear invalid auth data
         AuthService.logout();
       } finally {
@@ -88,6 +99,7 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     setLoading(true);
     setError(null);
+    console.log('[AuthContext] Login attempt for:', email);
     try {
       const response = await AuthService.login({ email, password });
       if (response.success) {
@@ -101,23 +113,35 @@ export const AuthProvider = ({ children }) => {
         try {
           const userResponse = await AuthService.getCurrentUser();
           if (userResponse.success) {
-            userData = { ...userData, ...userResponse.data };
+            userData = { 
+              ...userData, 
+              ...userResponse.data,
+              name: userResponse.data.name || userData.name || email.split('@')[0]
+            };
           }
         } catch (e) {
-          console.warn('Could not fetch additional user data:', e);
+          console.warn('[AuthContext] Could not fetch additional user data:', e);
         }
         
+        // Ensure name is set
+        if (!userData.name) {
+          userData.name = email.split('@')[0];
+        }
+        
+        console.log('[AuthContext] Login successful, setting user:', userData);
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Like Amazon/Flipkart: customers go to home or previous page, farmers/admins go to dashboard
         const roles = userData.roles || [];
         let defaultRedirect = '/';
         
-        // Only farmers, managers, and admins go to dashboard by default
-        if (roles.includes('FARMER') || roles.includes('MANAGER') || roles.includes('ADMIN')) {
+        // FARMERS always go to profile onboarding first to check profile/verification status
+        if (roles.includes('FARMER')) {
+          defaultRedirect = '/profile/onboarding';
+        } else if (roles.includes('MANAGER') || roles.includes('ADMIN')) {
           defaultRedirect = getDashboardRoute(userData);
         }
+        // CUSTOMERS go to home page (like Amazon/Flipkart)
         
         return { 
           success: true, 
@@ -125,9 +149,11 @@ export const AuthProvider = ({ children }) => {
           user: userData
         };
       }
+      console.warn('[AuthContext] Login failed:', response.message);
       return { success: false, message: response.message };
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed. Please try again.';
+      console.error('[AuthContext] Login error:', message);
       setError(message);
       return { success: false, message };
     } finally {

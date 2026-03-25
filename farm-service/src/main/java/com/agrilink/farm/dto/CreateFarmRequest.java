@@ -23,6 +23,8 @@ public class CreateFarmRequest {
 
     private String description;
     private String location;
+    private String cropTypes;
+    private String farmImageUrl;
 
     @Positive(message = "Total area must be positive")
     private BigDecimal totalArea;

@@ -16,7 +16,6 @@ CREATE SCHEMA IF NOT EXISTS user_schema;
 CREATE SCHEMA IF NOT EXISTS farm_schema;
 CREATE SCHEMA IF NOT EXISTS marketplace_schema;
 CREATE SCHEMA IF NOT EXISTS order_schema;
-CREATE SCHEMA IF NOT EXISTS iot_schema;
 CREATE SCHEMA IF NOT EXISTS notification_schema;
 
 -- =====================================================

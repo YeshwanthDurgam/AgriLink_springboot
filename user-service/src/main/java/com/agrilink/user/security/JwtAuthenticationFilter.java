@@ -42,20 +42,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String roles = jwtTokenProvider.getRolesFromToken(jwt);
                 String userId = jwtTokenProvider.getUserIdFromToken(jwt);
 
+                log.info("[JWT Auth] Token validated. Email: {}, Roles from JWT: {}, UserId: {}", email, roles, userId);
+
+                // Convert roles to authorities with ROLE_ prefix for Spring Security hasRole() compatibility
                 List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                        .map(SimpleGrantedAuthority::new)
+                        .map(String::trim)
+                        .filter(role -> !role.isEmpty())
+                        .map(role -> {
+                            // Ensure ROLE_ prefix exists
+                            String authority = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                            return new SimpleGrantedAuthority(authority);
+                        })
                         .collect(Collectors.toList());
+
+                log.info("[JWT Auth] Created authorities: {}", authorities);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(email, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("[JWT Auth] Authentication set for user: {} with authorities: {}", email, authorities);
                 
                 // Store userId in request attribute for controllers to access
                 if (StringUtils.hasText(userId)) {
                     request.setAttribute("userId", userId);
                 }
+            } else {
+                log.warn("[JWT Auth] Token validation failed or token is empty. Has token: {}", StringUtils.hasText(jwt));
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context", ex);

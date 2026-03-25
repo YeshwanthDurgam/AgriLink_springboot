@@ -24,11 +24,17 @@ public class FarmerProfileDto {
     private String city;
     private String state;
     private String country;
+    private String address;
+    private String pincode;
     private String farmName;
     private String cropTypes;
     private String farmPhoto;
     private String farmBio;
     private String certificates;
+    private String verificationDocument;
+    private LocalDateTime documentUploadedAt;
+    private String documentType;
+    private boolean hasDocument;
     private ProfileStatus status;
     private UUID approvedBy;
     private LocalDateTime approvedAt;

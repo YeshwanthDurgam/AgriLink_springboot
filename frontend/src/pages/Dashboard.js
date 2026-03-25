@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiMap, FiPackage, FiDollarSign, FiTrendingUp, FiPlus, FiArrowRight } from 'react-icons/fi';
+import { FiMap, FiPackage, FiDollarSign, FiTrendingUp, FiPlus, FiArrowRight, FiShoppingCart, FiBarChart2, FiHome, FiMapPin, FiMaximize, FiGrid } from 'react-icons/fi';
 import FarmService from '../services/farmService';
 import './Dashboard.css';
 
@@ -162,22 +162,22 @@ const Dashboard = () => {
           <h2>Quick Actions</h2>
           <div className="quick-actions">
             <Link to="/farms/create" className="quick-action-card">
-              <div className="quick-action-icon">🌾</div>
+              <div className="quick-action-icon"><FiGrid size={32} /></div>
               <h3>Add Farm</h3>
               <p>Register a new farm</p>
             </Link>
             <Link to="/marketplace" className="quick-action-card">
-              <div className="quick-action-icon">🛒</div>
+              <div className="quick-action-icon"><FiShoppingCart size={32} /></div>
               <h3>Marketplace</h3>
               <p>Browse or sell products</p>
             </Link>
-            <Link to="/devices" className="quick-action-card">
-              <div className="quick-action-icon">📡</div>
-              <h3>IoT Devices</h3>
-              <p>Monitor your sensors</p>
+            <Link to="/analytics" className="quick-action-card">
+              <div className="quick-action-icon"><FiBarChart2 size={32} /></div>
+              <h3>Farm Insights</h3>
+              <p>View analytics & forecasts</p>
             </Link>
             <Link to="/orders" className="quick-action-card">
-              <div className="quick-action-icon">📦</div>
+              <div className="quick-action-icon"><FiPackage size={32} /></div>
               <h3>Orders</h3>
               <p>Track your orders</p>
             </Link>
@@ -197,12 +197,12 @@ const Dashboard = () => {
               {recentFarms.map((farm) => (
                 <Link to={`/farms/${farm.id}`} key={farm.id} className="farm-card">
                   <div className="farm-card-image">
-                    🏡
+                    <FiHome size={24} />
                   </div>
                   <div className="farm-card-content">
                     <h3>{farm.name}</h3>
-                    <p>📍 {farm.location || 'Location not set'}</p>
-                    <p>📐 {farm.size ? `${farm.size} acres` : 'Size not set'}</p>
+                    <p><FiMapPin size={14} /> {farm.location || 'Location not set'}</p>
+                    <p><FiMaximize size={14} /> {farm.size ? `${farm.size} acres` : 'Size not set'}</p>
                   </div>
                   <div className="farm-card-footer">
                     <span className={`farm-status ${farm.status?.toLowerCase() || 'active'}`}>
@@ -214,7 +214,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="empty-state">
-              <div className="empty-state-icon">🌱</div>
+              <div className="empty-state-icon"><FiPlus size={48} /></div>
               <h3>No farms yet</h3>
               <p>Start by adding your first farm to track your agricultural activities.</p>
               <Link to="/farms/create" className="btn btn-primary">

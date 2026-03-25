@@ -7,15 +7,16 @@ import { toast } from 'react-toastify';
 import { 
   FiUser, FiPhone, FiMapPin, FiCamera, FiSave, FiArrowRight, FiArrowLeft,
   FiCheckCircle, FiAlertCircle, FiEdit3, FiUpload, FiX, FiShoppingBag,
-  FiTruck, FiAward, FiHeart, FiZap
+  FiTruck, FiAward, FiHeart, FiZap, FiFile, FiFileText, FiTrash2, FiAlertTriangle
 } from 'react-icons/fi';
-import { FaTractor, FaSeedling } from 'react-icons/fa';
+import { FaTractor, FaSeedling, FaIdCard } from 'react-icons/fa';
 import './ProfileOnboarding.css';
 
 const ProfileOnboarding = () => {
   const { user, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const farmPhotoInputRef = useRef(null);
   
   // Core states
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,8 @@ const ProfileOnboarding = () => {
   // Image upload states
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [farmPhotoPreview, setFarmPhotoPreview] = useState(null);
+  const [uploadingFarmPhoto, setUploadingFarmPhoto] = useState(false);
   
   // Determine user role
   const userRole = user?.roles?.includes('FARMER') ? 'FARMER' 
@@ -51,14 +54,23 @@ const ProfileOnboarding = () => {
     cropTypes: '',
     farmPhoto: '',
     farmBio: '',
-    certificates: ''
+    certificates: '',
+    // Verification document (required for farmers)
+    verificationDocument: '',
+    documentType: 'AADHAAR'
   });
+
+  // Document upload states
+  const [documentPreview, setDocumentPreview] = useState(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const documentInputRef = useRef(null);
 
   // Define required fields based on role
   const getRequiredFields = useCallback(() => {
     const baseFields = ['name', 'phone', 'address', 'city', 'state', 'pincode'];
     if (userRole === 'FARMER') {
-      return [...baseFields, 'farmName'];
+      // Verification document is MANDATORY for farmers
+      return [...baseFields, 'farmName', 'farmPhoto', 'verificationDocument'];
     }
     return baseFields;
   }, [userRole]);
@@ -108,13 +120,25 @@ const ProfileOnboarding = () => {
           cropTypes: profile.cropTypes || '',
           farmPhoto: profile.farmPhoto || '',
           farmBio: profile.farmBio || '',
-          certificates: profile.certificates || ''
+          certificates: profile.certificates || '',
+          verificationDocument: profile.verificationDocument || '',
+          documentType: profile.documentType || 'AADHAAR'
         };
         setFormData(newFormData);
         
         // Set image preview if exists
         if (profile.profilePhoto) {
           setImagePreview(profile.profilePhoto);
+        }
+        
+        // Set farm photo preview if exists
+        if (profile.farmPhoto) {
+          setFarmPhotoPreview(profile.farmPhoto);
+        }
+
+        // Set document preview if exists
+        if (profile.verificationDocument) {
+          setDocumentPreview(profile.verificationDocument);
         }
         
         // Check if profile is already complete
@@ -185,6 +209,96 @@ const ProfileOnboarding = () => {
     }
   };
 
+  // Handle farm photo upload
+  const handleFarmPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingFarmPhoto(true);
+
+    // Convert to base64 for preview and storage
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setFarmPhotoPreview(base64String);
+      setFormData(prev => ({ ...prev, farmPhoto: base64String }));
+      setUploadingFarmPhoto(false);
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read image file');
+      setUploadingFarmPhoto(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFarmPhoto = () => {
+    setFarmPhotoPreview(null);
+    setFormData(prev => ({ ...prev, farmPhoto: '' }));
+    if (farmPhotoInputRef.current) {
+      farmPhotoInputRef.current.value = '';
+    }
+  };
+
+  // Handle verification document upload
+  const handleDocumentUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type - accept images and PDF
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload an image (JPG, PNG) or PDF file');
+      return;
+    }
+
+    // Validate file size (max 10MB for documents)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Document size should be less than 10MB');
+      return;
+    }
+
+    setUploadingDocument(true);
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setDocumentPreview(base64String);
+      setFormData(prev => ({ ...prev, verificationDocument: base64String }));
+      setUploadingDocument(false);
+      
+      // Show warning if profile was already verified
+      if (profileStatus === 'APPROVED') {
+        toast.warning('Re-uploading document will reset your verification status to Pending');
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Failed to read document file');
+      setUploadingDocument(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeDocument = () => {
+    setDocumentPreview(null);
+    setFormData(prev => ({ ...prev, verificationDocument: '' }));
+    if (documentInputRef.current) {
+      documentInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -193,7 +307,20 @@ const ProfileOnboarding = () => {
     const missing = required.filter(field => !formData[field]?.toString().trim());
     
     if (missing.length > 0) {
-      toast.error(`Please fill in all required fields: ${missing.join(', ')}`);
+      // Make error message more user-friendly
+      const fieldLabels = {
+        verificationDocument: 'Verification Document',
+        farmName: 'Farm Name',
+        farmPhoto: 'Farm Photo'
+      };
+      const missingLabels = missing.map(f => fieldLabels[f] || f);
+      toast.error(`Please fill in all required fields: ${missingLabels.join(', ')}`);
+      return;
+    }
+
+    // Extra validation for farmers - document is mandatory
+    if (userRole === 'FARMER' && !formData.verificationDocument) {
+      toast.error('Please upload a verification document (Aadhaar/Government ID/Land proof)');
       return;
     }
 
@@ -204,28 +331,44 @@ const ProfileOnboarding = () => {
       if (userRole === 'FARMER') endpoint = '/profiles/farmer';
       else if (userRole === 'MANAGER') endpoint = '/profiles/manager';
 
-      await userApi.put(endpoint, formData);
+      // Build clean request payload - only send non-empty values
+      const payload = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          // Convert age to integer if it's a string
+          if (key === 'age' && value) {
+            payload[key] = parseInt(value, 10);
+          } else {
+            payload[key] = value;
+          }
+        }
+      });
+
+      console.log('Sending profile update request:', { endpoint, payload: { ...payload, profilePhoto: payload.profilePhoto ? '[BASE64_IMAGE]' : undefined } });
+
+      const response = await userApi.put(endpoint, payload);
+      console.log('Profile update response:', response.data);
       
-      // For farmers, also create a farm in farm-service if farmName is provided
+      // For farmers, call the farm onboarding endpoint to create/update farm in farm-service
       if (userRole === 'FARMER' && formData.farmName) {
         try {
-          const farmsResponse = await FarmService.getMyFarms();
-          const existingFarms = farmsResponse?.data || [];
+          const farmOnboardingData = {
+            farmName: formData.farmName,
+            cropTypes: formData.cropTypes || '',
+            description: formData.farmBio || '',
+            farmImageUrl: formData.farmPhoto || '',
+            location: '',
+            city: formData.city || '',
+            state: formData.state || ''
+          };
           
-          if (existingFarms.length === 0) {
-            const farmData = {
-              name: formData.farmName,
-              description: formData.farmBio || '',
-              location: formData.city && formData.state 
-                ? `${formData.city}, ${formData.state}` 
-                : formData.city || formData.state || '',
-              totalArea: 0,
-              areaUnit: 'HECTARE'
-            };
-            await FarmService.createFarm(farmData);
-          }
+          console.log('Calling farm onboarding endpoint:', { ...farmOnboardingData, farmImageUrl: farmOnboardingData.farmImageUrl ? '[BASE64_IMAGE]' : undefined });
+          await FarmService.onboardFarm(farmOnboardingData);
+          console.log('Farm onboarding successful');
         } catch (farmErr) {
-          console.error('Could not create farm entry:', farmErr);
+          console.error('Farm onboarding error:', farmErr);
+          // Don't fail the whole process if farm creation fails
+          toast.warning('Profile saved, but farm creation had an issue. You can update your farm from the Farms page.');
         }
       }
       
@@ -243,7 +386,40 @@ const ProfileOnboarding = () => {
       }
     } catch (err) {
       console.error('Error saving profile:', err);
-      toast.error(err.response?.data?.message || 'Failed to save profile');
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Failed to save profile';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      // Handle validation errors from backend
+      if (err.response?.data?.validationErrors) {
+        const validationErrors = err.response.data.validationErrors;
+        const errorMessages = [];
+        Object.entries(validationErrors).forEach(([field, messages]) => {
+          if (Array.isArray(messages)) {
+            errorMessages.push(`${field}: ${messages.join(', ')}`);
+          }
+        });
+        if (errorMessages.length > 0) {
+          errorMessage = errorMessages.join('; ');
+        }
+      } else if (err.response?.data?.errors) {
+        // Handle other error formats
+        const errors = err.response.data.errors;
+        if (Array.isArray(errors)) {
+          errorMessage = errors.join(', ');
+        } else if (typeof errors === 'object') {
+          errorMessage = Object.values(errors).flat().join(', ');
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -666,6 +842,50 @@ const ProfileOnboarding = () => {
                     <p>Tell us about your farm</p>
                   </div>
 
+                  {/* Farm Photo Upload */}
+                  <div className="photo-upload-section farm-photo-section">
+                    <label className="section-label">
+                      Farm Photo <span className="required">*</span>
+                    </label>
+                    <div className="photo-preview farm-photo-preview">
+                      {uploadingFarmPhoto ? (
+                        <div className="photo-loading">
+                          <div className="loading-spinner-small"></div>
+                        </div>
+                      ) : farmPhotoPreview ? (
+                        <>
+                          <img src={farmPhotoPreview} alt="Farm" />
+                          <button 
+                            type="button" 
+                            className="remove-photo-btn"
+                            onClick={removeFarmPhoto}
+                          >
+                            <FiX />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="photo-placeholder farm-placeholder">
+                          <FaTractor />
+                          <span>Upload farm photo</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="photo-actions">
+                      <input
+                        ref={farmPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFarmPhotoUpload}
+                        className="hidden-input"
+                        id="farm-photo-input"
+                      />
+                      <label htmlFor="farm-photo-input" className="upload-btn">
+                        <FiCamera /> {farmPhotoPreview ? 'Change Photo' : 'Upload Photo'}
+                      </label>
+                      <span className="photo-hint">Show your farm to buyers (JPG, PNG up to 5MB)</span>
+                    </div>
+                  </div>
+
                   <div className="form-fields">
                     <div className="field">
                       <label htmlFor="farmName">
@@ -720,6 +940,94 @@ const ProfileOnboarding = () => {
                         placeholder="Organic, FSSAI, etc."
                       />
                     </div>
+                  </div>
+
+                  {/* Verification Document Upload Section */}
+                  <div className="document-upload-section">
+                    <h4 className="section-subtitle">
+                      <FaIdCard className="field-icon" /> Verification Document <span className="required">*</span>
+                    </h4>
+                    <p className="section-info">
+                      Upload your Aadhaar Card, Government ID, or Land Ownership Proof for verification.
+                    </p>
+                    
+                    {/* Document Type Selector */}
+                    <div className="field">
+                      <label htmlFor="documentType">Document Type</label>
+                      <select
+                        id="documentType"
+                        name="documentType"
+                        value={formData.documentType}
+                        onChange={handleChange}
+                        className="document-type-select"
+                      >
+                        <option value="">Select document type...</option>
+                        <option value="AADHAAR">Aadhaar Card</option>
+                        <option value="GOV_ID">Government ID (PAN, Voter ID, etc.)</option>
+                        <option value="LAND_PROOF">Land Ownership Proof</option>
+                        <option value="OTHER">Other Document</option>
+                      </select>
+                    </div>
+
+                    {/* Document Preview */}
+                    <div className="document-preview-container">
+                      {documentPreview ? (
+                        <div className="document-preview">
+                          {documentPreview.endsWith('.pdf') || documentPreview.includes('application/pdf') ? (
+                            <div className="pdf-preview">
+                              <FiFileText className="pdf-icon" />
+                              <span>PDF Document Uploaded</span>
+                              <a href={documentPreview} target="_blank" rel="noopener noreferrer" className="view-link">
+                                View Document
+                              </a>
+                            </div>
+                          ) : (
+                            <img src={documentPreview} alt="Verification Document" className="document-image" />
+                          )}
+                          <button type="button" className="remove-document-btn" onClick={removeDocument}>
+                            <FiTrash2 /> Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="document-placeholder">
+                          <FiFile className="placeholder-icon" />
+                          <span>No document uploaded</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload Button */}
+                    <div className="document-actions">
+                      <input
+                        ref={documentInputRef}
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleDocumentUpload}
+                        className="hidden-input"
+                        id="document-input"
+                        disabled={uploadingDocument}
+                      />
+                      <label htmlFor="document-input" className={`upload-btn document-upload-btn ${uploadingDocument ? 'uploading' : ''}`}>
+                        {uploadingDocument ? (
+                          <>
+                            <span className="loading-spinner-small"></span> Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <FiUpload /> {documentPreview ? 'Change Document' : 'Upload Document'}
+                          </>
+                        )}
+                      </label>
+                      <span className="document-hint">PDF or Image (JPG, PNG) up to 10MB</span>
+                    </div>
+
+                    {/* Re-verification Warning */}
+                    {documentPreview && formData.status === 'APPROVED' && (
+                      <div className="reupload-warning">
+                        <FiAlertTriangle className="warning-icon" />
+                        <span>Re-uploading this document will require admin re-verification. Your verified status will change to PENDING.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

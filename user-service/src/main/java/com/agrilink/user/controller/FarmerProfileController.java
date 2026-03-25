@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -42,9 +41,9 @@ public class FarmerProfileController {
     /**
      * Get current farmer's profile.
      * GET /api/v1/profiles/farmer
+     * Security: Handled by SecurityConfig - FARMER role required
      */
     @GetMapping
-    @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<FarmerProfileDto>> getProfile(
             HttpServletRequest request,
             Authentication authentication) {
@@ -56,24 +55,42 @@ public class FarmerProfileController {
     /**
      * Update current farmer's profile.
      * PUT /api/v1/profiles/farmer
+     * Security: Handled by SecurityConfig - FARMER role required (NO verification check)
      */
     @PutMapping
-    @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<FarmerProfileDto>> updateProfile(
             HttpServletRequest request,
             Authentication authentication,
             @Valid @RequestBody FarmerProfileRequest profileRequest) {
+        
+        // Enhanced logging for debugging 403 issues
+        log.info("[ProfileUpdate] ========================================");
+        log.info("[ProfileUpdate] Auth principal: {}", authentication != null ? authentication.getName() : "NULL");
+        log.info("[ProfileUpdate] Auth authorities: {}", authentication != null ? authentication.getAuthorities() : "NULL");
+        log.info("[ProfileUpdate] Request userId attr: {}", request.getAttribute("userId"));
+        log.info("[ProfileUpdate] Fields: name={}, phone={}, farmName={}, city={}, state={}",
+                profileRequest.getName(),
+                profileRequest.getPhone(),
+                profileRequest.getFarmName(),
+                profileRequest.getCity(),
+                profileRequest.getState());
+        log.info("[ProfileUpdate] Has document: {}", profileRequest.getVerificationDocument() != null && !profileRequest.getVerificationDocument().isBlank());
+        log.info("[ProfileUpdate] ========================================");
+        
         UUID userId = getUserIdFromRequest(request, authentication);
+        log.info("Resolved userId: {}", userId);
+        
         FarmerProfileDto profile = farmerProfileService.updateProfile(userId, profileRequest);
+        log.info("Profile updated successfully for user: {}", userId);
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", profile));
     }
 
     /**
      * Check if farmer is approved.
      * GET /api/v1/profiles/farmer/status
+     * Security: Handled by SecurityConfig - FARMER role required
      */
     @GetMapping("/status")
-    @PreAuthorize("hasRole('FARMER')")
     public ResponseEntity<ApiResponse<Boolean>> isApproved(
             HttpServletRequest request,
             Authentication authentication) {
@@ -85,9 +102,9 @@ public class FarmerProfileController {
     /**
      * Get pending farmer profiles (Manager/Admin only).
      * GET /api/v1/profiles/farmer/pending
+     * Security: Handled by SecurityConfig - MANAGER or ADMIN role required
      */
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Page<FarmerProfileDto>>> getPendingProfiles(Pageable pageable) {
         Page<FarmerProfileDto> profiles = farmerProfileService.getPendingProfiles(pageable);
         return ResponseEntity.ok(ApiResponse.success(profiles));
@@ -96,9 +113,9 @@ public class FarmerProfileController {
     /**
      * Approve or reject a farmer profile (Manager/Admin only).
      * POST /api/v1/profiles/farmer/{farmerId}/approve
+     * Security: Handled by SecurityConfig - MANAGER or ADMIN role required
      */
     @PostMapping("/{farmerId}/approve")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<FarmerProfileDto>> approveOrRejectProfile(
             HttpServletRequest request,
             Authentication authentication,
@@ -113,9 +130,9 @@ public class FarmerProfileController {
     /**
      * Get farmer profile by ID (Manager/Admin only).
      * GET /api/v1/profiles/farmer/{farmerId}
+     * Security: Handled by SecurityConfig - MANAGER or ADMIN role required
      */
     @GetMapping("/{farmerId}")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<FarmerProfileDto>> getProfileById(@PathVariable UUID farmerId) {
         FarmerProfileDto profile = farmerProfileService.getProfile(farmerId);
         return ResponseEntity.ok(ApiResponse.success(profile));
@@ -124,9 +141,9 @@ public class FarmerProfileController {
     /**
      * Get pending farmer count (Manager/Admin only).
      * GET /api/v1/profiles/farmer/pending/count
+     * Security: Handled by SecurityConfig - MANAGER or ADMIN role required
      */
     @GetMapping("/pending/count")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Long>> getPendingCount() {
         long count = farmerProfileService.getPendingCount();
         return ResponseEntity.ok(ApiResponse.success(count));
