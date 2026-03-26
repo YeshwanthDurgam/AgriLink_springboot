@@ -36,6 +36,7 @@ public class RazorpayService {
 
     /**
      * Create a Razorpay order for payment.
+     * Falls back to mock payment if Razorpay credentials are invalid.
      * 
      * @param order  The order to create payment for
      * @param amount The amount to charge
@@ -43,9 +44,15 @@ public class RazorpayService {
      */
     @Transactional
     public Payment createPaymentOrder(Order order, BigDecimal amount) {
-        log.info("Creating Razorpay order for order: {} amount: {}", order.getOrderNumber(), amount);
+        log.info("Creating payment order for order: {} amount: {}", order.getOrderNumber(), amount);
 
         try {
+            // If Razorpay client is not available, use mock payment
+            if (razorpayClient == null || !razorpayConfig.isRazorpayConfigured()) {
+                log.warn("Razorpay client not configured. Using mock payment order for testing.");
+                return createMockPaymentOrder(order, amount);
+            }
+
             // Convert amount to paise (smallest currency unit)
             long amountInPaise = amount.multiply(BigDecimal.valueOf(100)).longValue();
 
@@ -83,9 +90,47 @@ public class RazorpayService {
             return paymentRepository.save(payment);
 
         } catch (RazorpayException e) {
-            log.error("Failed to create Razorpay order for order: {}", order.getOrderNumber(), e);
+            log.error("Razorpay API error for order: {}. Error: {}", order.getOrderNumber(), e.getMessage());
+            log.warn("Falling back to mock payment. Please ensure valid Razorpay credentials are configured.");
+            return createMockPaymentOrder(order, amount);
+        } catch (Exception e) {
+            log.error("Unexpected error creating payment for order: {}", order.getOrderNumber(), e);
             throw new BadRequestException("Failed to initialize payment: " + e.getMessage());
         }
+    }
+
+    /**
+     * Create a mock payment order for testing or when Razorpay is not configured.
+     * This allows the application to work without valid Razorpay credentials.
+     * 
+     * @param order  The order to create payment for
+     * @param amount The amount to charge
+     * @return Payment entity with mock payment details
+     */
+    @Transactional
+    private Payment createMockPaymentOrder(Order order, BigDecimal amount) {
+        log.info("Creating mock payment order for order: {} amount: {}", order.getOrderNumber(), amount);
+
+        // Generate mock Razorpay order ID
+        String mockOrderId = "order_" + UUID.randomUUID().toString().substring(0, 16).replace("-", "");
+        String mockReceipt = "mock_rcpt_" + order.getId().toString().substring(0, 8) + "_"
+                + (System.currentTimeMillis() % 1000000000L);
+
+        Payment payment = Payment.builder()
+                .order(order)
+                .paymentMethod("RAZORPAY")
+                .paymentGateway("MOCK")
+                .amount(amount)
+                .currency(razorpayConfig.getCurrency())
+                .razorpayOrderId(mockOrderId)
+                .razorpayReceipt(mockReceipt)
+                .paymentStatus(Payment.PaymentStatus.CREATED)
+                .build();
+
+        log.warn("⚠️  MOCK PAYMENT MODE ACTIVE - This payment will not be processed by Razorpay. " +
+                 "Configure valid Razorpay API keys in .env to enable real payments.");
+
+        return paymentRepository.save(payment);
     }
 
     /**

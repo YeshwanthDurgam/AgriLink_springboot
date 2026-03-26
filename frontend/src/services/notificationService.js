@@ -1,4 +1,4 @@
-import { notificationApi } from './api';
+import { marketplaceApi, notificationApi } from './api';
 
 const notificationService = {
   // Get all notifications (paginated)
@@ -54,6 +54,18 @@ const notificationService = {
   // Update notification preferences
   updatePreferences: async (preferences) => {
     const response = await notificationApi.put('/notifications/preferences', preferences);
+    return response.data;
+  },
+
+  // Approve a marketplace price update proposal.
+  allowPriceUpdateProposal: async (proposalId) => {
+    const response = await marketplaceApi.post(`/listings/price-updates/${proposalId}/allow`);
+    return response.data;
+  },
+
+  // Deny a marketplace price update proposal.
+  denyPriceUpdateProposal: async (proposalId) => {
+    const response = await marketplaceApi.post(`/listings/price-updates/${proposalId}/deny`);
     return response.data;
   },
 

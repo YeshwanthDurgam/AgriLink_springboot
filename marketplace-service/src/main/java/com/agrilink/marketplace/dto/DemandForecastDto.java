@@ -3,6 +3,7 @@ package com.agrilink.marketplace.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * DTO for demand forecast response.
@@ -42,4 +43,10 @@ public class DemandForecastDto {
     
     // Additional insights
     private String marketInsight;
+
+    // Data quality metadata
+    private String dataSource;
+    private LocalDateTime generatedAt;
+    private Integer dataFreshnessMinutes;
+    private Integer confidenceScore;
 }

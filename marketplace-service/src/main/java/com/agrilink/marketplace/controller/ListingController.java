@@ -5,7 +5,9 @@ import com.agrilink.common.dto.PagedResponse;
 import com.agrilink.marketplace.dto.CreateListingRequest;
 import com.agrilink.marketplace.dto.ListingDto;
 import com.agrilink.marketplace.dto.ListingSearchCriteria;
+import com.agrilink.marketplace.dto.PriceUpdateProposalDto;
 import com.agrilink.marketplace.service.ListingService;
+import com.agrilink.marketplace.service.PriceUpdateApprovalService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.Set;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,7 +36,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ListingController {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt",
+            "pricePerUnit",
+            "averageRating",
+            "title",
+            "quantity"
+    );
+
     private final ListingService listingService;
+    private final PriceUpdateApprovalService priceUpdateApprovalService;
 
     /**
      * Helper method to get seller ID from JWT token stored in request attribute.
@@ -103,8 +115,12 @@ public class ListingController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
+            String normalizedKeyword = normalizeKeyword(keyword);
+            String safeSortBy = ALLOWED_SORT_FIELDS.contains(sortBy) ? sortBy : "createdAt";
+            String safeSortDir = "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
+
         ListingSearchCriteria criteria = ListingSearchCriteria.builder()
-                .keyword(keyword)
+                .keyword(normalizedKeyword)
                 .categoryId(categoryId)
                 .categoryIds(categoryIds)
                 .cropType(cropType)
@@ -125,13 +141,21 @@ public class ListingController {
                 .radiusKm(radiusKm)
                 .build();
 
-        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+            Sort sort = "asc".equals(safeSortDir) ? Sort.by(safeSortBy).ascending() : Sort.by(safeSortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ListingDto> listings = listingService.searchListings(criteria, pageable);
         PagedResponse<ListingDto> response = PagedResponse.of(listings);
 
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String normalized = keyword.trim().replaceAll("\\s+", " ");
+        return normalized.isEmpty() ? null : normalized;
     }
 
     /**
@@ -201,6 +225,53 @@ public class ListingController {
     }
 
     /**
+     * Get pending automated price update proposals for the authenticated farmer.
+     * GET /api/v1/listings/price-updates/pending
+     */
+    @GetMapping("/price-updates/pending")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<PagedResponse<PriceUpdateProposalDto>>> getPendingPriceUpdates(
+            HttpServletRequest request,
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<PriceUpdateProposalDto> proposals = priceUpdateApprovalService.getPendingProposals(sellerId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(proposals)));
+    }
+
+    /**
+     * Approve a suggested market-driven price update.
+     * POST /api/v1/listings/price-updates/{proposalId}/allow
+     */
+    @PostMapping("/price-updates/{proposalId}/allow")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<PriceUpdateProposalDto>> allowPriceUpdate(
+            HttpServletRequest request,
+            Authentication authentication,
+            @PathVariable UUID proposalId) {
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
+        PriceUpdateProposalDto updated = priceUpdateApprovalService.allowPriceUpdate(proposalId, sellerId);
+        return ResponseEntity.ok(ApiResponse.success("Price update approved", updated));
+    }
+
+    /**
+     * Reject a suggested market-driven price update.
+     * POST /api/v1/listings/price-updates/{proposalId}/deny
+     */
+    @PostMapping("/price-updates/{proposalId}/deny")
+    @PreAuthorize("hasRole('FARMER')")
+    public ResponseEntity<ApiResponse<PriceUpdateProposalDto>> denyPriceUpdate(
+            HttpServletRequest request,
+            Authentication authentication,
+            @PathVariable UUID proposalId) {
+        UUID sellerId = getSellerIdFromRequest(request, authentication);
+        PriceUpdateProposalDto updated = priceUpdateApprovalService.denyPriceUpdate(proposalId, sellerId);
+        return ResponseEntity.ok(ApiResponse.success("Price update denied", updated));
+    }
+
+    /**
      * Update listing.
      * PUT /api/v1/listings/{listingId}
      */
@@ -254,5 +325,43 @@ public class ListingController {
     public ResponseEntity<ApiResponse<List<com.agrilink.marketplace.dto.SellerDto>>> getSellers() {
         List<com.agrilink.marketplace.dto.SellerDto> sellers = listingService.getSellers();
         return ResponseEntity.ok(ApiResponse.success(sellers));
+    }
+
+    /**
+     * Admin: Get pending listings for approval.
+     * GET /api/v1/listings/admin/pending
+     */
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PagedResponse<ListingDto>>> getPendingListings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<ListingDto> listings = listingService.getPendingListings(pageable);
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.of(listings)));
+    }
+
+    /**
+     * Admin: Approve a listing (changes status from DRAFT to ACTIVE for customer visibility).
+     * POST /api/v1/listings/admin/{listingId}/approve
+     */
+    @PostMapping("/admin/{listingId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ListingDto>> approveListing(@PathVariable UUID listingId) {
+        ListingDto listing = listingService.updateListingStatus(listingId, Listing.ListingStatus.ACTIVE);
+        return ResponseEntity.ok(ApiResponse.success("Listing approved and activated successfully", listing));
+    }
+
+    /**
+     * Admin: Suspend/Reject a listing with reason.
+     * POST /api/v1/listings/admin/{listingId}/suspend
+     */
+    @PostMapping("/admin/{listingId}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ListingDto>> suspendListing(
+            @PathVariable UUID listingId,
+            @RequestParam(required = false) String reason) {
+        ListingDto listing = listingService.suspendListing(listingId, reason);
+        return ResponseEntity.ok(ApiResponse.success("Listing suspended successfully", listing));
     }
 }

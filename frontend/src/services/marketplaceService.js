@@ -1,5 +1,13 @@
 import { marketplaceApi } from './api';
 
+const ALLOWED_SORT_FIELDS = new Set([
+  'createdAt',
+  'pricePerUnit',
+  'averageRating',
+  'title',
+  'quantity'
+]);
+
 // Simple in-memory cache for frequently accessed data
 const cache = {
   categories: { data: null, timestamp: 0 },
@@ -20,10 +28,27 @@ const getCachedOrFetch = async (key, fetcher) => {
 const marketplaceService = {
   // Get all listings with pagination and filters
   getListings: async (params = {}) => {
-    const { page = 0, size = 12, categoryId, minPrice, maxPrice, search, sortBy } = params;
+    const {
+      page = 0,
+      size = 12,
+      categoryId,
+      minPrice,
+      maxPrice,
+      keyword,
+      minRating,
+      organicOnly,
+      availableOnly,
+      sortBy
+    } = params;
+
+    const rawSortBy = sortBy?.split(',')[0] || 'createdAt';
+    const safeSortBy = ALLOWED_SORT_FIELDS.has(rawSortBy) ? rawSortBy : 'createdAt';
+    const safeSortDir = sortBy?.split(',')[1] === 'asc' ? 'asc' : 'desc';
+    const hasNonDefaultSort = safeSortBy !== 'createdAt' || safeSortDir !== 'desc';
+    const hasAdvancedFilters = keyword || minPrice || maxPrice || minRating || organicOnly || availableOnly || hasNonDefaultSort;
     
-    // If categoryId is provided, use the category endpoint
-    if (categoryId) {
+    // Use lightweight category endpoint only for plain category browsing.
+    if (categoryId && !hasAdvancedFilters) {
       const response = await marketplaceApi.get(`/listings/category/${categoryId}`, {
         params: { page, size }
       });
@@ -31,16 +56,20 @@ const marketplaceService = {
     }
     
     // If search or filters, use search endpoint
-    if (search || minPrice || maxPrice) {
+    if (categoryId || hasAdvancedFilters) {
       const response = await marketplaceApi.get('/listings/search', {
-        params: { 
-          keyword: search, 
-          minPrice, 
-          maxPrice, 
-          page, 
+        params: {
+          categoryId,
+          keyword,
+          minPrice,
+          maxPrice,
+          minRating,
+          organicOnly,
+          availableOnly,
+          page,
           size,
-          sortBy: sortBy?.split(',')[0] || 'createdAt',
-          sortDir: sortBy?.split(',')[1] || 'desc'
+          sortBy: safeSortBy,
+          sortDir: safeSortDir
         }
       });
       return response.data.data || response.data;
@@ -106,7 +135,7 @@ const marketplaceService = {
   // Search listings
   searchListings: async (query, page = 0, size = 12) => {
     const response = await marketplaceApi.get('/listings/search', {
-      params: { query, page, size }
+      params: { keyword: query, page, size }
     });
     return response.data.data || response.data;
   },

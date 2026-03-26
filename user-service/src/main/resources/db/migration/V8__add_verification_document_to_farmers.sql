@@ -2,12 +2,26 @@
 -- Farmers must upload verification documents (Aadhaar/Gov ID/Land ownership proof)
 -- When a document is (re)uploaded, verification status resets to PENDING
 
--- Add verification document columns
-ALTER TABLE user_schema.farmers ADD COLUMN IF NOT EXISTS verification_document TEXT;
-ALTER TABLE user_schema.farmers ADD COLUMN IF NOT EXISTS document_uploaded_at TIMESTAMP;
-ALTER TABLE user_schema.farmers ADD COLUMN IF NOT EXISTS document_type VARCHAR(50);
+DO $$
+DECLARE
+	farmers_table regclass;
+BEGIN
+	-- Support both deployments:
+	-- 1) Neon/profiled setup where tables are in user_schema
+	-- 2) Local/default setup where tables are in public/current schema
+	farmers_table := COALESCE(to_regclass('user_schema.farmers'), to_regclass('farmers'));
 
--- Add comment for documentation
-COMMENT ON COLUMN user_schema.farmers.verification_document IS 'Base64 encoded verification document (Aadhaar/Gov ID/Land proof) or URL';
-COMMENT ON COLUMN user_schema.farmers.document_uploaded_at IS 'Timestamp when document was last uploaded';
-COMMENT ON COLUMN user_schema.farmers.document_type IS 'Type of document uploaded: AADHAAR, GOV_ID, LAND_PROOF, OTHER';
+	IF farmers_table IS NULL THEN
+		RAISE EXCEPTION 'Cannot find farmers table in user_schema or current schema';
+	END IF;
+
+	-- Add verification document columns
+	EXECUTE format('ALTER TABLE %s ADD COLUMN IF NOT EXISTS verification_document TEXT', farmers_table);
+	EXECUTE format('ALTER TABLE %s ADD COLUMN IF NOT EXISTS document_uploaded_at TIMESTAMP', farmers_table);
+	EXECUTE format('ALTER TABLE %s ADD COLUMN IF NOT EXISTS document_type VARCHAR(50)', farmers_table);
+
+	-- Add comment for documentation
+	EXECUTE format($f$COMMENT ON COLUMN %s.verification_document IS 'Base64 encoded verification document (Aadhaar/Gov ID/Land proof) or URL'$f$, farmers_table);
+	EXECUTE format($f$COMMENT ON COLUMN %s.document_uploaded_at IS 'Timestamp when document was last uploaded'$f$, farmers_table);
+	EXECUTE format($f$COMMENT ON COLUMN %s.document_type IS 'Type of document uploaded: AADHAAR, GOV_ID, LAND_PROOF, OTHER'$f$, farmers_table);
+END $$;

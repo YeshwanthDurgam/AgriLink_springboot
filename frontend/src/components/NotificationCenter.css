@@ -217,6 +217,77 @@
   color: #9ca3af;
 }
 
+.proposal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.proposal-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 0.72rem;
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.proposal-allow-btn,
+.proposal-deny-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.proposal-allow-btn {
+  background: #166534;
+  color: #ffffff;
+}
+
+.proposal-allow-btn:hover:not(:disabled) {
+  background: #14532d;
+}
+
+.proposal-deny-btn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.proposal-deny-btn:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.proposal-allow-btn:disabled,
+.proposal-deny-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.proposal-result {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.proposal-result.approved {
+  color: #166534;
+}
+
+.proposal-result.denied {
+  color: #991b1b;
+}
+
 .notification-actions {
   display: flex;
   gap: 0.25rem;

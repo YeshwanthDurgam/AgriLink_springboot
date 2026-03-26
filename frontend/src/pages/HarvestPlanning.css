@@ -106,6 +106,19 @@
   margin-bottom: 16px;
 }
 
+.harvest-stale-warning {
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  color: #92400e;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
 /* Results */
 .guidance-results {
   border-top: 1px solid #e5e7eb;
@@ -141,6 +154,25 @@
   padding: 4px 10px;
   background: #dbeafe;
   color: #1d4ed8;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.guidance-meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fdba74;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
@@ -268,6 +300,15 @@
   color: #3b82f6;
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.weather-source-row {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #334155;
 }
 
 /* Readiness Section */

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 // Tree-shakeable individual icon imports
 import { FiPackage } from '@react-icons/all-files/fi/FiPackage';
@@ -20,12 +20,21 @@ import EmptyState from '../components/EmptyState';
 import './Orders.css';
 
 const Orders = () => {
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('buyer');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const tabFromState = location.state?.initialTab;
+    if (tabFromState === 'buyer' || tabFromState === 'seller') {
+      setActiveTab(tabFromState);
+      setPage(0);
+    }
+  }, [location.state]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);

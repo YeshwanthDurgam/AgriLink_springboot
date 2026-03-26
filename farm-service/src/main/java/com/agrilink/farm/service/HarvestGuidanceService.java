@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.*;
 
@@ -199,6 +200,14 @@ public class HarvestGuidanceService {
         
         // Build cultivation tips
         List<String> tips = buildCultivationTips(normalizedCrop, weatherSummary);
+
+        boolean weatherIsSimulated = weatherSummary == null
+            || "simulated-seasonal".equalsIgnoreCase(weatherSummary.getSource());
+        String dataSource = weatherIsSimulated
+            ? "rules-engine + seasonal-weather-model"
+            : "rules-engine + open-meteo";
+        int dataFreshnessMinutes = weatherIsSimulated ? 720 : 15;
+        int confidenceScore = weatherIsSimulated ? 58 : 78;
         
         return HarvestGuidanceDto.builder()
                 .cropName(cropName)
@@ -209,7 +218,11 @@ public class HarvestGuidanceService {
                 .irrigationGuidance(irrigation)
                 .harvestReadiness(harvestReadiness)
                 .cultivationTips(tips)
-                .isSimulated(true)
+                .isSimulated(weatherIsSimulated)
+                .dataSource(dataSource)
+                .generatedAt(LocalDateTime.now())
+                .dataFreshnessMinutes(dataFreshnessMinutes)
+                .confidenceScore(confidenceScore)
                 .build();
     }
 
@@ -255,6 +268,8 @@ public class HarvestGuidanceService {
                         .forecast(generateForecastSummary(weather))
                         .advisoryMessage(generateWeatherAdvisory(weather))
                         .dailyForecast(dailyForecast)
+                        .source("open-meteo")
+                        .lastUpdatedAt(weather.getLastUpdated())
                         .build();
             }
         } catch (Exception e) {
@@ -300,6 +315,8 @@ public class HarvestGuidanceService {
                 .forecast("Weather data simulated based on seasonal patterns. Check local forecasts for accurate information.")
                 .advisoryMessage("Monitor local weather updates for field operations planning.")
                 .dailyForecast(forecast)
+            .source("simulated-seasonal")
+            .lastUpdatedAt(LocalDateTime.now())
                 .build();
     }
 

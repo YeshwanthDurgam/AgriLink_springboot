@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FiCloud, FiDroplet, FiSun, FiThermometer, FiTool, FiInfo, 
   FiRefreshCw, FiCheckCircle, FiAlertCircle, FiClock, FiMapPin
@@ -16,6 +16,7 @@ const HarvestPlanning = () => {
   const [selectedCrop, setSelectedCrop] = useState('');
   const [selectedFarm, setSelectedFarm] = useState('');
   const [location, setLocation] = useState('');
+  const [liveNow, setLiveNow] = useState(Date.now());
 
   useEffect(() => {
     fetchCrops();
@@ -56,13 +57,15 @@ const HarvestPlanning = () => {
     }
   };
 
-  const fetchGuidance = async () => {
+  const fetchGuidance = useCallback(async (silent = false) => {
     if (!selectedCrop) {
       setError('Please select a crop');
       return;
     }
 
-    setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
     setError('');
     try {
       const data = await analyticsService.getHarvestGuidance(
@@ -75,9 +78,24 @@ const HarvestPlanning = () => {
       console.error('Error fetching guidance:', err);
       setError('Failed to fetch harvest guidance. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [selectedCrop, location, selectedFarm]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setLiveNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!guidance || !selectedCrop) return;
+    const interval = setInterval(() => {
+      fetchGuidance(true);
+    }, 180000);
+    return () => clearInterval(interval);
+  }, [guidance, selectedCrop, fetchGuidance]);
 
   const formatCropName = (crop) => {
     return crop.charAt(0) + crop.slice(1).toLowerCase();
@@ -119,6 +137,26 @@ const HarvestPlanning = () => {
       default: return '#6b7280';
     }
   };
+
+  const formatDateTime = (value) => {
+    if (!value) return 'N/A';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'N/A';
+    return parsed.toLocaleString();
+  };
+
+  const getEffectiveFreshnessMinutes = () => {
+    if (guidance?.generatedAt) {
+      const generated = new Date(guidance.generatedAt).getTime();
+      if (!Number.isNaN(generated)) {
+        return Math.max(0, Math.floor((liveNow - generated) / 60000));
+      }
+    }
+    return guidance?.dataFreshnessMinutes ?? null;
+  };
+
+  const effectiveFreshnessMinutes = getEffectiveFreshnessMinutes();
+  const isStale = effectiveFreshnessMinutes != null && effectiveFreshnessMinutes > 120;
 
   return (
     <div className="harvest-planning-section">
@@ -185,6 +223,12 @@ const HarvestPlanning = () => {
 
       {error && <div className="harvest-error">{error}</div>}
 
+      {guidance && isStale && (
+        <div className="harvest-stale-warning">
+          <FiInfo /> Guidance may be stale ({effectiveFreshnessMinutes} min old). Refreshing automatically every 3 minutes.
+        </div>
+      )}
+
       {guidance && (
         <div className="guidance-results">
           <div className="guidance-header">
@@ -194,11 +238,17 @@ const HarvestPlanning = () => {
                 <FiMapPin /> {guidance.location}
               </span>
             </div>
-            {guidance.isSimulated && (
-              <span className="simulated-badge">
-                <FiInfo /> Backend-driven data
-              </span>
-            )}
+            <div className="guidance-meta-badges">
+              {guidance.isSimulated && (
+                <span className="simulated-badge">
+                  <FiInfo /> Partially simulated
+                </span>
+              )}
+              <span className="meta-badge">Source: {guidance.dataSource || 'Unknown'}</span>
+              <span className="meta-badge">Freshness: {effectiveFreshnessMinutes ?? 'N/A'} min</span>
+              <span className="meta-badge">Confidence: {guidance.confidenceScore ?? 'N/A'}%</span>
+              <span className="meta-badge">Updated: {formatDateTime(guidance.generatedAt)}</span>
+            </div>
           </div>
 
           {/* Weather Summary */}
@@ -231,6 +281,10 @@ const HarvestPlanning = () => {
               </div>
               <div className="weather-advisory">
                 <FiInfo /> {guidance.weatherSummary.advisoryMessage}
+              </div>
+              <div className="weather-source-row">
+                <span>Weather Source: {guidance.weatherSummary.source || 'Unknown'}</span>
+                <span>Weather Updated: {formatDateTime(guidance.weatherSummary.lastUpdatedAt)}</span>
               </div>
             </div>
           )}

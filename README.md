@@ -471,7 +471,7 @@ GET http://localhost:8084/api/v1/listings?page=0&size=12
 #### Search Listings with Filters
 
 ```bash
-GET http://localhost:8084/api/v1/listings?categoryId=<uuid>&minPrice=10&maxPrice=100&page=0&size=20
+GET http://localhost:8084/api/v1/listings/search?keyword=tomato&categoryId=<uuid>&minPrice=10&maxPrice=100&page=0&size=20&sortBy=createdAt&sortDir=desc
 ```
 
 #### Get Categories

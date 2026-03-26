@@ -174,7 +174,7 @@ const AppContent = () => {
                 </FarmerRoute>
               } />
               <Route path="/farms/create" element={
-                <FarmerRoute>
+                <FarmerRoute requireVerification={false} requireProfileCompletion={true}>
                   <CreateFarm />
                 </FarmerRoute>
               } />
@@ -204,12 +204,12 @@ const AppContent = () => {
                 </PrivateRoute>
               } />
               <Route path="/marketplace/create" element={
-                <FarmerRoute>
+                <FarmerRoute requireVerification={false} requireProfileCompletion={true}>
                   <CreateListing />
                 </FarmerRoute>
               } />
               <Route path="/marketplace/edit/:id" element={
-                <FarmerRoute>
+                <FarmerRoute requireVerification={false} requireProfileCompletion={true}>
                   <EditListing />
                 </FarmerRoute>
               } />

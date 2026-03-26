@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import wishlistService from '../services/wishlistService';
@@ -9,7 +9,6 @@ import EmptyState from '../components/EmptyState';
 import './Wishlist.css';
 
 const Wishlist = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,16 +16,6 @@ const Wishlist = () => {
   const [actionLoading, setActionLoading] = useState({});
 
   const isGuest = !user;
-  const isFarmer = user?.roles?.includes('FARMER');
-
-  // Block farmers from accessing wishlist
-  useEffect(() => {
-    if (isFarmer) {
-      toast.error('Farmers cannot use the wishlist feature');
-      navigate('/farmer/dashboard');
-      return;
-    }
-  }, [isFarmer, navigate]);
 
   const fetchWishlist = useCallback(async () => {
     try {
@@ -55,10 +44,8 @@ const Wishlist = () => {
   }, [isGuest]);
 
   useEffect(() => {
-    if (!isFarmer) {
-      fetchWishlist();
-    }
-  }, [isFarmer, fetchWishlist]);
+    fetchWishlist();
+  }, [fetchWishlist]);
 
   // Listen for guest wishlist updates
   useEffect(() => {

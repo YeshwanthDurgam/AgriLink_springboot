@@ -51,10 +51,17 @@ public class GlobalExceptionHandler {
             validationErrors.computeIfAbsent(fieldName, k -> new ArrayList<>()).add(errorMessage);
         });
 
+        // Enhanced logging for debugging validation issues
+        log.warn("[ValidationError] Path: {}", request.getRequestURI());
+        log.warn("[ValidationError] Validation errors: {}", validationErrors);
+        validationErrors.forEach((field, messages) -> {
+            log.warn("[ValidationError] {} : {}", field, messages);
+        });
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("VALIDATION_ERROR")
-                .message("Validation failed")
+                .message("Validation failed: " + String.join("; ", validationErrors.keySet()))
                 .path(request.getRequestURI())
                 .timestamp(LocalDateTime.now())
                 .validationErrors(validationErrors)

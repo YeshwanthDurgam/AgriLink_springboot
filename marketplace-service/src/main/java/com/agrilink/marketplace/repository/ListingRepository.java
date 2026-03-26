@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -79,6 +80,18 @@ public interface ListingRepository extends JpaRepository<Listing, UUID>, JpaSpec
 
        @Query("SELECT l.location FROM Listing l WHERE l.sellerId = :sellerId AND l.status = 'ACTIVE' ORDER BY l.createdAt DESC LIMIT 1")
        String getLocationBySeller(@Param("sellerId") UUID sellerId);
+
+       @Query("SELECT COUNT(l) FROM Listing l WHERE l.status = 'ACTIVE' AND LOWER(l.cropType) = LOWER(:cropType)")
+       long countActiveListingsByCropType(@Param("cropType") String cropType);
+
+       @Query("SELECT AVG(l.pricePerUnit) FROM Listing l WHERE l.status = 'ACTIVE' AND LOWER(l.cropType) = LOWER(:cropType)")
+       BigDecimal getAverageActivePriceByCropType(@Param("cropType") String cropType);
+
+       @Query("SELECT l FROM Listing l WHERE l.status = :status")
+       Page<Listing> findByStatusForPriceSync(@Param("status") Listing.ListingStatus status, Pageable pageable);
+
+       @Query("SELECT COUNT(l) FROM Listing l WHERE l.status = 'ACTIVE' AND LOWER(l.cropType) = LOWER(:cropType) AND l.createdAt >= :fromDate")
+       long countRecentActiveListingsByCropType(@Param("cropType") String cropType, @Param("fromDate") LocalDateTime fromDate);
 
        @Query("SELECT COUNT(l) FROM Listing l WHERE l.category.id = :categoryId AND l.status = 'ACTIVE'")
        Long countActiveListingsByCategory(@Param("categoryId") UUID categoryId);

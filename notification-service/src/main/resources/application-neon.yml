@@ -13,9 +13,9 @@ spring:
 
   datasource:
     # Neon Database Connection URL
-    url: jdbc:postgresql://ep-withered-wave-ah6absff-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=notification_schema
-    username: neondb_owner
-    password: npg_0aWqleYJP1nw
+    url: ${NEON_DB_URL:}
+    username: ${NEON_DB_USER:}
+    password: ${NEON_DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
     # HikariCP Connection Pool Configuration (optimized for serverless)
@@ -29,7 +29,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -51,8 +51,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 465
-    username: arunteja2385@gmail.com
-    password: ${MAIL_PASSWORD:rgnt vljl ienu hmgw}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -77,7 +77,7 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}
+  secret: ${JWT_SECRET:}
   expiration: 86400000
 
 # Logging
@@ -89,15 +89,31 @@ logging:
 
 # Notification Settings
 notification:
-  email:
-    from: arunteja2385@gmail.com
-    from-name: AgriLink
+  retry:
     enabled: true
+    max-retries: 5
+    interval-ms: 60000
+  email:
+    from: ${NOTIFICATION_EMAIL_FROM:no-reply@agrilink.local}
+    from-name: ${NOTIFICATION_EMAIL_FROM_NAME:AgriLink}
+    enabled: true
+    provider: ${NOTIFICATION_EMAIL_PROVIDER:brevo}
+    brevo:
+      api-key: ${BREVO_API_KEY:}
   sms:
     enabled: false
-    provider: twilio
+    provider: ${NOTIFICATION_SMS_PROVIDER:textbelt}
+    textbelt:
+      key: ${TEXTBELT_KEY:textbelt_test}
   push:
     enabled: false
+
+  security:
+    allow-unauthenticated-internal-endpoints: ${NOTIFICATION_ALLOW_UNAUTH_INTERNAL_ENDPOINTS:false}
+    enable-test-endpoints: ${NOTIFICATION_ENABLE_TEST_ENDPOINTS:false}
+
+websocket:
+  allowed-origin-patterns: ${WEBSOCKET_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
 
 # Microservice URLs
 user:

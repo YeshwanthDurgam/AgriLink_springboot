@@ -1,6 +1,7 @@
 package com.agrilink.notification.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,6 +30,12 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${notification.security.allow-unauthenticated-internal-endpoints:false}")
+    private boolean allowUnauthenticatedInternalEndpoints;
+
+    @Value("${notification.security.enable-test-endpoints:false}")
+    private boolean enableTestEndpoints;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -36,18 +43,23 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        // Internal service endpoints for sending notifications
-                        .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/notifications/send/template").permitAll()
-                        // Email API endpoints (for inter-service communication)
-                        .requestMatchers("/api/v1/emails/**").permitAll()
-                        // Email test endpoints (for development/testing)
-                        .requestMatchers("/api/v1/email-test/**").permitAll()
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                        auth.requestMatchers("/actuator/health", "/error").permitAll();
+
+                        if (allowUnauthenticatedInternalEndpoints) {
+                            auth.requestMatchers(HttpMethod.POST, "/api/v1/notifications/send").permitAll();
+                            auth.requestMatchers(HttpMethod.POST, "/api/v1/notifications/send/template").permitAll();
+                            auth.requestMatchers("/api/v1/emails/**").permitAll();
+                        }
+
+                        if (enableTestEndpoints) {
+                            auth.requestMatchers("/api/v1/email-test/**").permitAll();
+                        } else {
+                            auth.requestMatchers("/api/v1/email-test/**").denyAll();
+                        }
+
+                        auth.anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

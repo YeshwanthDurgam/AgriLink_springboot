@@ -12,12 +12,16 @@ import { userApi } from '../services/api';
  * Checks:
  * 1. User is authenticated
  * 2. User has FARMER role
- * 3. Farmer profile is complete (from backend)
- * 4. Farmer is verified/APPROVED (from backend)
+ * 3. Farmer profile is complete (optional, from backend)
+ * 4. Farmer is verified/APPROVED (optional, from backend)
  * 
- * Redirects to profile onboarding if not complete/verified.
+ * Redirects to profile onboarding based on configured requirements.
  */
-const FarmerRoute = ({ children, requireVerification = true }) => {
+const FarmerRoute = ({
+  children,
+  requireVerification = true,
+  requireProfileCompletion = requireVerification
+}) => {
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const location = useLocation();
   const [farmerProfile, setFarmerProfile] = useState(null);
@@ -113,34 +117,29 @@ const FarmerRoute = ({ children, requireVerification = true }) => {
   const verificationStatus = farmerProfile?.status || 'PENDING';
   const isVerified = verificationStatus === 'APPROVED';
 
-  // If verification is required and profile is incomplete or not verified
-  if (requireVerification) {
-    if (!isProfileComplete) {
-      // Profile incomplete - redirect to onboarding
-      return <Navigate 
-        to="/profile/onboarding" 
-        state={{ 
-          from: location,
-          message: 'Please complete your profile to access farmer features.',
-          reason: 'incomplete_profile'
-        }} 
-        replace 
-      />;
-    }
+  if (requireProfileCompletion && !isProfileComplete) {
+    return <Navigate 
+      to="/profile/onboarding" 
+      state={{ 
+        from: location,
+        message: 'Please complete your profile to access farmer features.',
+        reason: 'incomplete_profile'
+      }} 
+      replace 
+    />;
+  }
 
-    if (!isVerified) {
-      // Profile complete but not verified - redirect to onboarding with pending message
-      return <Navigate 
-        to="/profile/onboarding" 
-        state={{ 
-          from: location,
-          message: 'Your profile is pending verification. Please wait for approval.',
-          reason: 'pending_verification',
-          status: verificationStatus
-        }} 
-        replace 
-      />;
-    }
+  if (requireVerification && !isVerified) {
+    return <Navigate 
+      to="/profile/onboarding" 
+      state={{ 
+        from: location,
+        message: 'Your profile is pending verification. Please wait for approval.',
+        reason: 'pending_verification',
+        status: verificationStatus
+      }} 
+      replace 
+    />;
   }
 
   // All checks passed - render the protected content

@@ -1,3 +1,8 @@
+:root {
+  --app-nav-height: 80px;
+  --app-sticky-gap: 16px;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
@@ -6,7 +11,7 @@
 
 .main-content {
   flex: 1;
-  padding: 24px 0;
+  padding: calc(var(--app-nav-height, 80px) + 24px) 0 24px;
 }
 
 /* Page Header */

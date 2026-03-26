@@ -7,6 +7,7 @@ import com.agrilink.notification.dto.MessageDto;
 import com.agrilink.notification.dto.SendMessageRequest;
 import com.agrilink.notification.entity.Conversation;
 import com.agrilink.notification.entity.Message;
+import com.agrilink.notification.service.UserServiceClient;
 import com.agrilink.notification.repository.ConversationRepository;
 import com.agrilink.notification.repository.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,12 @@ class MessagingServiceTest {
 
     @Mock
     private MessageRepository messageRepository;
+
+    @Mock
+    private UserServiceClient userServiceClient;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private MessagingService messagingService;
@@ -95,6 +102,7 @@ class MessagingServiceTest {
         @Test
         @DisplayName("Should send message successfully")
         void shouldSendMessageSuccessfully() {
+                lenient().when(userServiceClient.getUserRole(recipientId)).thenReturn("FARMER");
             lenient().when(conversationRepository.findByParticipants(senderId, recipientId))
                     .thenReturn(Optional.of(conversation));
             lenient().when(messageRepository.save(any(Message.class))).thenReturn(message);
@@ -119,6 +127,7 @@ class MessagingServiceTest {
         @Test
         @DisplayName("Should create new conversation if not exists")
         void shouldCreateNewConversationIfNotExists() {
+                lenient().when(userServiceClient.getUserRole(recipientId)).thenReturn("FARMER");
             lenient().when(conversationRepository.findByParticipants(senderId, recipientId))
                     .thenReturn(Optional.empty());
             lenient().when(conversationRepository.save(any(Conversation.class))).thenReturn(conversation);
@@ -137,6 +146,7 @@ class MessagingServiceTest {
         @Test
         @DisplayName("Should return user conversations")
         void shouldReturnUserConversations() {
+            lenient().when(userServiceClient.getUserName(recipientId)).thenReturn("John");
             Pageable pageable = PageRequest.of(0, 10);
             Page<Conversation> page = new PageImpl<>(List.of(conversation));
             when(conversationRepository.findByParticipant(senderId, pageable)).thenReturn(page);

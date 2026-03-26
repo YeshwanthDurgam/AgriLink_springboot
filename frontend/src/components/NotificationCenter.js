@@ -19,6 +19,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [processingActions, setProcessingActions] = useState({});
 
   const fetchNotifications = useCallback(async (pageNum = 0) => {
     try {
@@ -81,6 +82,67 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       const nextPage = page + 1;
       setPage(nextPage);
       fetchNotifications(nextPage);
+    }
+  };
+
+  const isPriceUpdateApprovalNotification = (notification) => {
+    if (!notification) return false;
+    const data = notification.data || {};
+    return notification.notificationType === 'LISTING' && !!data.proposalId;
+  };
+
+  const parsePriceValue = (value) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return null;
+    return num;
+  };
+
+  const formatPrice = (value, currency = 'INR') => {
+    const parsed = parsePriceValue(value);
+    if (parsed == null) return 'N/A';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(parsed);
+  };
+
+  const handlePriceProposalAction = async (notification, action) => {
+    const proposalId = notification?.data?.proposalId;
+    if (!proposalId) {
+      return;
+    }
+
+    const actionKey = `${notification.id}-${action}`;
+    try {
+      setProcessingActions(prev => ({ ...prev, [actionKey]: true }));
+      if (action === 'allow') {
+        await notificationService.allowPriceUpdateProposal(proposalId);
+      } else {
+        await notificationService.denyPriceUpdateProposal(proposalId);
+      }
+
+      await notificationService.markAsRead(notification.id);
+      setNotifications(prev => prev.map(item => {
+        if (item.id !== notification.id) return item;
+        return {
+          ...item,
+          read: true,
+          data: {
+            ...(item.data || {}),
+            responseStatus: action === 'allow' ? 'APPROVED' : 'DENIED'
+          }
+        };
+      }));
+    } catch (err) {
+      console.error(`Error while attempting to ${action} price update proposal:`, err);
+    } finally {
+      setProcessingActions(prev => {
+        const next = { ...prev };
+        delete next[actionKey];
+        return next;
+      });
     }
   };
 
@@ -166,9 +228,47 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                     <div className="notification-text">
                       <h4>{notification.title}</h4>
                       <p>{notification.message}</p>
+                      {isPriceUpdateApprovalNotification(notification) && (
+                        <div className="proposal-meta">
+                          <span>
+                            Current: {formatPrice(notification.data?.currentPrice, notification.data?.currency || 'INR')}
+                          </span>
+                          <span>
+                            Market: {formatPrice(notification.data?.suggestedPrice, notification.data?.currency || 'INR')}
+                          </span>
+                          {notification.data?.matchedCommodity && (
+                            <span>Matched: {notification.data.matchedCommodity}</span>
+                          )}
+                        </div>
+                      )}
                       <span className="notification-time">
                         {formatTime(notification.createdAt)}
                       </span>
+
+                      {isPriceUpdateApprovalNotification(notification) && !notification.read && (
+                        <div className="proposal-actions">
+                          <button
+                            className="proposal-allow-btn"
+                            onClick={() => handlePriceProposalAction(notification, 'allow')}
+                            disabled={!!processingActions[`${notification.id}-allow`] || !!processingActions[`${notification.id}-deny`]}
+                          >
+                            {processingActions[`${notification.id}-allow`] ? 'Allowing...' : 'Allow'}
+                          </button>
+                          <button
+                            className="proposal-deny-btn"
+                            onClick={() => handlePriceProposalAction(notification, 'deny')}
+                            disabled={!!processingActions[`${notification.id}-allow`] || !!processingActions[`${notification.id}-deny`]}
+                          >
+                            {processingActions[`${notification.id}-deny`] ? 'Denying...' : 'Deny'}
+                          </button>
+                        </div>
+                      )}
+
+                      {isPriceUpdateApprovalNotification(notification) && notification.read && notification.data?.responseStatus && (
+                        <div className={`proposal-result ${String(notification.data.responseStatus).toLowerCase()}`}>
+                          {notification.data.responseStatus === 'APPROVED' ? 'Price update approved' : 'Price update denied'}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="notification-actions">

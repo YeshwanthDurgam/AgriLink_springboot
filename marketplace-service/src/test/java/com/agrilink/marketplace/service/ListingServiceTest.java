@@ -2,10 +2,15 @@ package com.agrilink.marketplace.service;
 
 import com.agrilink.marketplace.dto.CreateListingRequest;
 import com.agrilink.marketplace.dto.ListingDto;
+import com.agrilink.marketplace.dto.ListingSearchCriteria;
+import com.agrilink.marketplace.dto.UserPublicProfileDto;
 import com.agrilink.marketplace.entity.Listing;
 import com.agrilink.marketplace.repository.CategoryRepository;
 import com.agrilink.marketplace.repository.ListingRepository;
 import com.agrilink.marketplace.repository.ReviewRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,8 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,6 +43,9 @@ class ListingServiceTest {
 
     @Mock
     private ReviewRepository reviewRepository;
+
+    @Mock
+    private UserServiceClient userServiceClient;
 
     @InjectMocks
     private ListingService listingService;
@@ -139,5 +149,47 @@ class ListingServiceTest {
 
         // Then
         verify(listingRepository).save(argThat(l -> l.getStatus() == Listing.ListingStatus.CANCELLED));
+    }
+
+    @Test
+    @DisplayName("Should search listings with criteria")
+    void shouldSearchListingsWithCriteria() {
+        ListingSearchCriteria criteria = ListingSearchCriteria.builder()
+                .keyword("fresh tomato")
+                .minPrice(new BigDecimal("1.00"))
+                .maxPrice(new BigDecimal("10.00"))
+                .organicOnly(true)
+                .availableOnly(true)
+                .build();
+        PageRequest pageable = PageRequest.of(0, 20);
+        Page<Listing> page = new PageImpl<>(List.of(listing), pageable, 1);
+
+        when(listingRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+        when(userServiceClient.getPublicProfile(any(UUID.class))).thenReturn(UserPublicProfileDto.builder().fullName("Farmer A").build());
+
+        Page<ListingDto> result = listingService.searchListings(criteria, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("Fresh Tomatoes");
+        verify(listingRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("Should normalize multi-term keyword through search pipeline")
+    void shouldHandleMultiTermKeywordSearch() {
+        ListingSearchCriteria criteria = ListingSearchCriteria.builder()
+                .keyword("fresh organic tomato")
+                .build();
+        PageRequest pageable = PageRequest.of(0, 10);
+        Page<Listing> page = new PageImpl<>(List.of(listing), pageable, 1);
+
+        when(listingRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+        when(userServiceClient.getPublicProfile(any(UUID.class))).thenReturn(UserPublicProfileDto.builder().fullName("Farmer A").build());
+
+        Page<ListingDto> result = listingService.searchListings(criteria, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(listingRepository).findAll(any(Specification.class), eq(pageable));
     }
 }

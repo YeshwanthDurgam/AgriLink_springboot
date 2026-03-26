@@ -76,14 +76,6 @@ const Checkout = () => {
 
   const [notes, setNotes] = useState('');
 
-  // Check if user is farmer - farmers cannot place orders
-  useEffect(() => {
-    if (user?.roles?.includes('FARMER')) {
-      toast.error('Farmers cannot place orders. Please use a customer account.');
-      navigate('/farmer/dashboard');
-    }
-  }, [user, navigate]);
-
   // Calculate delivery estimate
   useEffect(() => {
     const selected = DELIVERY_OPTIONS.find(opt => opt.id === deliveryOption);

@@ -27,7 +27,8 @@ public class FarmerProfileRequest {
     @Max(value = 120, message = "Age must be less than 120")
     private Integer age;
     
-    // No size limit - profile photo can be base64 encoded
+    // Allow large base64 images (up to ~6.5MB after base64 encoding)
+    @Size(max = 10000000, message = "Profile photo is too large")
     private String profilePhoto;
     
     @Size(max = 100, message = "City must be less than 100 characters")
@@ -50,7 +51,8 @@ public class FarmerProfileRequest {
     
     private String cropTypes;
     
-    // No size limit - farm photo can be base64 encoded
+    // Allow large base64 images (up to ~6.5MB after base64 encoding)
+    @Size(max = 10000000, message = "Farm photo is too large")
     private String farmPhoto;
     
     private String farmBio;

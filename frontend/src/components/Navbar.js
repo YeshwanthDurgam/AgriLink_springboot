@@ -51,6 +51,227 @@ const CATEGORY_ICONS = {
   'Herbs': '🌿'
 };
 
+const SEARCH_SCOPES = [
+  { key: 'all', label: 'All' },
+  { key: 'products', label: 'Products' },
+  { key: 'categories', label: 'Categories' },
+  { key: 'farmers', label: 'Farmers' }
+];
+
+const POPULAR_SEARCHES = ['Fresh Vegetables', 'Organic Fruits', 'Farm Fresh Milk', 'Rice', 'Tomatoes', 'Potatoes'];
+const SEARCH_BEHAVIOR_KEY = 'navbarSearchSuggestionMetrics';
+const MAX_SEARCH_BEHAVIOR_ENTRIES = 250;
+const SEARCH_TELEMETRY_KEY = 'navbarSearchTelemetryEvents';
+const MAX_SEARCH_TELEMETRY_EVENTS = 500;
+
+const normalizeSearchText = (value) => (value || '')
+  .toString()
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const getBoundedLevenshteinDistance = (a, b, maxDistance = 2) => {
+  if (a === b) {
+    return 0;
+  }
+  if (!a || !b) {
+    return Math.max(a?.length || 0, b?.length || 0);
+  }
+  const lenA = a.length;
+  const lenB = b.length;
+  if (Math.abs(lenA - lenB) > maxDistance) {
+    return maxDistance + 1;
+  }
+
+  let prev = new Array(lenB + 1);
+  let curr = new Array(lenB + 1);
+  for (let j = 0; j <= lenB; j += 1) {
+    prev[j] = j;
+  }
+
+  for (let i = 1; i <= lenA; i += 1) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= lenB; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + cost
+      );
+      rowMin = Math.min(rowMin, curr[j]);
+    }
+
+    if (rowMin > maxDistance) {
+      return maxDistance + 1;
+    }
+
+    [prev, curr] = [curr, prev];
+  }
+
+  return prev[lenB];
+};
+
+const getSuggestionScore = (sourceText, queryText) => {
+  const text = normalizeSearchText(sourceText);
+  const query = normalizeSearchText(queryText);
+  if (!text || !query) {
+    return 0;
+  }
+
+  const queryTokens = query.split(' ').filter(Boolean);
+  const textTokens = text.split(' ').filter(Boolean);
+  let score = 0;
+
+  if (text === query) {
+    score += 500;
+  }
+  if (text.startsWith(query)) {
+    score += 280;
+  }
+  if (text.includes(query)) {
+    score += 120;
+  }
+
+  queryTokens.forEach((token) => {
+    if (textTokens.some(textToken => textToken === token)) {
+      score += 80;
+    }
+    if (textTokens.some(textToken => textToken.startsWith(token))) {
+      score += 45;
+    }
+    if (text.includes(token)) {
+      score += 20;
+    }
+
+    // Typo tolerance: reward close token matches (e.g., "tomtoes" -> "tomatoes").
+    if (token.length >= 4) {
+      const bestDistance = textTokens.reduce((best, textToken) => {
+        const distance = getBoundedLevenshteinDistance(token, textToken, 2);
+        return Math.min(best, distance);
+      }, 3);
+
+      if (bestDistance === 1) {
+        score += 35;
+      } else if (bestDistance === 2) {
+        score += 15;
+      }
+    }
+  });
+
+  // Slightly prefer concise matches when relevance is similar.
+  score += Math.max(0, 40 - text.length);
+  return score;
+};
+
+const loadSearchBehaviorMetrics = () => {
+  try {
+    const raw = localStorage.getItem(SEARCH_BEHAVIOR_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+};
+
+const saveSearchBehaviorMetrics = (metrics) => {
+  try {
+    localStorage.setItem(SEARCH_BEHAVIOR_KEY, JSON.stringify(metrics));
+  } catch (error) {
+    // Ignore storage write errors (e.g., private mode quota limits).
+  }
+};
+
+const getSearchBehaviorKey = (scopeKey, label) => `${scopeKey}::${normalizeSearchText(label)}`;
+
+const getBehaviorBoost = (metrics, scopeKey, label) => {
+  const behaviorKey = getSearchBehaviorKey(scopeKey, label);
+  const entry = metrics?.[behaviorKey];
+  if (!entry) {
+    return 0;
+  }
+
+  const now = Date.now();
+  const ageMs = Math.max(0, now - (entry.lastSelectedAt || 0));
+  const ageHours = ageMs / (1000 * 60 * 60);
+  const countBoost = Math.min((entry.count || 0) * 18, 180);
+
+  let recencyBoost = 8;
+  if (ageHours <= 1) recencyBoost = 160;
+  else if (ageHours <= 24) recencyBoost = 100;
+  else if (ageHours <= 72) recencyBoost = 55;
+  else if (ageHours <= 168) recencyBoost = 25;
+
+  return countBoost + recencyBoost;
+};
+
+const trimBehaviorMetrics = (metrics) => {
+  const entries = Object.entries(metrics || {});
+  if (entries.length <= MAX_SEARCH_BEHAVIOR_ENTRIES) {
+    return metrics;
+  }
+
+  const sorted = entries
+    .sort((a, b) => (b[1]?.lastSelectedAt || 0) - (a[1]?.lastSelectedAt || 0))
+    .slice(0, MAX_SEARCH_BEHAVIOR_ENTRIES);
+
+  return Object.fromEntries(sorted);
+};
+
+const rankSuggestions = (items, queryText, textSelector, maxItems, metrics = {}, scopeKey = 'all') => {
+  return items
+    .map((item, index) => ({
+      item,
+      index,
+      score: getSuggestionScore(textSelector(item), queryText)
+        + getBehaviorBoost(metrics, scopeKey, textSelector(item))
+    }))
+    .filter(entry => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.index - b.index;
+    })
+    .slice(0, maxItems)
+    .map(entry => entry.item);
+};
+
+const trackSearchTelemetryEvent = (eventName, payload = {}) => {
+  try {
+    const raw = localStorage.getItem(SEARCH_TELEMETRY_KEY);
+    const current = raw ? JSON.parse(raw) : [];
+    const safeCurrent = Array.isArray(current) ? current : [];
+    const next = [
+      ...safeCurrent,
+      {
+        eventName,
+        timestamp: Date.now(),
+        ...payload
+      }
+    ];
+    const trimmed = next.length > MAX_SEARCH_TELEMETRY_EVENTS
+      ? next.slice(next.length - MAX_SEARCH_TELEMETRY_EVENTS)
+      : next;
+    localStorage.setItem(SEARCH_TELEMETRY_KEY, JSON.stringify(trimmed));
+
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('navbarSearchTelemetry', {
+        detail: {
+          eventName,
+          timestamp: Date.now(),
+          ...payload
+        }
+      }));
+    }
+  } catch (error) {
+    // Ignore telemetry storage errors to avoid impacting UX flows.
+  }
+};
+
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { cartCount } = useCart();
@@ -61,12 +282,20 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [searchScopeOpen, setSearchScopeOpen] = useState(false);
   const [locationMenuOpen, setLocationMenuOpen] = useState(false);
   
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchScope, setSearchScope] = useState('all');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [searchBehaviorMetrics, setSearchBehaviorMetrics] = useState(() => loadSearchBehaviorMetrics());
+  const [liveProductSuggestions, setLiveProductSuggestions] = useState([]);
+  const [liveCategorySuggestions, setLiveCategorySuggestions] = useState([]);
+  const [liveFarmerSuggestions, setLiveFarmerSuggestions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   
   // Data State
   const [categories, setCategories] = useState([]);
@@ -102,6 +331,35 @@ const Navbar = () => {
   const categoriesRef = useRef(null);
   const locationRef = useRef(null);
   const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const navbarRef = useRef(null);
+  const lastImpressionSignatureRef = useRef('');
+
+  const trackSearchTelemetry = useCallback((eventName, payload = {}) => {
+    trackSearchTelemetryEvent(eventName, payload);
+  }, []);
+
+  // Keep global navbar height in sync so sticky offsets remain correct on all pages.
+  useEffect(() => {
+    const setNavbarHeight = () => {
+      const height = navbarRef.current?.offsetHeight || 80;
+      document.documentElement.style.setProperty('--app-nav-height', `${height}px`);
+    };
+
+    setNavbarHeight();
+    window.addEventListener('resize', setNavbarHeight);
+
+    let observer;
+    if (navbarRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => setNavbarHeight());
+      observer.observe(navbarRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', setNavbarHeight);
+      if (observer) observer.disconnect();
+    };
+  }, []);
 
 
   // Get user role
@@ -298,6 +556,7 @@ const Navbar = () => {
       }
       if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
         setCategoriesOpen(false);
+        setSearchScopeOpen(false);
       }
       if (locationRef.current && !locationRef.current.contains(event.target)) {
         setLocationMenuOpen(false);
@@ -312,6 +571,7 @@ const Navbar = () => {
         console.log('[DEBUG] Escape key pressed, closing all menus');
         setUserMenuOpen(false);
         setCategoriesOpen(false);
+        setSearchScopeOpen(false);
         setLocationMenuOpen(false);
         setSearchFocused(false);
       }
@@ -338,30 +598,293 @@ const Navbar = () => {
 
   // ============= HANDLERS =============
 
-  const handleSearch = (e) => {
+  const handleSearch = (e, source = 'submit') => {
     e.preventDefault();
-    if (searchQuery.trim()) {
+    const normalizedQuery = searchQuery.trim();
+    if (normalizedQuery) {
       // Save to recent searches
-      const newSearches = [searchQuery.trim(), ...recentSearches.filter(s => s !== searchQuery.trim())].slice(0, 5);
+      const newSearches = [normalizedQuery, ...recentSearches.filter(s => s !== normalizedQuery)].slice(0, 5);
       setRecentSearches(newSearches);
       localStorage.setItem('recentSearches', JSON.stringify(newSearches));
-      
-      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      trackSuggestionSelection(searchScope, normalizedQuery);
+      trackSearchTelemetry('search_submit', {
+        source,
+        scope: searchScope,
+        query: normalizedQuery,
+        queryLength: normalizedQuery.length
+      });
+
+      if (searchScope === 'farmers') {
+        navigate(`/farmers?search=${encodeURIComponent(normalizedQuery)}`);
+      } else {
+        navigate(`/marketplace?search=${encodeURIComponent(normalizedQuery)}`);
+      }
       setSearchQuery('');
       setSearchFocused(false);
+      setActiveSuggestionIndex(-1);
     }
   };
 
-  const handleSearchSuggestionClick = (suggestion) => {
+  const handleSearchSuggestionClick = (suggestion, source = 'mouse') => {
     setSearchQuery(suggestion);
-    navigate(`/marketplace?search=${encodeURIComponent(suggestion)}`);
+    trackSuggestionSelection(searchScope, suggestion);
+    trackSearchTelemetry('suggestion_click', {
+      source,
+      scope: searchScope,
+      suggestionType: searchQuery.trim().length >= 2 ? 'query' : 'recent_or_popular',
+      label: suggestion
+    });
+    if (searchScope === 'farmers') {
+      navigate(`/farmers?search=${encodeURIComponent(suggestion)}`);
+    } else {
+      navigate(`/marketplace?search=${encodeURIComponent(suggestion)}`);
+    }
+    setSearchFocused(false);
+    setActiveSuggestionIndex(-1);
+  };
+
+  const handleScopeSelect = (scope) => {
+    setSearchScope(scope);
+    setSearchScopeOpen(false);
+    setActiveSuggestionIndex(-1);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  const handleProductSuggestionClick = (listing, source = 'mouse') => {
+    const keyword = listing?.title || searchQuery.trim();
+    if (keyword) {
+      const newSearches = [keyword, ...recentSearches.filter(s => s !== keyword)].slice(0, 5);
+      setRecentSearches(newSearches);
+      localStorage.setItem('recentSearches', JSON.stringify(newSearches));
+    }
+    trackSuggestionSelection('products', keyword);
+    trackSearchTelemetry('suggestion_click', {
+      source,
+      scope: searchScope,
+      suggestionType: 'product',
+      suggestionId: listing?.id,
+      label: listing?.title || ''
+    });
+    navigate(`/marketplace/${listing.id}`);
     setSearchFocused(false);
   };
+
+  const handleCategorySuggestionClick = (category, source = 'mouse') => {
+    trackSuggestionSelection('categories', category?.name || '');
+    trackSearchTelemetry('suggestion_click', {
+      source,
+      scope: searchScope,
+      suggestionType: 'category',
+      suggestionId: category?.id,
+      label: category?.name || ''
+    });
+    navigate(`/marketplace?categoryId=${category.id}`);
+    setSearchFocused(false);
+  };
+
+  const handleFarmerSuggestionClick = (farmer, source = 'mouse') => {
+    trackSuggestionSelection('farmers', farmer?.name || '');
+    trackSearchTelemetry('suggestion_click', {
+      source,
+      scope: searchScope,
+      suggestionType: 'farmer',
+      suggestionId: farmer?.id,
+      label: farmer?.name || ''
+    });
+    navigate(`/farmers?search=${encodeURIComponent(farmer.name || '')}`);
+    setSearchFocused(false);
+  };
+
+  const trackSuggestionSelection = (scopeKey, label) => {
+    const normalizedLabel = normalizeSearchText(label);
+    if (!normalizedLabel) {
+      return;
+    }
+
+    setSearchBehaviorMetrics((previous) => {
+      const behaviorKey = getSearchBehaviorKey(scopeKey, normalizedLabel);
+      const existing = previous?.[behaviorKey] || { count: 0, lastSelectedAt: 0, label: normalizedLabel };
+      const nextMetrics = {
+        ...(previous || {}),
+        [behaviorKey]: {
+          count: (existing.count || 0) + 1,
+          lastSelectedAt: Date.now(),
+          label: label || existing.label
+        }
+      };
+
+      const trimmed = trimBehaviorMetrics(nextMetrics);
+      saveSearchBehaviorMetrics(trimmed);
+      return trimmed;
+    });
+  };
+
+  const renderHighlightedText = useCallback((text, query) => {
+    const safeText = text || '';
+    const safeQuery = query?.trim();
+    if (!safeQuery) {
+      return safeText;
+    }
+
+    const tokens = [...new Set(safeQuery
+      .toLowerCase()
+      .split(/\s+/)
+      .map(token => token.trim())
+      .filter(Boolean))];
+
+    if (tokens.length === 0) {
+      return safeText;
+    }
+
+    const escapedTokens = tokens
+      .map(token => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .sort((a, b) => b.length - a.length);
+
+    const regex = new RegExp(`(${escapedTokens.join('|')})`, 'ig');
+    const parts = safeText.split(regex);
+
+    return parts.map((part, idx) => (
+      tokens.includes(part.toLowerCase()) ? (
+        <mark key={`${part}-${idx}`} className="suggestion-highlight">{part}</mark>
+      ) : (
+        <React.Fragment key={`${part}-${idx}`}>{part}</React.Fragment>
+      )
+    ));
+  }, []);
 
   const handleCategoryClick = (categoryId) => {
     navigate(`/marketplace?categoryId=${categoryId}`);
     setCategoriesOpen(false);
   };
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!searchFocused || query.length < 2) {
+      setLiveProductSuggestions([]);
+      setLiveCategorySuggestions([]);
+      setLiveFarmerSuggestions([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const shouldFetchProducts = searchScope === 'all' || searchScope === 'products';
+        const shouldFetchFarmers = searchScope === 'all' || searchScope === 'farmers';
+        const shouldFetchCategories = searchScope === 'all' || searchScope === 'categories';
+
+        const [productsResponse, sellersResponse] = await Promise.all([
+          shouldFetchProducts
+            ? marketplaceApi.get('/listings/search', {
+                params: {
+                  keyword: query,
+                  page: 0,
+                  size: 6,
+                  sortBy: 'createdAt',
+                  sortDir: 'desc'
+                }
+              }).catch(() => null)
+            : Promise.resolve(null),
+          shouldFetchFarmers
+            ? marketplaceApi.get('/listings/sellers').catch(() => null)
+            : Promise.resolve(null)
+        ]);
+
+        const productContent = productsResponse?.data?.data?.content || [];
+        const sellerContent = sellersResponse?.data?.data || [];
+
+        const rankedProducts = shouldFetchProducts
+          ? rankSuggestions(
+              Array.isArray(productContent) ? productContent : [],
+              query,
+              (listing) => `${listing?.title || ''} ${listing?.cropType || ''} ${listing?.description || ''}`,
+              6,
+              searchBehaviorMetrics,
+              'products'
+            )
+          : [];
+
+        const categoryMatches = shouldFetchCategories
+          ? rankSuggestions(categories, query, (category) => category?.name || '', 4, searchBehaviorMetrics, 'categories')
+          : [];
+
+        const farmerMatches = shouldFetchFarmers
+          ? rankSuggestions(sellerContent, query, (seller) => seller?.name || '', 4, searchBehaviorMetrics, 'farmers')
+          : [];
+
+        if (!cancelled) {
+          setLiveProductSuggestions(rankedProducts);
+          setLiveCategorySuggestions(categoryMatches);
+          setLiveFarmerSuggestions(farmerMatches);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLiveProductSuggestions([]);
+          setLiveCategorySuggestions([]);
+          setLiveFarmerSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, searchFocused, categories, searchScope, searchBehaviorMetrics]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!searchFocused || query.length < 2) {
+      lastImpressionSignatureRef.current = '';
+      return;
+    }
+
+    const impressionItems = [
+      ...liveProductSuggestions.slice(0, 6).map((item) => ({ type: 'product', id: item?.id, label: item?.title || '' })),
+      ...liveCategorySuggestions.slice(0, 4).map((item) => ({ type: 'category', id: item?.id, label: item?.name || '' })),
+      ...liveFarmerSuggestions.slice(0, 4).map((item) => ({ type: 'farmer', id: item?.id, label: item?.name || '' }))
+    ];
+
+    if (impressionItems.length === 0) {
+      return;
+    }
+
+    const signature = JSON.stringify({
+      scope: searchScope,
+      query,
+      keys: impressionItems.map((item) => `${item.type}:${item.id || item.label}`)
+    });
+
+    if (lastImpressionSignatureRef.current === signature) {
+      return;
+    }
+    lastImpressionSignatureRef.current = signature;
+
+    trackSearchTelemetry('suggestion_impression', {
+      scope: searchScope,
+      query,
+      productCount: liveProductSuggestions.length,
+      categoryCount: liveCategorySuggestions.length,
+      farmerCount: liveFarmerSuggestions.length,
+      topSuggestions: impressionItems.slice(0, 8)
+    });
+  }, [
+    searchQuery,
+    searchScope,
+    searchFocused,
+    liveProductSuggestions,
+    liveCategorySuggestions,
+    liveFarmerSuggestions,
+    trackSearchTelemetry
+  ]);
 
   const handleLocationSave = () => {
     if (pincode.length === 6) {
@@ -404,12 +927,117 @@ const Navbar = () => {
     }
   };
 
-  // Popular searches for suggestions
-  const popularSearches = ['Fresh Vegetables', 'Organic Fruits', 'Farm Fresh Milk', 'Rice', 'Tomatoes', 'Potatoes'];
+  const keyboardSuggestions = useMemo(() => {
+    if (!searchFocused) {
+      return [];
+    }
+
+    const query = searchQuery.trim();
+    const items = [];
+
+    if (query.length >= 2) {
+      if (liveProductSuggestions.length > 0) {
+        liveProductSuggestions.forEach((listing) => {
+          items.push({ type: 'product', key: `product-${listing.id}`, label: listing.title, payload: listing });
+        });
+      }
+      if (liveCategorySuggestions.length > 0) {
+        liveCategorySuggestions.forEach((category) => {
+          items.push({ type: 'category', key: `category-${category.id}`, label: category.name, payload: category });
+        });
+      }
+      if (liveFarmerSuggestions.length > 0) {
+        liveFarmerSuggestions.forEach((farmer) => {
+          items.push({ type: 'farmer', key: `farmer-${farmer.id}`, label: farmer.name, payload: farmer });
+        });
+      }
+    } else {
+      recentSearches.forEach((search, idx) => {
+        items.push({ type: 'recent', key: `recent-${idx}-${search}`, label: search, payload: search });
+      });
+      POPULAR_SEARCHES.forEach((search, idx) => {
+        items.push({ type: 'popular', key: `popular-${idx}-${search}`, label: search, payload: search });
+      });
+    }
+
+    return items;
+  }, [
+    searchFocused,
+    searchQuery,
+    liveProductSuggestions,
+    liveCategorySuggestions,
+    liveFarmerSuggestions,
+    recentSearches
+  ]);
+
+  const suggestionIndexMap = useMemo(() => {
+    const map = new Map();
+    keyboardSuggestions.forEach((item, idx) => {
+      map.set(item.key, idx);
+    });
+    return map;
+  }, [keyboardSuggestions]);
+
+  const executeKeyboardSuggestion = (item) => {
+    if (!item) {
+      return;
+    }
+    if (item.type === 'product') {
+      handleProductSuggestionClick(item.payload, 'keyboard');
+      return;
+    }
+    if (item.type === 'category') {
+      handleCategorySuggestionClick(item.payload, 'keyboard');
+      return;
+    }
+    if (item.type === 'farmer') {
+      handleFarmerSuggestionClick(item.payload, 'keyboard');
+      return;
+    }
+    handleSearchSuggestionClick(item.payload, 'keyboard');
+  };
+
+  const handleSearchInputKeyDown = (event) => {
+    if (!searchFocused) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setSearchFocused(false);
+      setSearchScopeOpen(false);
+      setActiveSuggestionIndex(-1);
+      return;
+    }
+
+    if (!keyboardSuggestions.length) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveSuggestionIndex(prev => (prev + 1) % keyboardSuggestions.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveSuggestionIndex(prev => (prev <= 0 ? keyboardSuggestions.length - 1 : prev - 1));
+      return;
+    }
+
+    if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+      event.preventDefault();
+      executeKeyboardSuggestion(keyboardSuggestions[activeSuggestionIndex]);
+    }
+  };
+
+  useEffect(() => {
+    setActiveSuggestionIndex(-1);
+  }, [searchQuery, searchFocused, searchScope]);
 
   return (
     <>
-      <nav className="navbar">
+      <nav className="navbar" ref={navbarRef}>
         {/* Top Bar - Announcement */}
         <div className="navbar-topbar">
           <div className="topbar-content">
@@ -487,38 +1115,24 @@ const Navbar = () => {
                   <button 
                     type="button"
                     className="category-select-btn"
-                    onClick={() => setCategoriesOpen(!categoriesOpen)}
+                    onClick={() => setSearchScopeOpen(!searchScopeOpen)}
                   >
-                    <span>All</span>
+                    <span>{SEARCH_SCOPES.find(scope => scope.key === searchScope)?.label || 'All'}</span>
                     <FiChevronDown />
                   </button>
                   
-                  {categoriesOpen && (
-                    <div className="category-mega-menu">
-                      <div className="mega-menu-header">
-                        <h3>Shop by Category</h3>
-                      </div>
-                      <div className="mega-menu-grid">
-                        {categories.map(category => (
-                          <button
-                            key={category.id}
-                            className="mega-menu-item"
-                            onClick={() => handleCategoryClick(category.id)}
-                          >
-                            <span className="category-emoji">
-                              {CATEGORY_ICONS[category.name] || '📦'}
-                            </span>
-                            <span>{category.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <Link 
-                        to="/marketplace" 
-                        className="mega-menu-all"
-                        onClick={() => setCategoriesOpen(false)}
-                      >
-                        View All Products <FiChevronRight />
-                      </Link>
+                  {searchScopeOpen && (
+                    <div className="search-scope-menu">
+                      {SEARCH_SCOPES.map((scope) => (
+                        <button
+                          key={scope.key}
+                          type="button"
+                          className={`search-scope-item ${searchScope === scope.key ? 'active' : ''}`}
+                          onClick={() => handleScopeSelect(scope.key)}
+                        >
+                          {scope.label}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -526,11 +1140,13 @@ const Navbar = () => {
                 {/* Search Input */}
                 <div className="search-input-container">
                   <input
+                    ref={searchInputRef}
                     type="text"
                     placeholder="Search for vegetables, fruits, farmers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
+                    onKeyDown={handleSearchInputKeyDown}
                     className="search-input"
                   />
                   <button type="submit" className="search-submit-btn">
@@ -541,34 +1157,92 @@ const Navbar = () => {
                 {/* Search Suggestions Dropdown */}
                 {searchFocused && (
                   <div className="search-suggestions">
-                    {recentSearches.length > 0 && (
-                      <div className="suggestions-section">
-                        <h5><FiClock /> Recent Searches</h5>
-                        {recentSearches.map((search, idx) => (
-                          <button 
-                            key={idx}
-                            className="suggestion-item"
-                            onClick={() => handleSearchSuggestionClick(search)}
-                          >
-                            <FiClock className="suggestion-icon" />
-                            {search}
-                          </button>
-                        ))}
-                      </div>
+                    {searchQuery.trim().length >= 2 ? (
+                      <>
+                        <div className="suggestions-section">
+                          <h5><FiSearch /> Suggested Products</h5>
+                          {searchLoading ? (
+                            <div className="suggestion-item suggestion-empty">Finding products...</div>
+                          ) : liveProductSuggestions.length > 0 ? (
+                            liveProductSuggestions.map((listing) => (
+                              <button
+                                key={listing.id}
+                                className={`suggestion-item ${activeSuggestionIndex === suggestionIndexMap.get(`product-${listing.id}`) ? 'active' : ''}`}
+                                onClick={() => handleProductSuggestionClick(listing)}
+                              >
+                                <FiSearch className="suggestion-icon" />
+                                <span>{renderHighlightedText(listing.title, searchQuery)}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="suggestion-item suggestion-empty">No related products found</div>
+                          )}
+                        </div>
+
+                        {liveCategorySuggestions.length > 0 && (
+                          <div className="suggestions-section">
+                            <h5>📦 Matching Categories</h5>
+                            {liveCategorySuggestions.map((category) => (
+                              <button
+                                key={category.id}
+                                className={`suggestion-item ${activeSuggestionIndex === suggestionIndexMap.get(`category-${category.id}`) ? 'active' : ''}`}
+                                onClick={() => handleCategorySuggestionClick(category)}
+                              >
+                                <FiChevronRight className="suggestion-icon" />
+                                <span>{renderHighlightedText(category.name, searchQuery)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {liveFarmerSuggestions.length > 0 && (
+                          <div className="suggestions-section">
+                            <h5><FiUsers /> Matching Farmers</h5>
+                            {liveFarmerSuggestions.map((farmer) => (
+                              <button
+                                key={farmer.id}
+                                className={`suggestion-item ${activeSuggestionIndex === suggestionIndexMap.get(`farmer-${farmer.id}`) ? 'active' : ''}`}
+                                onClick={() => handleFarmerSuggestionClick(farmer)}
+                              >
+                                <FiUsers className="suggestion-icon" />
+                                <span>{renderHighlightedText(farmer.name, searchQuery)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {recentSearches.length > 0 && (
+                          <div className="suggestions-section">
+                            <h5><FiClock /> Recent Searches</h5>
+                            {recentSearches.map((search, idx) => (
+                              <button
+                                key={idx}
+                                className={`suggestion-item ${activeSuggestionIndex === suggestionIndexMap.get(`recent-${idx}-${search}`) ? 'active' : ''}`}
+                                onClick={() => handleSearchSuggestionClick(search)}
+                              >
+                                <FiClock className="suggestion-icon" />
+                                {renderHighlightedText(search, searchQuery)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="suggestions-section">
+                          <h5>🔥 Popular Searches</h5>
+                          {POPULAR_SEARCHES.map((search, idx) => (
+                            <button
+                              key={idx}
+                              className={`suggestion-item ${activeSuggestionIndex === suggestionIndexMap.get(`popular-${idx}-${search}`) ? 'active' : ''}`}
+                              onClick={() => handleSearchSuggestionClick(search)}
+                            >
+                              <FiSearch className="suggestion-icon" />
+                              {renderHighlightedText(search, searchQuery)}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
-                    <div className="suggestions-section">
-                      <h5>🔥 Popular Searches</h5>
-                      {popularSearches.map((search, idx) => (
-                        <button 
-                          key={idx}
-                          className="suggestion-item"
-                          onClick={() => handleSearchSuggestionClick(search)}
-                        >
-                          <FiSearch className="suggestion-icon" />
-                          {search}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 )}
               </form>
@@ -577,7 +1251,7 @@ const Navbar = () => {
             {/* Right: Orders, Messages, Notifications, Wishlist, Cart, Account (Account at extreme right) */}
             <div className="navbar-right">
               {/* Returns & Orders - Amazon Style */}
-              {isAuthenticated && userRole !== 'FARMER' && (
+              {isAuthenticated && (
                 <Link to="/orders" className="orders-btn">
                   <span className="orders-label">Returns</span>
                   <span className="orders-title">& Orders</span>
@@ -645,7 +1319,7 @@ const Navbar = () => {
               )}
 
               {/* Wishlist */}
-              {(!isAuthenticated || userRole !== 'FARMER') && (
+              {isAuthenticated && (
                 <Link to="/wishlist" className="navbar-icon-btn" title="Wishlist" aria-label="Wishlist">
                   <FiHeart />
                   {wishlistCount > 0 && <span className="badge wishlist">{wishlistCount}</span>}
@@ -653,15 +1327,13 @@ const Navbar = () => {
               )}
 
               {/* Cart - Amazon Style */}
-              {(!isAuthenticated || userRole !== 'FARMER') && (
-                <Link to="/cart" className="cart-btn" aria-label="Cart">
-                  <div className="cart-icon-wrapper">
-                    <FiShoppingCart className="cart-icon" />
-                    <span className="cart-count">{cartCount}</span>
-                  </div>
-                  <span className="cart-text">Cart</span>
-                </Link>
-              )}
+              <Link to="/cart" className="cart-btn" aria-label="Cart">
+                <div className="cart-icon-wrapper">
+                  <FiShoppingCart className="cart-icon" />
+                  <span className="cart-count">{cartCount}</span>
+                </div>
+                <span className="cart-text">Cart</span>
+              </Link>
 
               {/* Account Section - Extreme Right */}
               {isAuthenticated ? (
@@ -762,16 +1434,14 @@ const Navbar = () => {
 
                       {/* Role-specific links */}
                       <div className="dropdown-section">
-                        {userRole !== 'FARMER' && (
-                          <>
-                            <Link to="/orders" onClick={() => setUserMenuOpen(false)} role="menuitem">
-                              <FiPackage /> Your Orders
-                            </Link>
-                            <Link to="/wishlist" onClick={() => setUserMenuOpen(false)} role="menuitem">
-                              <FiHeart /> Your Wishlist
-                            </Link>
-                          </>
-                        )}
+                        <>
+                          <Link to="/orders" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                            <FiPackage /> Your Orders
+                          </Link>
+                          <Link to="/wishlist" onClick={() => setUserMenuOpen(false)} role="menuitem">
+                            <FiHeart /> Your Wishlist
+                          </Link>
+                        </>
                         {userRole === 'FARMER' && (
                           <>
                             <Link to="/farmer/products" onClick={() => setUserMenuOpen(false)} role="menuitem">
@@ -990,11 +1660,9 @@ const Navbar = () => {
                 <Link to={getDashboardLink()} onClick={closeMobileMenu}>
                   <FiHome /> Dashboard
                 </Link>
-                {userRole !== 'FARMER' && (
-                  <Link to="/orders" onClick={closeMobileMenu}>
-                    <FiPackage /> Your Orders
-                  </Link>
-                )}
+                <Link to="/orders" onClick={closeMobileMenu}>
+                  <FiPackage /> Your Orders
+                </Link>
                 {userRole === 'FARMER' && (
                   <>
                     <Link to="/farmer/products" onClick={closeMobileMenu}>

@@ -1,12 +1,15 @@
 package com.agrilink.marketplace.service;
 
 import com.agrilink.marketplace.dto.DemandForecastDto;
+import com.agrilink.marketplace.repository.ListingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.*;
 
@@ -19,6 +22,9 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class DemandForecastService {
+
+    private final ListingRepository listingRepository;
+    private final ExternalMarketDataService externalMarketDataService;
 
     // Seasonal crop demand patterns (simulated data based on Indian agricultural patterns)
     private static final Map<String, List<Month>> HIGH_DEMAND_SEASONS = new HashMap<>();
@@ -119,16 +125,63 @@ public class DemandForecastService {
         List<Month> highDemandMonths = HIGH_DEMAND_SEASONS.getOrDefault(normalizedCrop, Collections.emptyList());
         String demandLevel = determineDemandLevel(currentMonth, highDemandMonths);
         
-        // Apply state multiplier to prices
+        // Apply state multiplier to profile-derived prices
         double stateMultiplier = STATE_DEMAND_MULTIPLIERS.getOrDefault(normalizedState, 1.0);
         BigDecimal adjustedMinPrice = profile.minPrice.multiply(BigDecimal.valueOf(stateMultiplier));
         BigDecimal adjustedMaxPrice = profile.maxPrice.multiply(BigDecimal.valueOf(stateMultiplier));
+
+        // Blend in internal real-time marketplace price signal (active listings).
+        BigDecimal liveAvgMarketplacePrice = listingRepository.getAverageActivePriceByCropType(normalizedCrop);
+        if (liveAvgMarketplacePrice != null && liveAvgMarketplacePrice.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal liveMin = liveAvgMarketplacePrice.multiply(new BigDecimal("0.90"));
+            BigDecimal liveMax = liveAvgMarketplacePrice.multiply(new BigDecimal("1.10"));
+            adjustedMinPrice = blendPrices(adjustedMinPrice, liveMin, new BigDecimal("0.75"), new BigDecimal("0.25"));
+            adjustedMaxPrice = blendPrices(adjustedMaxPrice, liveMax, new BigDecimal("0.75"), new BigDecimal("0.25"));
+        }
+
+        // Optional free external market feed (data.gov.in style datasets).
+        Optional<ExternalMarketDataService.MarketSnapshot> externalSnapshot =
+                externalMarketDataService.getMarketSnapshot(normalizedCrop, normalizedState, normalizedDistrict);
+        if (externalSnapshot.isPresent()) {
+            ExternalMarketDataService.MarketSnapshot snapshot = externalSnapshot.get();
+            if (snapshot.getMinPrice() != null) {
+                adjustedMinPrice = blendPrices(adjustedMinPrice, snapshot.getMinPrice(), new BigDecimal("0.40"), new BigDecimal("0.60"));
+            }
+            if (snapshot.getMaxPrice() != null) {
+                adjustedMaxPrice = blendPrices(adjustedMaxPrice, snapshot.getMaxPrice(), new BigDecimal("0.40"), new BigDecimal("0.60"));
+            }
+        }
+
+        long activeListingCount = listingRepository.countActiveListingsByCropType(normalizedCrop);
+        long recentListings30d = listingRepository.countRecentActiveListingsByCropType(
+                normalizedCrop,
+                LocalDateTime.now().minusDays(30)
+        );
         
         // Generate trend message
         String trendMessage = generateTrendMessage(normalizedCrop, demandLevel, currentMonth);
         String trendDirection = determineTrendDirection(currentMonth, highDemandMonths);
         String seasonRecommendation = generateSeasonRecommendation(normalizedCrop, currentMonth, highDemandMonths);
         String marketInsight = generateMarketInsight(normalizedCrop, normalizedState, demandLevel);
+        String dataSource = externalSnapshot.isPresent()
+                ? "agmarknet-india + internal-live + seasonal-rules-v1"
+                : "internal-live-india + seasonal-rules-v1";
+        int confidenceScore = mapConfidenceScore(demandLevel, externalSnapshot.isPresent(), activeListingCount, recentListings30d);
+        int freshnessMinutes = externalSnapshot.isPresent() ? 60 : 30;
+        boolean simulated = !externalSnapshot.isPresent();
+        String resolvedPriceUnit = externalSnapshot
+                .map(snapshot -> "INR/" + (snapshot.getNormalizedUnit() == null ? "kg" : snapshot.getNormalizedUnit()))
+                .orElse("INR/" + profile.unit);
+
+        if (externalSnapshot.isPresent()) {
+            trendMessage = trendMessage + " External mandi snapshots are influencing this estimate.";
+            ExternalMarketDataService.MarketSnapshot snapshot = externalSnapshot.get();
+            if (snapshot.getMarketName() != null && !snapshot.getMarketName().isBlank()) {
+                marketInsight = marketInsight + " Reference market: " + snapshot.getMarketName() + ".";
+            }
+            marketInsight = marketInsight + " Prices normalized from Indian mandi feed to INR/kg where needed.";
+        }
+        marketInsight = marketInsight + String.format(" Live marketplace signal: %d active listings, %d new in last 30 days.", activeListingCount, recentListings30d);
         
         return DemandForecastDto.builder()
                 .cropType(cropType)
@@ -137,13 +190,17 @@ public class DemandForecastService {
                 .demandLevel(demandLevel)
                 .minPricePerKg(adjustedMinPrice.setScale(2, java.math.RoundingMode.HALF_UP))
                 .maxPricePerKg(adjustedMaxPrice.setScale(2, java.math.RoundingMode.HALF_UP))
-                .priceUnit("INR/" + profile.unit)
+                .priceUnit(resolvedPriceUnit)
                 .trendMessage(trendMessage)
                 .trendDirection(trendDirection)
                 .confidence(demandLevel.equals("HIGH") ? "HIGH" : "MEDIUM")
                 .seasonRecommendation(seasonRecommendation)
-                .isSimulated(true)
+                .isSimulated(simulated)
                 .marketInsight(marketInsight)
+                .dataSource(dataSource)
+                .generatedAt(LocalDateTime.now())
+                .dataFreshnessMinutes(freshnessMinutes)
+                .confidenceScore(confidenceScore)
                 .build();
     }
 
@@ -270,6 +327,39 @@ public class DemandForecastService {
             }
         }
         return result.toString().trim();
+    }
+
+    private int mapConfidenceScore(String demandLevel, boolean hasExternalData, long activeListings, long recentListings30d) {
+        int base = switch (demandLevel) {
+            case "HIGH" -> 70;
+            case "MEDIUM" -> 62;
+            default -> 54;
+        };
+
+        if (hasExternalData) {
+            base += 16;
+        }
+        if (activeListings >= 20) {
+            base += 6;
+        } else if (activeListings >= 8) {
+            base += 3;
+        }
+        if (recentListings30d >= 10) {
+            base += 4;
+        } else if (recentListings30d >= 4) {
+            base += 2;
+        }
+
+        return Math.min(base, 95);
+    }
+
+    private BigDecimal blendPrices(BigDecimal base, BigDecimal signal, BigDecimal baseWeight, BigDecimal signalWeight) {
+        if (signal == null) {
+            return base;
+        }
+        return base.multiply(baseWeight)
+                .add(signal.multiply(signalWeight))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     // Inner class for demand profile

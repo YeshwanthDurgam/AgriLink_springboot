@@ -117,6 +117,19 @@
   margin-bottom: 16px;
 }
 
+.forecast-stale-warning {
+  padding: 10px 14px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  color: #9a3412;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
 /* Results */
 .forecast-results {
   border-top: 1px solid #e5e7eb;
@@ -155,6 +168,25 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.forecast-meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #ecfeff;
+  color: #0f766e;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #a5f3fc;
 }
 
 /* Forecast Cards */
@@ -338,6 +370,10 @@
   .forecast-header {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .forecast-meta-badges {
+    justify-content: flex-start;
   }
 
   .forecast-cards {

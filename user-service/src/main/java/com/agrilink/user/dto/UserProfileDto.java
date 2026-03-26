@@ -20,8 +20,11 @@ public class UserProfileDto {
 
     private UUID id;
     private UUID userId;
+    private String email;
     private String firstName;
     private String lastName;
+    private String phoneNumber;
+    private String role;
     private String fullName;
     private LocalDate dateOfBirth;
     private String address;
@@ -30,7 +33,9 @@ public class UserProfileDto {
     private String country;
     private String postalCode;
     private String profilePictureUrl;
+    private String profilePhoto;
     private String bio;
+    private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

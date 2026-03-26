@@ -116,13 +116,15 @@ class NotificationServiceTest {
                 .build();
 
         when(preferencesRepository.findByUserId(userId)).thenReturn(Optional.of(preferences));
+        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
 
         // When
         NotificationDto result = notificationService.sendNotification(request);
 
         // Then
-        assertThat(result).isNull();
-        verify(notificationRepository, never()).save(any(Notification.class));
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo(Notification.Status.CANCELLED);
+        verify(notificationRepository, atLeastOnce()).save(any(Notification.class));
     }
 
     @Test

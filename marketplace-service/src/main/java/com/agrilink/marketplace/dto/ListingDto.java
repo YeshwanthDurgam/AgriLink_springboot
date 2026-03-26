@@ -44,6 +44,7 @@ public class ListingDto {
     private boolean organicCertified;
     private String qualityGrade;
     private Listing.ListingStatus status;
+    private String suspensionReason;
     private int viewCount;
     private Double averageRating;
     private int reviewCount;

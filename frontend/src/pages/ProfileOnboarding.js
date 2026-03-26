@@ -1,20 +1,27 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../services/api';
 import FarmService from '../services/farmService';
 import { toast } from 'react-toastify';
 import { 
   FiUser, FiPhone, FiMapPin, FiCamera, FiSave, FiArrowRight, FiArrowLeft,
-  FiCheckCircle, FiAlertCircle, FiEdit3, FiUpload, FiX, FiShoppingBag,
-  FiTruck, FiAward, FiHeart, FiZap, FiFile, FiFileText, FiTrash2, FiAlertTriangle
+  FiCheckCircle, FiAlertCircle, FiEdit3, FiUpload, FiX,
+  FiFile, FiFileText, FiTrash2, FiAlertTriangle
 } from 'react-icons/fi';
 import { FaTractor, FaSeedling, FaIdCard } from 'react-icons/fa';
+import {
+  resolvePrimaryRole,
+  getRequiredFieldsForRole,
+  calculateProfileCompletion,
+  getFieldLabel,
+} from '../utils/profileCompletion';
 import './ProfileOnboarding.css';
 
 const ProfileOnboarding = () => {
   const { user, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const farmPhotoInputRef = useRef(null);
   
@@ -31,12 +38,6 @@ const ProfileOnboarding = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [farmPhotoPreview, setFarmPhotoPreview] = useState(null);
   const [uploadingFarmPhoto, setUploadingFarmPhoto] = useState(false);
-  
-  // Determine user role
-  const userRole = user?.roles?.includes('FARMER') ? 'FARMER' 
-    : user?.roles?.includes('MANAGER') ? 'MANAGER'
-    : user?.roles?.includes('ADMIN') ? 'ADMIN'
-    : 'CUSTOMER';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -49,51 +50,74 @@ const ProfileOnboarding = () => {
     country: 'India',
     address: '',
     pincode: '',
-    // Farmer-specific fields
     farmName: '',
     cropTypes: '',
     farmPhoto: '',
     farmBio: '',
     certificates: '',
-    // Verification document (required for farmers)
     verificationDocument: '',
     documentType: 'AADHAAR'
   });
 
-  // Document upload states
   const [documentPreview, setDocumentPreview] = useState(null);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const documentInputRef = useRef(null);
+  
+  const userRole = resolvePrimaryRole(user?.roles);
+  const requiredFields = useMemo(() => getRequiredFieldsForRole(userRole), [userRole]);
 
-  // Define required fields based on role
-  const getRequiredFields = useCallback(() => {
-    const baseFields = ['name', 'phone', 'address', 'city', 'state', 'pincode'];
-    if (userRole === 'FARMER') {
-      // Verification document is MANDATORY for farmers
-      return [...baseFields, 'farmName', 'farmPhoto', 'verificationDocument'];
-    }
-    return baseFields;
+  const roleConfig = useMemo(() => {
+    const roleMap = {
+      CUSTOMER: {
+        heading: 'Customer Profile',
+        subtitle: 'Add required details.',
+        roleLabel: 'Customer',
+      },
+      BUYER: {
+        heading: 'Buyer Profile',
+        subtitle: 'Add required details.',
+        roleLabel: 'Buyer',
+      },
+      FARMER: {
+        heading: 'Farmer Profile',
+        subtitle: 'Add required details and verification.',
+        roleLabel: 'Farmer',
+      },
+      MANAGER: {
+        heading: 'Manager Profile',
+        subtitle: 'Add required details.',
+        roleLabel: 'Manager',
+      },
+    };
+
+    return roleMap[userRole] || roleMap.CUSTOMER;
   }, [userRole]);
 
-  // Check if profile is complete
   const checkProfileCompletion = useCallback((data) => {
-    const required = getRequiredFields();
-    return required.every(field => data[field] && data[field].toString().trim() !== '');
-  }, [getRequiredFields]);
+    return calculateProfileCompletion(data, userRole).percentage === 100;
+  }, [userRole]);
 
-  // Calculate completion percentage
-  const calculateCompletion = useCallback(() => {
-    const required = getRequiredFields();
-    const filled = required.filter(field => formData[field]?.toString().trim()).length;
-    return Math.round((filled / required.length) * 100);
-  }, [formData, getRequiredFields]);
-
-  // Fetch profile on mount
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (!location.state?.message) {
+      return;
+    }
 
-  const fetchProfile = async () => {
+    const toastType = location.state?.toastType || 'info';
+    const message = String(location.state.message);
+    if (toastType === 'success') {
+      toast.success(message);
+    } else if (toastType === 'warning') {
+      toast.warning(message);
+    } else if (toastType === 'error') {
+      toast.error(message);
+    } else {
+      toast.info(message);
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
       let endpoint = '/profiles/customer';
@@ -160,7 +184,12 @@ const ProfileOnboarding = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [checkProfileCompletion, userRole]);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -303,17 +332,11 @@ const ProfileOnboarding = () => {
     e.preventDefault();
     
     // Validate required fields
-    const required = getRequiredFields();
-    const missing = required.filter(field => !formData[field]?.toString().trim());
+    const missing = requiredFields.filter(field => !formData[field]?.toString().trim());
     
     if (missing.length > 0) {
       // Make error message more user-friendly
-      const fieldLabels = {
-        verificationDocument: 'Verification Document',
-        farmName: 'Farm Name',
-        farmPhoto: 'Farm Photo'
-      };
-      const missingLabels = missing.map(f => fieldLabels[f] || f);
+      const missingLabels = missing.map((field) => getFieldLabel(field));
       toast.error(`Please fill in all required fields: ${missingLabels.join(', ')}`);
       return;
     }
@@ -333,18 +356,64 @@ const ProfileOnboarding = () => {
 
       // Build clean request payload - only send non-empty values
       const payload = {};
+      const excludedFields = new Set(['username']);
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== '' && value !== null && value !== undefined) {
-          // Convert age to integer if it's a string
-          if (key === 'age' && value) {
-            payload[key] = parseInt(value, 10);
-          } else {
-            payload[key] = value;
-          }
+        if (excludedFields.has(key)) {
+          console.log(`[ProfileOnboarding] Skipping excluded field: ${key}`);
+          return;
         }
+
+        if (value === '' || value === null || value === undefined) {
+          console.log(`[ProfileOnboarding] Skipping empty field: ${key}=${value}`);
+          return;
+        }
+
+        // Handle age specially - convert to integer BEFORE string processing
+        if (key === 'age') {
+          const ageValue = typeof value === 'string' ? parseInt(value, 10) : value;
+          if (!isNaN(ageValue) && ageValue > 0 && ageValue <= 120) {
+            payload[key] = ageValue;
+            console.log(`[ProfileOnboarding] Field ${key} (converted to int): ${payload[key]}`);
+          } else {
+            console.log(`[ProfileOnboarding] Skipping invalid age value: ${value} (must be 1-120)`);
+          }
+          return;
+        }
+
+        // Handle phone - trim and remove whitespace
+        if (key === 'phone' && typeof value === 'string') {
+          const trimmed = value.trim().replace(/\s+/g, '');
+          if (trimmed.length > 0) {
+            payload[key] = trimmed;
+            console.log(`[ProfileOnboarding] Field ${key} (trimmed & whitespace removed): ${payload[key]}`);
+          } else {
+            console.log(`[ProfileOnboarding] Skipping empty phone`);
+          }
+          return;
+        }
+
+        // Handle other strings
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed === '') {
+            console.log(`[ProfileOnboarding] Skipping whitespace-only field: ${key}`);
+            return;
+          }
+
+          payload[key] = trimmed;
+          console.log(`[ProfileOnboarding] Field ${key} (string): "${trimmed.substring(0, 100) + (trimmed.length > 100 ? '...' : '')}"`);
+          return;
+        }
+
+        // Handle other types
+        payload[key] = value;
+        console.log(`[ProfileOnboarding] Field ${key} (other type): ${typeof value}`);
       });
 
-      console.log('Sending profile update request:', { endpoint, payload: { ...payload, profilePhoto: payload.profilePhoto ? '[BASE64_IMAGE]' : undefined } });
+      console.log('=== FULL PAYLOAD BEING SENT ===', payload);
+      console.log(`[ProfileOnboarding] Sending profile update to: ${endpoint}`);
+      console.log('[ProfileOnboarding] Payload fields:', Object.keys(payload).join(', '));
+      console.log('[ProfileOnboarding] Request:', { endpoint, payload: { ...payload, profilePhoto: payload.profilePhoto ? '[BASE64_IMAGE]' : undefined, farmPhoto: payload.farmPhoto ? '[BASE64_IMAGE]' : undefined, verificationDocument: payload.verificationDocument ? '[BASE64_DOC]' : undefined } });
 
       const response = await userApi.put(endpoint, payload);
       console.log('Profile update response:', response.data);
@@ -386,27 +455,31 @@ const ProfileOnboarding = () => {
       }
     } catch (err) {
       console.error('Error saving profile:', err);
-      console.error('Error response:', err.response?.data);
+      console.error('Full error response:', JSON.stringify(err.response?.data, null, 2));
       console.error('Error status:', err.response?.status);
       
       // Extract meaningful error message
       let errorMessage = 'Failed to save profile';
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      }
+      let validationDetails = [];
       
-      // Handle validation errors from backend
       if (err.response?.data?.validationErrors) {
         const validationErrors = err.response.data.validationErrors;
-        const errorMessages = [];
+        console.error('[ValidationError] Backend validation errors:', validationErrors);
+        
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages)) {
-            errorMessages.push(`${field}: ${messages.join(', ')}`);
+            messages.forEach(msg => validationDetails.push(`${field}: ${msg}`));
+          } else if (messages) {
+            validationDetails.push(`${field}: ${String(messages)}`);
           }
         });
-        if (errorMessages.length > 0) {
-          errorMessage = errorMessages.join('; ');
+        
+        if (validationDetails.length > 0) {
+          errorMessage = `Validation errors:\n${validationDetails.join('\n')}`;
+          console.error('[ValidationError] Formatted error message:', errorMessage);
         }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
       } else if (err.response?.data?.errors) {
         // Handle other error formats
         const errors = err.response.data.errors;
@@ -426,7 +499,7 @@ const ProfileOnboarding = () => {
   };
 
   const handleContinueShopping = () => {
-    if (userRole === 'CUSTOMER') {
+    if (userRole === 'CUSTOMER' || userRole === 'BUYER') {
       navigate('/');
     } else {
       navigate(getDashboardRoute());
@@ -435,7 +508,7 @@ const ProfileOnboarding = () => {
 
   // Steps configuration
   const steps = userRole === 'FARMER' 
-    ? ['Personal', 'Address', 'Farm'] 
+    ? ['Personal', 'Address', 'Farm & Verification'] 
     : ['Personal', 'Address'];
 
   const nextStep = () => {
@@ -459,6 +532,8 @@ const ProfileOnboarding = () => {
     'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
     'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Puducherry', 'Chandigarh'
   ];
+
+  const profileCompletion = calculateProfileCompletion(formData, userRole);
 
   // Loading state
   if (loading) {
@@ -492,6 +567,7 @@ const ProfileOnboarding = () => {
           {/* Profile Card */}
           <div className="complete-profile-card">
             <div className="profile-header">
+              <span className="completion-pill">Complete</span>
               <div className="profile-avatar-large">
                 {imagePreview ? (
                   <img src={imagePreview} alt={formData.name} />
@@ -506,7 +582,7 @@ const ProfileOnboarding = () => {
               </div>
               <h1>{formData.name || 'User'}</h1>
               <p className="profile-role">
-                {userRole === 'FARMER' ? '👨‍🌾 Farmer' : '🛒 Customer'}
+                {roleConfig.roleLabel}
               </p>
             </div>
 
@@ -522,7 +598,7 @@ const ProfileOnboarding = () => {
                 <FiMapPin className="detail-icon" />
                 <div>
                   <span className="detail-label">Location</span>
-                  <span className="detail-value">{formData.city}, {formData.state}</span>
+                  <span className="detail-value">{formData.city || '-'}, {formData.state || '-'}</span>
                 </div>
               </div>
               {userRole === 'FARMER' && formData.farmName && (
@@ -534,6 +610,13 @@ const ProfileOnboarding = () => {
                   </div>
                 </div>
               )}
+              <div className="detail-item">
+                <FiCheckCircle className="detail-icon" />
+                <div>
+                  <span className="detail-label">Status</span>
+                  <span className="detail-value">{profileStatus}</span>
+                </div>
+              </div>
             </div>
 
             <div className="profile-actions">
@@ -551,29 +634,6 @@ const ProfileOnboarding = () => {
               </button>
             </div>
           </div>
-
-          {/* Benefits Section */}
-          <div className="benefits-section">
-            <h3>🎉 You're all set! Here's what you can do now:</h3>
-            <div className="benefits-grid">
-              <div className="benefit-card">
-                <FiShoppingBag />
-                <span>Shop fresh produce</span>
-              </div>
-              <div className="benefit-card">
-                <FiTruck />
-                <span>Fast delivery</span>
-              </div>
-              <div className="benefit-card">
-                <FiAward />
-                <span>Earn rewards</span>
-              </div>
-              <div className="benefit-card">
-                <FiHeart />
-                <span>Save favorites</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -589,6 +649,7 @@ const ProfileOnboarding = () => {
             <span className="brand-icon">🌾</span>
             <span className="brand-name">AgriLink</span>
           </Link>
+          <span className="setup-note">Secure profile setup</span>
           {isProfileComplete && (
             <button 
               className="btn-skip-link"
@@ -602,16 +663,24 @@ const ProfileOnboarding = () => {
         {/* Main Content */}
         <div className="onboarding-content">
           {/* Left: Progress & Info */}
-          <div className="onboarding-left">
+          <aside className="onboarding-left">
+            <div className="role-summary-card">
+              <div className="role-summary-top">
+                <span className="role-chip">{roleConfig.roleLabel}</span>
+                <span className="completion-mini">{profileCompletion.percentage}%</span>
+              </div>
+              <h3>{roleConfig.heading}</h3>
+            </div>
+
             <div className="progress-section">
               <div className="progress-header">
                 <span className="progress-label">Profile Completion</span>
-                <span className="progress-value">{calculateCompletion()}%</span>
+                <span className="progress-value">{profileCompletion.percentage}%</span>
               </div>
               <div className="progress-bar-track">
                 <div 
                   className="progress-bar-fill" 
-                  style={{ width: `${calculateCompletion()}%` }}
+                  style={{ width: `${profileCompletion.percentage}%` }}
                 ></div>
               </div>
             </div>
@@ -632,34 +701,36 @@ const ProfileOnboarding = () => {
               ))}
             </div>
 
-            {/* Info Cards */}
-            <div className="info-cards">
-              <div className="info-card">
-                <FiZap className="info-icon" />
-                <div>
-                  <h4>Quick Setup</h4>
-                  <p>Takes less than 2 minutes</p>
-                </div>
-              </div>
-              <div className="info-card">
-                <FiTruck className="info-icon" />
-                <div>
-                  <h4>Faster Delivery</h4>
-                  <p>Save your address for quick checkout</p>
-                </div>
+            <div className="required-details-card">
+              <h4>Checklist</h4>
+              <div className="required-details-list">
+                {requiredFields.map((fieldName) => {
+                  const isFilled = Boolean(formData[fieldName]?.toString().trim());
+                  return (
+                    <div
+                      key={fieldName}
+                      className={`required-detail-item ${isFilled ? 'done' : 'pending'}`}
+                    >
+                      <span className="required-detail-icon">
+                        {isFilled ? <FiCheckCircle /> : <FiAlertCircle />}
+                      </span>
+                      <span className="required-detail-label">{getFieldLabel(fieldName)}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          </aside>
 
           {/* Right: Form */}
           <div className="onboarding-right">
+            <div className="onboarding-form-card">
             <form onSubmit={handleSubmit} className="profile-form">
               {/* Step 1: Personal Info */}
               {currentStep === 0 && (
                 <div className="form-step">
                   <div className="step-header">
-                    <h2>Personal Information</h2>
-                    <p>Let's get to know you better</p>
+                    <h2>Personal</h2>
                   </div>
 
                   {/* Profile Photo Upload */}
@@ -698,7 +769,7 @@ const ProfileOnboarding = () => {
                       <label htmlFor="profile-photo-input" className="upload-btn">
                         <FiUpload /> Upload Photo
                       </label>
-                      <span className="photo-hint">JPG, PNG up to 5MB</span>
+                      <span className="photo-hint">JPG/PNG up to 5MB</span>
                     </div>
                   </div>
 
@@ -760,8 +831,7 @@ const ProfileOnboarding = () => {
               {currentStep === 1 && (
                 <div className="form-step">
                   <div className="step-header">
-                    <h2>Delivery Address</h2>
-                    <p>Where should we deliver your orders?</p>
+                    <h2>Address</h2>
                   </div>
 
                   <div className="form-fields">
@@ -838,8 +908,7 @@ const ProfileOnboarding = () => {
               {currentStep === 2 && userRole === 'FARMER' && (
                 <div className="form-step">
                   <div className="step-header">
-                    <h2>Farm Details</h2>
-                    <p>Tell us about your farm</p>
+                    <h2>Farm</h2>
                   </div>
 
                   {/* Farm Photo Upload */}
@@ -866,7 +935,7 @@ const ProfileOnboarding = () => {
                       ) : (
                         <div className="photo-placeholder farm-placeholder">
                           <FaTractor />
-                          <span>Upload farm photo</span>
+                          <span>Add photo</span>
                         </div>
                       )}
                     </div>
@@ -882,7 +951,7 @@ const ProfileOnboarding = () => {
                       <label htmlFor="farm-photo-input" className="upload-btn">
                         <FiCamera /> {farmPhotoPreview ? 'Change Photo' : 'Upload Photo'}
                       </label>
-                      <span className="photo-hint">Show your farm to buyers (JPG, PNG up to 5MB)</span>
+                      <span className="photo-hint">JPG/PNG up to 5MB</span>
                     </div>
                   </div>
 
@@ -904,7 +973,7 @@ const ProfileOnboarding = () => {
 
                     <div className="field">
                       <label htmlFor="cropTypes">
-                        <FaSeedling className="field-icon" /> What do you grow?
+                        <FaSeedling className="field-icon" /> Crops
                       </label>
                       <input
                         id="cropTypes"
@@ -914,7 +983,7 @@ const ProfileOnboarding = () => {
                         onChange={handleChange}
                         placeholder="Tomatoes, Rice, Mangoes, etc."
                       />
-                      <span className="field-hint">Separate with commas</span>
+                      <span className="field-hint">Comma separated</span>
                     </div>
 
                     <div className="field">
@@ -945,11 +1014,8 @@ const ProfileOnboarding = () => {
                   {/* Verification Document Upload Section */}
                   <div className="document-upload-section">
                     <h4 className="section-subtitle">
-                      <FaIdCard className="field-icon" /> Verification Document <span className="required">*</span>
+                      <FaIdCard className="field-icon" /> Verification Doc <span className="required">*</span>
                     </h4>
-                    <p className="section-info">
-                      Upload your Aadhaar Card, Government ID, or Land Ownership Proof for verification.
-                    </p>
                     
                     {/* Document Type Selector */}
                     <div className="field">
@@ -991,7 +1057,7 @@ const ProfileOnboarding = () => {
                       ) : (
                         <div className="document-placeholder">
                           <FiFile className="placeholder-icon" />
-                          <span>No document uploaded</span>
+                          <span>No file</span>
                         </div>
                       )}
                     </div>
@@ -1018,14 +1084,14 @@ const ProfileOnboarding = () => {
                           </>
                         )}
                       </label>
-                      <span className="document-hint">PDF or Image (JPG, PNG) up to 10MB</span>
+                      <span className="document-hint">PDF/JPG/PNG up to 10MB</span>
                     </div>
 
                     {/* Re-verification Warning */}
-                    {documentPreview && formData.status === 'APPROVED' && (
+                    {documentPreview && profileStatus === 'APPROVED' && (
                       <div className="reupload-warning">
                         <FiAlertTriangle className="warning-icon" />
-                        <span>Re-uploading this document will require admin re-verification. Your verified status will change to PENDING.</span>
+                        <span>Re-upload needs admin re-verification and sets status to PENDING.</span>
                       </div>
                     )}
                   </div>
@@ -1062,6 +1128,7 @@ const ProfileOnboarding = () => {
                 </div>
               </div>
             </form>
+            </div>
           </div>
         </div>
       </div>

@@ -31,3 +31,7 @@ jwt:
 logging:
   level:
     com.agrilink: DEBUG
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}

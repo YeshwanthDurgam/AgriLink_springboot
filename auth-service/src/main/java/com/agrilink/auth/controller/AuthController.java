@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -119,5 +120,41 @@ public class AuthController {
         passwordResetService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse
                 .success("Password has been reset successfully. You can now log in with your new password.", null));
+    }
+
+    /**
+     * Admin: suspend user login access.
+     * PUT /api/v1/auth/admin/users/{userId}/suspend
+     */
+    @PutMapping("/admin/users/{userId}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDto>> suspendUser(@PathVariable UUID userId) {
+        log.info("Admin requested suspend for user {}", userId);
+        UserDto user = authService.suspendUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("User suspended in auth-service", user));
+    }
+
+    /**
+     * Admin: activate user login access.
+     * PUT /api/v1/auth/admin/users/{userId}/activate
+     */
+    @PutMapping("/admin/users/{userId}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDto>> activateUser(@PathVariable UUID userId) {
+        log.info("Admin requested activate for user {}", userId);
+        UserDto user = authService.activateUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("User activated in auth-service", user));
+    }
+
+    /**
+     * Admin: disable user login access for soft-delete.
+     * PUT /api/v1/auth/admin/users/{userId}/disable
+     */
+    @PutMapping("/admin/users/{userId}/disable")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDto>> disableUser(@PathVariable UUID userId) {
+        log.info("Admin requested disable for user {}", userId);
+        UserDto user = authService.disableUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("User disabled in auth-service", user));
     }
 }

@@ -10,6 +10,7 @@ import { FiEyeOff } from '@react-icons/all-files/fi/FiEyeOff';
 import guestService from '../services/guestService';
 import cartService from '../services/cartService';
 import wishlistService from '../services/wishlistService';
+import { getFieldLabel } from '../utils/profileCompletion';
 import './Auth.css';
 
 const Login = () => {
@@ -85,6 +86,23 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
+      const completion = result.profileCompletion;
+      if (completion && !completion.isComplete) {
+        const roleLabel = `${completion.role.charAt(0)}${completion.role.slice(1).toLowerCase()}`;
+        const missingPreview = completion.missingFields
+          .slice(0, 3)
+          .map((fieldName) => getFieldLabel(fieldName))
+          .join(', ');
+        const missingText = missingPreview || 'required details';
+        const moreCount = Math.max(completion.missingFields.length - 3, 0);
+        const suffix = moreCount > 0 ? ` and ${moreCount} more` : '';
+
+        toast.info(
+          `${roleLabel} profile is ${completion.percentage}% complete. Add ${missingText}${suffix} to finish setup.`,
+          { autoClose: 6000 }
+        );
+      }
+
       // Seamless login like Amazon/Flipkart - no success message
       // Sync guest cart to server silently if there's guest data
       if (guestService.hasGuestData()) {
@@ -96,7 +114,13 @@ const Login = () => {
       const redirectTo = from || result.redirectTo || '/';
       navigate(redirectTo, { replace: true });
     } else {
-      toast.error(result.message || 'Login failed. Please try again.');
+      const errorMsg = result.message || result.error || 'Invalid email or password. Please try again.';
+      toast.error(errorMsg);
+      setErrors({ 
+        general: errorMsg,
+        email: 'Invalid credentials',
+        password: 'Invalid credentials'
+      });
     }
     
     setSubmitting(false);

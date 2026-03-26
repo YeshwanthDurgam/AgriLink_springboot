@@ -60,6 +60,34 @@ public class UserProfile {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+        @Column(name = "email", length = 255)
+        private String email;
+
+        @Column(name = "phone_number", length = 20)
+        private String phoneNumber;
+
+        @Column(name = "profile_photo", columnDefinition = "TEXT")
+        private String profilePhoto;
+
+        @Column(name = "role", length = 50)
+        private String role;
+
+        @Column(name = "is_active", nullable = false)
+        @Builder.Default
+        private boolean active = true;
+
+        @Column(name = "suspension_reason", columnDefinition = "TEXT")
+        private String suspensionReason;
+
+        @Column(name = "suspended_at")
+        private LocalDateTime suspendedAt;
+
+        @Column(name = "deletion_reason", columnDefinition = "TEXT")
+        private String deletionReason;
+
+        @Column(name = "deleted_at")
+        private LocalDateTime deletedAt;
+
     @OneToMany(mappedBy = "userProfile", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<KycDocument> kycDocuments = new ArrayList<>();

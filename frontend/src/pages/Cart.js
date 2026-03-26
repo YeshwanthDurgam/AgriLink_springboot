@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import cartService from '../services/cartService';
 import guestService from '../services/guestService';
 import marketplaceService from '../services/marketplaceService';
@@ -26,6 +27,7 @@ import './Cart.css';
 const Cart = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setCount } = useCart();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,8 +41,6 @@ const Cart = () => {
   const [deliveryEstimate, setDeliveryEstimate] = useState(null);
 
   const isGuest = !user;
-  const isFarmer = user?.roles?.includes('FARMER');
-
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -54,15 +54,6 @@ const Cart = () => {
     'FARM20': { discount: 20, type: 'percentage', minOrder: 1000, description: '20% off on orders above ₹1000' }
   };
 
-  // Block farmers from accessing cart
-  useEffect(() => {
-    if (isFarmer) {
-      toast.error('Farmers cannot use the cart feature');
-      navigate('/farmer/dashboard');
-      return;
-    }
-  }, [isFarmer, navigate]);
-
   const fetchCart = useCallback(async () => {
     try {
       setLoading(true);
@@ -71,12 +62,14 @@ const Cart = () => {
       if (isGuest) {
         const guestCart = guestService.getGuestCart();
         setCart(guestCart);
+        setCount(guestCart?.totalItems || 0);
         // Select all items by default
         const allIds = new Set(guestCart.items?.map(item => item.listingId) || []);
         setSelectedItems(allIds);
       } else {
         const data = await cartService.getCart();
         setCart(data);
+        setCount(data?.totalItems || 0);
         const allIds = new Set(data.items?.map(item => item.listingId) || []);
         setSelectedItems(allIds);
       }
@@ -119,10 +112,8 @@ const Cart = () => {
   }, []);
 
   useEffect(() => {
-    if (!isFarmer) {
-      fetchCart();
-    }
-  }, [isFarmer, fetchCart]);
+    fetchCart();
+  }, [fetchCart]);
 
   // Listen for guest cart updates
   useEffect(() => {
@@ -147,6 +138,7 @@ const Cart = () => {
         updatedCart = await cartService.updateCartItem(listingId, newQuantity);
       }
       setCart(updatedCart);
+      setCount(updatedCart?.totalItems || 0);
     } catch (err) {
       console.error('Error updating quantity:', err);
       toast.error('Failed to update quantity');
@@ -165,6 +157,7 @@ const Cart = () => {
         updatedCart = await cartService.removeFromCart(listingId);
       }
       setCart(updatedCart);
+      setCount(updatedCart?.totalItems || 0);
       setSelectedItems(prev => {
         const newSet = new Set(prev);
         newSet.delete(listingId);
@@ -189,6 +182,7 @@ const Cart = () => {
         await cartService.clearCart();
       }
       setCart({ items: [], totalAmount: 0, totalItems: 0 });
+      setCount(0);
       setSelectedItems(new Set());
       toast.success('Cart cleared');
     } catch (err) {
@@ -212,11 +206,14 @@ const Cart = () => {
     try {
       if (isGuest) {
         guestService.addToGuestCart(item);
-        setCart(guestService.getGuestCart());
+        const guestCart = guestService.getGuestCart();
+        setCart(guestCart);
+        setCount(guestCart?.totalItems || 0);
       } else {
         await cartService.addToCart(item.listingId, 1);
         const updatedCart = await cartService.getCart();
         setCart(updatedCart);
+        setCount(updatedCart?.totalItems || 0);
       }
       
       // Remove from saved for later
@@ -309,7 +306,10 @@ const Cart = () => {
     const items = cart?.items || [];
     return items
       .filter(item => selectedItems.has(item.listingId))
-      .reduce((sum, item) => sum + (item.subtotal || item.quantity * (item.price || item.unitPrice)), 0);
+      .reduce((sum, item) => {
+        const price = item.price || item.unitPrice || 0;
+        return sum + (item.subtotal || item.quantity * price);
+      }, 0);
   };
 
   const getSelectedItemsCount = () => {
@@ -339,8 +339,9 @@ const Cart = () => {
     const savings = items
       .filter(item => selectedItems.has(item.listingId))
       .reduce((sum, item) => {
-        const mrp = (item.originalPrice || item.price * 1.2) * item.quantity;
-        const actual = item.subtotal || item.quantity * (item.price || item.unitPrice);
+        const price = item.price || item.unitPrice || 0;
+        const mrp = (item.originalPrice || price * 1.2) * item.quantity;
+        const actual = item.subtotal || item.quantity * price;
         return sum + (mrp - actual);
       }, 0);
     return savings + getCouponDiscount();
@@ -594,10 +595,10 @@ const Cart = () => {
 
                       <div className="item-price-section">
                         <div className="item-price">
-                          ₹{item.subtotal?.toFixed(2) || (item.quantity * (item.price || item.unitPrice)).toFixed(2)}
+                          ₹{item.subtotal ? item.subtotal.toFixed(2) : (item.quantity * ((item.price || item.unitPrice) || 0)).toFixed(2)}
                         </div>
                         <div className="item-unit-price">
-                          ₹{(item.price || item.unitPrice)?.toFixed(2)} / {item.unit || 'unit'}
+                          ₹{((item.price || item.unitPrice) || 0).toFixed(2)} / {item.unit || 'unit'}
                         </div>
                       </div>
                     </div>

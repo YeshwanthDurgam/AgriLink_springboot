@@ -98,6 +98,9 @@ public class Listing {
     @Builder.Default
     private ListingStatus status = ListingStatus.DRAFT;
 
+    @Column(name = "suspension_reason", columnDefinition = "TEXT")
+    private String suspensionReason;
+
     @Column(name = "view_count")
     @Builder.Default
     private int viewCount = 0;
@@ -130,6 +133,7 @@ public class Listing {
 
     public enum ListingStatus {
         DRAFT,
+        APPROVED,
         ACTIVE,
         SOLD,
         EXPIRED,

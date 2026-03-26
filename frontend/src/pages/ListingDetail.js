@@ -218,10 +218,6 @@ const ListingDetail = () => {
   };
 
   const handleAddToCart = async () => {
-    if (user?.roles?.includes('FARMER')) {
-      return;
-    }
-
     setAddedToCart(true);
     setActionLoading('cart');
     
@@ -272,11 +268,6 @@ const ListingDetail = () => {
       return;
     }
 
-    if (user?.roles?.includes('FARMER')) {
-      toast.error('Farmers cannot place orders. Please use a customer account.');
-      return;
-    }
-
     setActionLoading('buy');
     try {
       const price = listing.pricePerUnit || listing.price;
@@ -300,11 +291,6 @@ const ListingDetail = () => {
   };
 
   const handleToggleWishlist = async () => {
-    if (user?.roles?.includes('FARMER')) {
-      toast.error('Farmers cannot use the wishlist feature');
-      return;
-    }
-
     setActionLoading('wishlist');
     try {
       if (!user) {

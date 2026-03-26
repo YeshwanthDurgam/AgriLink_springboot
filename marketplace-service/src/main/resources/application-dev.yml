@@ -32,6 +32,10 @@ spring:
 jwt:
   secret: ${JWT_SECRET:myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}
 
+notification:
+  service:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+
 logging:
   level:
     com.agrilink: DEBUG
@@ -43,3 +47,15 @@ management:
     web:
       exposure:
         include: health,info,h2-console
+
+market:
+  data:
+    datagov:
+      base-url: ${DATAGOV_BASE_URL:https://api.data.gov.in/resource}
+      api-key: ${DATAGOV_API_KEY:}
+      resource-id: ${DATAGOV_RESOURCE_ID:}
+    price-sync:
+      enabled: ${MARKET_PRICE_SYNC_ENABLED:true}
+      fixed-delay-ms: ${MARKET_PRICE_SYNC_DELAY_MS:21600000}
+      initial-delay-ms: ${MARKET_PRICE_SYNC_INITIAL_DELAY_MS:120000}
+      page-size: ${MARKET_PRICE_SYNC_PAGE_SIZE:150}

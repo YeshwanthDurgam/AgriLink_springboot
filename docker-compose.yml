@@ -116,6 +116,9 @@ services:
       SPRING_DATASOURCE_USERNAME: agrilink
       SPRING_DATASOURCE_PASSWORD: agrilink123
       JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-webhook_secret}
     ports:
       - "8085:8085"
     depends_on:

@@ -3,6 +3,7 @@ package com.agrilink.farm.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -37,6 +38,12 @@ public class HarvestGuidanceDto {
     
     // Flag to indicate if data is simulated
     private boolean isSimulated;
+
+    // Data quality metadata
+    private String dataSource;
+    private LocalDateTime generatedAt;
+    private Integer dataFreshnessMinutes;
+    private Integer confidenceScore;
     
     @Data
     @Builder
@@ -50,6 +57,8 @@ public class HarvestGuidanceDto {
         private String forecast;
         private String advisoryMessage;
         private List<DayForecast> dailyForecast;
+        private String source;
+        private LocalDateTime lastUpdatedAt;
     }
     
     @Data

@@ -7,6 +7,7 @@ import com.agrilink.auth.entity.Role;
 import com.agrilink.auth.entity.User;
 import com.agrilink.auth.repository.RoleRepository;
 import com.agrilink.auth.repository.UserRepository;
+import com.agrilink.auth.client.NotificationClient;
 import com.agrilink.auth.security.JwtTokenProvider;
 import com.agrilink.common.exception.BadRequestException;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private NotificationClient notificationClient;
 
     @InjectMocks
     private AuthService authService;

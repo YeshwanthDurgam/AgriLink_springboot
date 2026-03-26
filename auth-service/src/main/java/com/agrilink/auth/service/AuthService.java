@@ -159,6 +159,60 @@ public class AuthService {
         return userRepository.findIdsByRoleNameAndEnabled("FARMER");
     }
 
+    /**
+     * Suspend a user account at authentication layer.
+     */
+    @Transactional
+    public UserDto suspendUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        user.setEnabled(false);
+        user.setAccountNonLocked(false);
+        user.setAccountNonExpired(true);
+        user.setCredentialsNonExpired(true);
+
+        User saved = userRepository.save(user);
+        log.info("Suspended auth account for user {}", userId);
+        return mapToUserDto(saved);
+    }
+
+    /**
+     * Activate a user account at authentication layer.
+     */
+    @Transactional
+    public UserDto activateUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        user.setEnabled(true);
+        user.setAccountNonLocked(true);
+        user.setAccountNonExpired(true);
+        user.setCredentialsNonExpired(true);
+
+        User saved = userRepository.save(user);
+        log.info("Activated auth account for user {}", userId);
+        return mapToUserDto(saved);
+    }
+
+    /**
+     * Disable a user account for soft-delete at authentication layer.
+     */
+    @Transactional
+    public UserDto disableUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        user.setEnabled(false);
+        user.setAccountNonLocked(false);
+        user.setAccountNonExpired(false);
+        user.setCredentialsNonExpired(false);
+
+        User saved = userRepository.save(user);
+        log.info("Disabled auth account for user {}", userId);
+        return mapToUserDto(saved);
+    }
+
     private UserDto mapToUserDto(User user) {
         // Generate display name from email prefix
         String displayName = user.getEmail().split("@")[0];

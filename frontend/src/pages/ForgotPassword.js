@@ -33,14 +33,27 @@ const ForgotPassword = () => {
       const response = await AuthService.forgotPassword(email);
       if (response.success) {
         setSubmitted(true);
-        toast.success('Password reset link sent! Please check your email.');
+        toast.success('✅ Password reset link sent! Please check your email inbox.');
+      } else if (response.message) {
+        // Backend returned an error
+        toast.error(response.message);
       } else {
-        toast.error(response.message || 'Failed to send reset link');
+        // No error but also no success - show generic message
+        setSubmitted(true);
+        toast.success('✅ If an account exists with this email, a reset link has been sent.');
       }
     } catch (err) {
-      // Still show success message to prevent email enumeration
-      setSubmitted(true);
-      toast.success('If your email is registered, you will receive a password reset link.');
+      // Network or other error
+      console.error('Password reset error:', err);
+      if (err.response?.status === 404) {
+        toast.error('❌ Email not found in our system');
+      } else if (err.response?.status === 500) {
+        toast.error('❌ Server error. Please try again later.');
+      } else {
+        // For security, always show generic message
+        setSubmitted(true);
+        toast.success('✅ If an account exists with this email, a reset link has been sent.');
+      }
     } finally {
       setSubmitting(false);
     }

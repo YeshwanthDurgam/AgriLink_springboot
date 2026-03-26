@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,6 +33,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -104,6 +106,52 @@ class ListingControllerTest {
                 .viewCount(0)
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/listings/search")
+    class SearchListingsTests {
+
+        @Test
+        @DisplayName("Should search listings with keyword and filters")
+        void shouldSearchListingsWithFilters() throws Exception {
+            listingDto.setStatus(Listing.ListingStatus.ACTIVE);
+            Page<ListingDto> page = new PageImpl<>(List.of(listingDto), PageRequest.of(0, 20), 1);
+            when(listingService.searchListings(any(), any(Pageable.class))).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings/search")
+                            .param("keyword", "tomato")
+                            .param("minPrice", "10")
+                            .param("maxPrice", "100")
+                            .param("organicOnly", "true")
+                            .param("minRating", "4")
+                            .param("sortBy", "createdAt")
+                            .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.content[0].title").value("Fresh Tomatoes"));
+        }
+
+        @Test
+        @DisplayName("Should fallback to safe sort field for invalid sortBy")
+        void shouldFallbackToSafeSortField() throws Exception {
+            Page<ListingDto> page = new PageImpl<>(List.of(listingDto), PageRequest.of(0, 20), 1);
+            when(listingService.searchListings(any(), any(Pageable.class))).thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/listings/search")
+                            .param("keyword", "  fresh   tomato  ")
+                            .param("sortBy", "invalidField")
+                            .param("sortDir", "desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+
+            org.mockito.Mockito.verify(listingService).searchListings(
+                    argThat(criteria -> "fresh tomato".equals(criteria.getKeyword())),
+                    argThat(pageable -> "createdAt".equals(
+                            pageable.getSort().stream().findFirst().map(order -> order.getProperty()).orElse("")))
+            );
+        }
     }
 
     @Nested

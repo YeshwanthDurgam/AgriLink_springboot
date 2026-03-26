@@ -18,6 +18,13 @@ const Analytics = () => {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
 
+  const formatINR = (value, fractionDigits = 2) => new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  }).format(Number(value || 0));
+
   const fetchAnalyticsData = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -253,14 +260,14 @@ const Analytics = () => {
           <div className="stat-card">
             <div className="stat-icon revenue"><FiDollarSign size={24} /></div>
             <div className="stat-content">
-              <span className="stat-value">${salesData.totalRevenue?.toFixed(2) || '0.00'}</span>
+              <span className="stat-value">{formatINR(salesData.totalRevenue, 2)}</span>
               <span className="stat-label">Total Revenue</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon monthly"><FiTrendingUp size={24} /></div>
             <div className="stat-content">
-              <span className="stat-value">${salesData.totalRevenueThisMonth?.toFixed(2) || '0.00'}</span>
+              <span className="stat-value">{formatINR(salesData.totalRevenueThisMonth, 2)}</span>
               <span className="stat-label">This Month</span>
               {salesData.revenueGrowthPercent !== 0 && (
                 <span className={`growth ${salesData.revenueGrowthPercent > 0 ? 'positive' : 'negative'}`}>
@@ -279,7 +286,7 @@ const Analytics = () => {
           <div className="stat-card">
             <div className="stat-icon avg"><FiBarChart2 size={24} /></div>
             <div className="stat-content">
-              <span className="stat-value">${salesData.averageOrderValue?.toFixed(2) || '0.00'}</span>
+              <span className="stat-value">{formatINR(salesData.averageOrderValue, 2)}</span>
               <span className="stat-label">Avg Order Value</span>
             </div>
           </div>
@@ -333,9 +340,9 @@ const Analytics = () => {
                     <div 
                       className="chart-bar" 
                       style={{ height: `${height}%` }}
-                      title={`$${month.revenue?.toFixed(2)}`}
+                      title={formatINR(month.revenue, 2)}
                     >
-                      <span className="bar-value">${month.revenue?.toFixed(0)}</span>
+                      <span className="bar-value">{formatINR(month.revenue, 0)}</span>
                     </div>
                     <span className="bar-label">{month.period?.substring(0, 3)}</span>
                   </div>
@@ -357,7 +364,7 @@ const Analytics = () => {
                     <span className="product-name">{product.productName}</span>
                     <span className="product-orders">{product.orderCount} orders</span>
                   </div>
-                  <div className="product-revenue">${product.totalRevenue?.toFixed(2)}</div>
+                  <div className="product-revenue">{formatINR(product.totalRevenue, 2)}</div>
                 </div>
               ))}
             </div>
@@ -376,7 +383,7 @@ const Analytics = () => {
                     <span className="buyer-name">{buyer.buyerName}</span>
                     <span className="buyer-orders">{buyer.orderCount} orders</span>
                   </div>
-                  <div className="buyer-spent">${buyer.totalSpent?.toFixed(2)}</div>
+                  <div className="buyer-spent">{formatINR(buyer.totalSpent, 2)}</div>
                 </div>
               ))}
             </div>

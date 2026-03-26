@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiTrendingUp, FiTrendingDown, FiMinus, FiMapPin, FiDollarSign, FiInfo, FiRefreshCw } from 'react-icons/fi';
 import analyticsService from '../services/analyticsService';
 import './DemandForecast.css';
@@ -12,6 +12,7 @@ const DemandForecast = () => {
   const [selectedCrop, setSelectedCrop] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [district, setDistrict] = useState('');
+  const [liveNow, setLiveNow] = useState(Date.now());
 
   useEffect(() => {
     fetchMetadata();
@@ -38,13 +39,15 @@ const DemandForecast = () => {
     }
   };
 
-  const fetchForecast = async () => {
+  const fetchForecast = useCallback(async (silent = false) => {
     if (!selectedCrop) {
       setError('Please select a crop');
       return;
     }
 
-    setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
     setError('');
     try {
       const data = await analyticsService.getDemandForecast(selectedCrop, district, selectedState);
@@ -53,9 +56,24 @@ const DemandForecast = () => {
       console.error('Error fetching forecast:', err);
       setError('Failed to fetch demand forecast. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [selectedCrop, district, selectedState]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setLiveNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!forecast || !selectedCrop) return;
+    const interval = setInterval(() => {
+      fetchForecast(true);
+    }, 180000);
+    return () => clearInterval(interval);
+  }, [forecast, selectedCrop, fetchForecast]);
 
   const getDemandLevelColor = (level) => {
     switch (level) {
@@ -83,6 +101,26 @@ const DemandForecast = () => {
       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     ).join(' ');
   };
+
+  const formatDateTime = (value) => {
+    if (!value) return 'N/A';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'N/A';
+    return parsed.toLocaleString();
+  };
+
+  const getEffectiveFreshnessMinutes = () => {
+    if (forecast?.generatedAt) {
+      const generated = new Date(forecast.generatedAt).getTime();
+      if (!Number.isNaN(generated)) {
+        return Math.max(0, Math.floor((liveNow - generated) / 60000));
+      }
+    }
+    return forecast?.dataFreshnessMinutes ?? null;
+  };
+
+  const effectiveFreshnessMinutes = getEffectiveFreshnessMinutes();
+  const isStale = effectiveFreshnessMinutes != null && effectiveFreshnessMinutes > 120;
 
   return (
     <div className="demand-forecast-section">
@@ -145,6 +183,12 @@ const DemandForecast = () => {
 
       {error && <div className="forecast-error">{error}</div>}
 
+      {forecast && isStale && (
+        <div className="forecast-stale-warning">
+          <FiInfo /> Data may be stale ({effectiveFreshnessMinutes} min old). Refreshing automatically every 3 minutes.
+        </div>
+      )}
+
       {forecast && (
         <div className="forecast-results">
           <div className="forecast-header">
@@ -154,11 +198,16 @@ const DemandForecast = () => {
                 <FiMapPin /> {forecast.district || ''} {forecast.state && formatStateName(forecast.state)}
               </span>
             </div>
-            {forecast.isSimulated && (
-              <span className="simulated-badge">
-                <FiInfo /> Simulated Data
-              </span>
-            )}
+            <div className="forecast-meta-badges">
+              {forecast.isSimulated && (
+                <span className="simulated-badge">
+                  <FiInfo /> Model-based data
+                </span>
+              )}
+              <span className="meta-badge">Source: {forecast.dataSource || 'Unknown'}</span>
+              <span className="meta-badge">Freshness: {effectiveFreshnessMinutes ?? 'N/A'} min</span>
+              <span className="meta-badge">Updated: {formatDateTime(forecast.generatedAt)}</span>
+            </div>
           </div>
 
           <div className="forecast-cards">
@@ -190,7 +239,7 @@ const DemandForecast = () => {
             <div className="forecast-card confidence">
               <span className="card-label">Confidence</span>
               <span className={`confidence-badge ${forecast.confidence?.toLowerCase()}`}>
-                {forecast.confidence}
+                {forecast.confidence} {forecast.confidenceScore ? `(${forecast.confidenceScore}%)` : ''}
               </span>
             </div>
           </div>

@@ -1,6 +1,8 @@
 package com.agrilink.user.repository;
 
 import com.agrilink.user.entity.UserProfile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,4 +21,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     boolean existsByUserId(UUID userId);
     
     List<UserProfile> findByUserIdIn(List<UUID> userIds);
+    
+    Page<UserProfile> findByRole(String role, Pageable pageable);
 }

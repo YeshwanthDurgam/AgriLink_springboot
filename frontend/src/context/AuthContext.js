@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AuthService from '../services/authService';
+import { userApi } from '../services/api';
+import {
+  resolvePrimaryRole,
+  getProfileEndpointForRole,
+  calculateProfileCompletion,
+} from '../utils/profileCompletion';
 
 const AuthContext = createContext(null);
 
@@ -43,6 +49,25 @@ const getUserDisplayName = (user) => {
   if (user.name) return user.name;
   if (user.email) return user.email.split('@')[0];
   return 'User';
+};
+
+const fetchLoginProfileCompletion = async (userData) => {
+  const role = resolvePrimaryRole(userData?.roles);
+  const endpoint = getProfileEndpointForRole(role);
+
+  try {
+    const response = await userApi.get(endpoint);
+    const profile = response.data?.data || response.data || {};
+    return calculateProfileCompletion(profile, role);
+  } catch (err) {
+    const statusCode = err?.response?.status;
+    if (statusCode === 404) {
+      return calculateProfileCompletion({}, role);
+    }
+
+    console.warn('[AuthContext] Unable to fetch profile completion on login:', statusCode || err.message);
+    return null;
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -131,6 +156,8 @@ export const AuthProvider = ({ children }) => {
         console.log('[AuthContext] Login successful, setting user:', userData);
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+
+        const profileCompletion = await fetchLoginProfileCompletion(userData);
         
         const roles = userData.roles || [];
         let defaultRedirect = '/';
@@ -146,7 +173,8 @@ export const AuthProvider = ({ children }) => {
         return { 
           success: true, 
           redirectTo: defaultRedirect,
-          user: userData
+          user: userData,
+          profileCompletion,
         };
       }
       console.warn('[AuthContext] Login failed:', response.message);

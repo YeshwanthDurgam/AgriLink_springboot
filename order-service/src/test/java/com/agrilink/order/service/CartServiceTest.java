@@ -265,23 +265,23 @@ class CartServiceTest {
         @Test
         @DisplayName("Should return cart item count")
         void shouldReturnCartItemCount() {
-            cart.getItems().add(cartItem);
-            when(cartRepository.findByUserIdWithItems(userId)).thenReturn(Optional.of(cart));
+            when(cartItemRepository.countByCartUserId(userId)).thenReturn(10);
 
             int count = cartService.getCartItemCount(userId);
 
-            // getTotalItems returns sum of quantities, not count of items
             assertThat(count).isEqualTo(10);
+            verify(cartItemRepository).countByCartUserId(userId);
         }
 
         @Test
         @DisplayName("Should return zero when cart not exists")
         void shouldReturnZeroWhenCartNotExists() {
-            when(cartRepository.findByUserIdWithItems(userId)).thenReturn(Optional.empty());
+            when(cartItemRepository.countByCartUserId(userId)).thenReturn(0);
 
             int count = cartService.getCartItemCount(userId);
 
             assertThat(count).isEqualTo(0);
+            verify(cartItemRepository).countByCartUserId(userId);
         }
     }
 }

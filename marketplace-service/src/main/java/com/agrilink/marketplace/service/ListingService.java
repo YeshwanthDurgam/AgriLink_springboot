@@ -237,18 +237,27 @@ public class ListingService {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Only active listings by default (unless availableOnly is false)
-            if (!Boolean.FALSE.equals(criteria.getAvailableOnly())) {
-                predicates.add(cb.equal(root.get("status"), Listing.ListingStatus.ACTIVE));
+            // Marketplace search should only return active listings.
+            predicates.add(cb.equal(root.get("status"), Listing.ListingStatus.ACTIVE));
+
+            // availableOnly means in-stock items (quantity > 0).
+            if (Boolean.TRUE.equals(criteria.getAvailableOnly())) {
+                predicates.add(cb.greaterThan(root.get("quantity"), java.math.BigDecimal.ZERO));
             }
 
             if (criteria.getKeyword() != null && !criteria.getKeyword().isEmpty()) {
-                String keyword = "%" + criteria.getKeyword().toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("title")), keyword),
-                        cb.like(cb.lower(root.get("description")), keyword),
-                        cb.like(cb.lower(root.get("cropType")), keyword)
-                ));
+                String[] terms = criteria.getKeyword().trim().toLowerCase().split("\\s+");
+                for (String term : terms) {
+                    if (term.isBlank()) {
+                        continue;
+                    }
+                    String keyword = "%" + term + "%";
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("title")), keyword),
+                            cb.like(cb.lower(root.get("description")), keyword),
+                            cb.like(cb.lower(root.get("cropType")), keyword)
+                    ));
+                }
             }
 
             if (criteria.getCategoryId() != null) {
@@ -476,5 +485,50 @@ public class ListingService {
                 .joinedYear(2024)
                 .description("Quality farm products available on AgriLink.")
                 .build();
+    }
+
+    /**
+     * Get listings pending approval (DRAFT status).
+     */
+    @Transactional(readOnly = true)
+    public Page<ListingDto> getPendingListings(Pageable pageable) {
+        log.info("Fetching pending listings for admin approval");
+        Page<Listing> listings = listingRepository.findByStatus(Listing.ListingStatus.DRAFT, pageable);
+        return listings.map(this::mapToListingDto);
+    }
+
+    /**
+     * Admin: Update listing status (for approval workflow).
+     */
+    @Transactional
+    public ListingDto updateListingStatus(UUID listingId, Listing.ListingStatus newStatus) {
+        log.info("Updating listing {} status to {}", listingId, newStatus);
+        
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new RuntimeException("Listing not found: " + listingId));
+        
+        listing.setStatus(newStatus);
+        Listing updated = listingRepository.save(listing);
+        
+        log.info("Listing {} status updated to {}", listingId, newStatus);
+        return mapToListingDto(updated);
+    }
+
+    /**
+     * Admin: Suspend a listing with a suspension reason.
+     */
+    @Transactional
+    public ListingDto suspendListing(UUID listingId, String reason) {
+        log.info("Suspending listing {} with reason: {}", listingId, reason);
+        
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new RuntimeException("Listing not found: " + listingId));
+        
+        listing.setStatus(Listing.ListingStatus.CANCELLED);
+        listing.setSuspensionReason(reason != null ? reason : "Suspended by admin");
+        Listing updated = listingRepository.save(listing);
+        
+        log.info("Listing {} suspended with reason: {}", listingId, reason);
+        return mapToListingDto(updated);
     }
 }

@@ -51,6 +51,13 @@ const PRICE_RANGES = [
 
 // Rating options
 const RATING_OPTIONS = [4, 3, 2, 1];
+const RECENT_SEARCHES_KEY = 'marketplace_recent_searches';
+const MAX_RECENT_SEARCHES = 6;
+
+const isPlatformApprovedListing = (listing) => {
+  const status = String(listing?.status || '').toUpperCase();
+  return status === 'APPROVED' || status === 'ACTIVE';
+};
 
 const Marketplace = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -68,6 +75,10 @@ const Marketplace = () => {
   // View state
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [productSuggestions, setProductSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   // Filter sections collapse state
   const [collapsedSections, setCollapsedSections] = useState({
@@ -88,18 +99,19 @@ const Marketplace = () => {
   const initialSearch = searchParams.get('search') || '';
   const initialMinPrice = searchParams.get('minPrice') || '';
   const initialMaxPrice = searchParams.get('maxPrice') || '';
-  const initialRating = searchParams.get('rating') || '';
-  const initialOrganic = searchParams.get('organic') === 'true';
-  const initialInStock = searchParams.get('inStock') === 'true';
+  const initialRating = searchParams.get('minRating') || '';
+  const initialOrganic = searchParams.get('organicOnly') === 'true';
+  const initialInStock = searchParams.get('availableOnly') === 'true';
 
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState(initialSearch);
   const [filters, setFilters] = useState({
     categoryId: initialCategoryId,
     minPrice: initialMinPrice,
     maxPrice: initialMaxPrice,
-    rating: initialRating,
-    organic: initialOrganic,
-    inStock: initialInStock,
+    minRating: initialRating,
+    organicOnly: initialOrganic,
+    availableOnly: initialInStock,
     sortBy: searchParams.get('sortBy') || 'createdAt,desc'
   });
 
@@ -116,34 +128,46 @@ const Marketplace = () => {
         : filters.minPrice ? `Over ₹${filters.minPrice}` : `Under ₹${filters.maxPrice}`;
       active.push({ key: 'price', label: priceLabel });
     }
-    if (filters.rating) {
-      active.push({ key: 'rating', label: `${filters.rating}★ & above` });
+    if (filters.minRating) {
+      active.push({ key: 'minRating', label: `${filters.minRating}★ & above` });
     }
-    if (filters.organic) {
-      active.push({ key: 'organic', label: 'Organic' });
+    if (filters.organicOnly) {
+      active.push({ key: 'organicOnly', label: 'Organic' });
     }
-    if (filters.inStock) {
-      active.push({ key: 'inStock', label: 'In Stock' });
+    if (filters.availableOnly) {
+      active.push({ key: 'availableOnly', label: 'In Stock' });
     }
-    if (searchQuery) {
-      active.push({ key: 'search', label: `"${searchQuery}"` });
+    if (appliedSearchTerm) {
+      active.push({ key: 'search', label: `"${appliedSearchTerm}"` });
     }
     return active;
-  }, [filters, searchQuery, categories]);
+  }, [filters, appliedSearchTerm, categories]);
+
+  const updateSearchParams = useCallback((updater) => {
+    const next = new URLSearchParams(searchParams);
+    updater(next);
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
 
   const removeFilter = (key) => {
     if (key === 'search') {
-      setSearchQuery('');
-      searchParams.delete('search');
+      setSearchInput('');
+      setAppliedSearchTerm('');
+      updateSearchParams((next) => {
+        next.delete('search');
+      });
     } else if (key === 'price') {
       setFilters(prev => ({ ...prev, minPrice: '', maxPrice: '' }));
-      searchParams.delete('minPrice');
-      searchParams.delete('maxPrice');
+      updateSearchParams((next) => {
+        next.delete('minPrice');
+        next.delete('maxPrice');
+      });
     } else {
-      setFilters(prev => ({ ...prev, [key]: key === 'organic' || key === 'inStock' ? false : '' }));
-      searchParams.delete(key);
+      setFilters(prev => ({ ...prev, [key]: key === 'organicOnly' || key === 'availableOnly' ? false : '' }));
+      updateSearchParams((next) => {
+        next.delete(key);
+      });
     }
-    setSearchParams(searchParams);
     setPage(0);
   };
 
@@ -152,12 +176,13 @@ const Marketplace = () => {
       categoryId: '',
       minPrice: '',
       maxPrice: '',
-      rating: '',
-      organic: false,
-      inStock: false,
+      minRating: '',
+      organicOnly: false,
+      availableOnly: false,
       sortBy: 'createdAt,desc'
     });
-    setSearchQuery('');
+    setSearchInput('');
+    setAppliedSearchTerm('');
     setSearchParams({});
     setPage(0);
   };
@@ -195,7 +220,7 @@ const Marketplace = () => {
         page,
         size: pageSize,
         ...filters,
-        search: searchQuery || undefined,
+        keyword: appliedSearchTerm || undefined,
         categoryId: filters.categoryId || undefined,
         minPrice: filters.minPrice || undefined,
         maxPrice: filters.maxPrice || undefined
@@ -207,13 +232,15 @@ const Marketplace = () => {
       const response = await marketplaceService.getListings(params);
 
       if (response.content) {
-        setListings(response.content);
+        const approvedListings = response.content.filter(isPlatformApprovedListing);
+        setListings(approvedListings);
         setTotalPages(response.totalPages || 1);
-        setTotalElements(response.totalElements || response.content.length);
+        setTotalElements(response.totalElements || approvedListings.length);
       } else if (Array.isArray(response)) {
-        setListings(response);
+        const approvedListings = response.filter(isPlatformApprovedListing);
+        setListings(approvedListings);
         setTotalPages(1);
-        setTotalElements(response.length);
+        setTotalElements(approvedListings.length);
       } else {
         setListings([]);
         setTotalPages(1);
@@ -227,7 +254,13 @@ const Marketplace = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filters, searchQuery]);
+  }, [page, pageSize, filters, appliedSearchTerm]);
+
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search') || '';
+    setSearchInput(searchFromUrl);
+    setAppliedSearchTerm(searchFromUrl);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchCategories();
@@ -241,25 +274,20 @@ const Marketplace = () => {
   // Handlers
   const handleSearch = (e) => {
     e.preventDefault();
-    setPage(0);
-    if (searchQuery) {
-      searchParams.set('search', searchQuery);
-    } else {
-      searchParams.delete('search');
-    }
-    setSearchParams(searchParams);
+    applySearch(searchInput);
   };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(0);
 
-    if (value && value !== '' && value !== false) {
-      searchParams.set(key, value.toString());
-    } else {
-      searchParams.delete(key);
-    }
-    setSearchParams(searchParams);
+    updateSearchParams((next) => {
+      if (value && value !== '' && value !== false) {
+        next.set(key, value.toString());
+      } else {
+        next.delete(key);
+      }
+    });
   };
 
   const handlePriceRangeSelect = (range) => {
@@ -270,10 +298,11 @@ const Marketplace = () => {
     }));
     setPage(0);
 
-    if (range.min) searchParams.set('minPrice', range.min.toString());
-    if (range.max) searchParams.set('maxPrice', range.max.toString());
-    else searchParams.delete('maxPrice');
-    setSearchParams(searchParams);
+    updateSearchParams((next) => {
+      if (range.min) next.set('minPrice', range.min.toString());
+      if (range.max) next.set('maxPrice', range.max.toString());
+      else next.delete('maxPrice');
+    });
   };
 
   // Memoized wishlist handler to prevent unnecessary re-renders
@@ -398,6 +427,127 @@ const Marketplace = () => {
   // Memoize active filters to prevent recalculation
   const activeFilters = useMemo(() => getActiveFilters(), [getActiveFilters]);
 
+  const filteredRecentSearches = useMemo(() => {
+    const query = searchInput.trim().toLowerCase();
+    if (!query) {
+      return recentSearches;
+    }
+    return recentSearches.filter(item => item.toLowerCase().includes(query));
+  }, [recentSearches, searchInput]);
+
+  const suggestionQuery = useMemo(() => searchInput.trim(), [searchInput]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (Array.isArray(parsed)) {
+        setRecentSearches(parsed.filter(item => typeof item === 'string'));
+      }
+    } catch (error) {
+      console.warn('Unable to load recent marketplace searches:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showSearchSuggestions || suggestionQuery.length < 2) {
+      setProductSuggestions([]);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      setSuggestionsLoading(true);
+      try {
+        const response = await marketplaceService.getListings({
+          keyword: suggestionQuery,
+          page: 0,
+          size: 6,
+          sortBy: 'createdAt,desc'
+        });
+        const rawSuggestions = response?.content || (Array.isArray(response) ? response : []);
+        const approvedSuggestions = rawSuggestions.filter(isPlatformApprovedListing);
+        const dedupedSuggestions = [];
+        const seenIds = new Set();
+        for (const item of approvedSuggestions) {
+          if (item?.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            dedupedSuggestions.push(item);
+          }
+        }
+        if (!cancelled) {
+          setProductSuggestions(dedupedSuggestions.slice(0, 6));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error fetching product suggestions:', error);
+          setProductSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSuggestionsLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [suggestionQuery, showSearchSuggestions]);
+
+  const saveRecentSearch = useCallback((term) => {
+    if (!term) {
+      return;
+    }
+    setRecentSearches(prev => {
+      const next = [term, ...prev.filter(item => item.toLowerCase() !== term.toLowerCase())]
+        .slice(0, MAX_RECENT_SEARCHES);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const clearRecentSearches = useCallback(() => {
+    setRecentSearches([]);
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+  }, []);
+
+  const formatSuggestionPrice = useCallback((listing) => {
+    const value = parseFloat(listing?.pricePerUnit) || parseFloat(listing?.price) || 0;
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  }, []);
+
+  const openSuggestedProduct = useCallback((listing) => {
+    setShowSearchSuggestions(false);
+    if (suggestionQuery) {
+      saveRecentSearch(suggestionQuery);
+    }
+    window.location.href = `/marketplace/${listing.id}`;
+  }, [saveRecentSearch, suggestionQuery]);
+
+  const applySearch = useCallback((rawTerm) => {
+    const normalizedSearch = rawTerm.trim();
+    setSearchInput(normalizedSearch);
+    setAppliedSearchTerm(normalizedSearch);
+    setPage(0);
+    updateSearchParams((next) => {
+      if (normalizedSearch) {
+        next.set('search', normalizedSearch);
+      } else {
+        next.delete('search');
+      }
+    });
+    saveRecentSearch(normalizedSearch);
+    setShowSearchSuggestions(false);
+  }, [saveRecentSearch, updateSearchParams]);
+
   return (
     <div className="marketplace-page">
       {/* Top Bar with Search and Sort */}
@@ -414,16 +564,76 @@ const Marketplace = () => {
           )}
         </div>
 
-        <form onSubmit={handleSearch} className="marketplace-search">
-          <FiSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search in Marketplace..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit">Search</button>
-        </form>
+        <div className="marketplace-search-wrapper">
+          <form onSubmit={handleSearch} className="marketplace-search">
+            <FiSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search in Marketplace..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onFocus={() => setShowSearchSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 150)}
+            />
+            <button type="submit">Search</button>
+          </form>
+
+          {showSearchSuggestions && (
+            <div className="search-suggestions" role="listbox" aria-label="Recent searches">
+              {suggestionQuery.length >= 2 && (
+                <>
+                  <div className="search-suggestions-header">
+                    <span>Suggested Products</span>
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => applySearch(suggestionQuery)}>
+                      Search "{suggestionQuery}"
+                    </button>
+                  </div>
+
+                  {suggestionsLoading ? (
+                    <div className="search-suggestion-loading">Finding products...</div>
+                  ) : productSuggestions.length > 0 ? (
+                    productSuggestions.map((listing) => (
+                      <button
+                        key={listing.id}
+                        type="button"
+                        className="search-suggestion-item product"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => openSuggestedProduct(listing)}
+                      >
+                        <FiSearch />
+                        <span className="suggestion-title">{listing.title}</span>
+                        <span className="suggestion-price">{formatSuggestionPrice(listing)}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="search-suggestion-empty">No related products found</div>
+                  )}
+                </>
+              )}
+
+              {filteredRecentSearches.length > 0 && (
+                <>
+                  <div className="search-suggestions-header recent">
+                    <span>Recent Searches</span>
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={clearRecentSearches}>Clear</button>
+                  </div>
+                  {filteredRecentSearches.map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      className="search-suggestion-item"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => applySearch(term)}
+                    >
+                      <FiSearch />
+                      <span>{term}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Results Bar */}
@@ -439,7 +649,7 @@ const Marketplace = () => {
             {loading ? 'Loading...' : (
               <>
                 <strong>{totalElements.toLocaleString()}</strong> results
-                {searchQuery && <> for "<strong>{searchQuery}</strong>"</>}
+                {appliedSearchTerm && <> for "<strong>{appliedSearchTerm}</strong>"</>}
               </>
             )}
           </span>
@@ -453,9 +663,9 @@ const Marketplace = () => {
               onChange={(e) => handleFilterChange('sortBy', e.target.value)}
             >
               <option value="createdAt,desc">Newest Arrivals</option>
-              <option value="price,asc">Price: Low to High</option>
-              <option value="price,desc">Price: High to Low</option>
-              <option value="rating,desc">Avg. Customer Review</option>
+              <option value="pricePerUnit,asc">Price: Low to High</option>
+              <option value="pricePerUnit,desc">Price: High to Low</option>
+              <option value="averageRating,desc">Avg. Customer Review</option>
               <option value="title,asc">Name: A to Z</option>
               <option value="quantity,desc">Best Availability</option>
             </select>
@@ -595,9 +805,12 @@ const Marketplace = () => {
                   <button
                     className="price-go-btn"
                     onClick={() => {
-                      if (filters.minPrice) searchParams.set('minPrice', filters.minPrice);
-                      if (filters.maxPrice) searchParams.set('maxPrice', filters.maxPrice);
-                      setSearchParams(searchParams);
+                      updateSearchParams((next) => {
+                        if (filters.minPrice) next.set('minPrice', filters.minPrice);
+                        else next.delete('minPrice');
+                        if (filters.maxPrice) next.set('maxPrice', filters.maxPrice);
+                        else next.delete('maxPrice');
+                      });
                     }}
                   >
                     Go
@@ -623,8 +836,8 @@ const Marketplace = () => {
                     <input
                       type="radio"
                       name="rating"
-                      checked={filters.rating === rating.toString()}
-                      onChange={() => handleFilterChange('rating', rating.toString())}
+                      checked={filters.minRating === rating.toString()}
+                      onChange={() => handleFilterChange('minRating', rating.toString())}
                     />
                     <span className="stars">
                       {[...Array(5)].map((_, i) => (
@@ -652,8 +865,8 @@ const Marketplace = () => {
                 <label className="filter-option checkbox-option">
                   <input
                     type="checkbox"
-                    checked={filters.organic}
-                    onChange={(e) => handleFilterChange('organic', e.target.checked)}
+                    checked={filters.organicOnly}
+                    onChange={(e) => handleFilterChange('organicOnly', e.target.checked)}
                   />
                   <span className="checkmark"></span>
                   <span>🌱 Organic Only</span>
@@ -661,8 +874,8 @@ const Marketplace = () => {
                 <label className="filter-option checkbox-option">
                   <input
                     type="checkbox"
-                    checked={filters.inStock}
-                    onChange={(e) => handleFilterChange('inStock', e.target.checked)}
+                    checked={filters.availableOnly}
+                    onChange={(e) => handleFilterChange('availableOnly', e.target.checked)}
                   />
                   <span className="checkmark"></span>
                   <span>In Stock</span>
@@ -685,13 +898,15 @@ const Marketplace = () => {
           {loading ? (
             <div className="marketplace-loading">
               <div className="loading-grid">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="skeleton-card">
+                {[...Array(pageSize || 12)].map((_, i) => (
+                  <div key={i} className="skeleton-card skeleton-shimmer">
                     <div className="skeleton-image"></div>
                     <div className="skeleton-content">
                       <div className="skeleton-line wide"></div>
                       <div className="skeleton-line medium"></div>
                       <div className="skeleton-line short"></div>
+                      <div className="skeleton-price-line"></div>
+                      <div className="skeleton-button"></div>
                     </div>
                   </div>
                 ))}
@@ -704,13 +919,18 @@ const Marketplace = () => {
               </div>
               <h2>No products found</h2>
               <p>
-                {searchQuery
-                  ? `We couldn't find any products matching "${searchQuery}"`
+                {appliedSearchTerm
+                  ? `We couldn't find any products matching "${appliedSearchTerm}"`
                   : 'No products match your current filters'}
               </p>
-              <button className="clear-filters-btn" onClick={clearAllFilters}>
-                Clear All Filters
-              </button>
+              {(appliedSearchTerm || activeFilters.length > 0) && (
+                <button className="clear-filters-btn" onClick={clearAllFilters}>
+                  Clear All Filters
+                </button>
+              )}
+              <p style={{marginTop: '20px', fontSize: '14px', color: '#666'}}>
+                Try adjusting your search or filters to find what you're looking for.
+              </p>
             </div>
           ) : (
             <>

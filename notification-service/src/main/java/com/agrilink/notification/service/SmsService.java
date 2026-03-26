@@ -4,6 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.Map;
 
 /**
  * SMS Service for sending text messages.
@@ -19,44 +23,60 @@ public class SmsService {
     @Value("${notification.sms.provider}")
     private String smsProvider;
 
+    @Value("${notification.sms.textbelt.key:textbelt_test}")
+    private String textbeltKey;
+
     /**
      * Send an SMS asynchronously.
      */
     @Async
     public void sendSms(String phoneNumber, String message) {
-        if (!smsEnabled) {
-            log.info("SMS sending disabled. Would have sent SMS to {} : {}", phoneNumber, message);
-            return;
-        }
-
         try {
-            log.info("Sending SMS to {} via {}", phoneNumber, smsProvider);
-
-            // Mock implementation
-            // In production, integrate with Twilio, AWS SNS, or other SMS provider
-            switch (smsProvider.toLowerCase()) {
-                case "twilio" -> sendViaTwilio(phoneNumber, message);
-                case "aws" -> sendViaAwsSns(phoneNumber, message);
-                default -> log.warn("Unknown SMS provider: {}", smsProvider);
-            }
-
-            log.info("SMS sent successfully to {}", phoneNumber);
+            sendSmsOrThrow(phoneNumber, message);
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", phoneNumber, e.getMessage());
-            throw new RuntimeException("Failed to send SMS", e);
         }
     }
 
-    private void sendViaTwilio(String phoneNumber, String message) {
-        // Mock Twilio implementation
-        log.debug("Twilio: Sending '{}' to {}", message, phoneNumber);
-        // Actual implementation would use Twilio SDK
+    public void sendSmsOrThrow(String phoneNumber, String message) {
+        if (!smsEnabled) {
+            throw new IllegalStateException("SMS_DISABLED");
+        }
+
+        log.info("Sending SMS to {} via {}", phoneNumber, smsProvider);
+        switch (smsProvider.toLowerCase()) {
+            case "textbelt" -> sendViaTextbelt(phoneNumber, message);
+            default -> throw new IllegalStateException("UNSUPPORTED_SMS_PROVIDER: " + smsProvider);
+        }
+
+        log.info("SMS sent successfully to {}", phoneNumber);
     }
 
-    private void sendViaAwsSns(String phoneNumber, String message) {
-        // Mock AWS SNS implementation
-        log.debug("AWS SNS: Sending '{}' to {}", message, phoneNumber);
-        // Actual implementation would use AWS SDK
+    private void sendViaTextbelt(String phoneNumber, String message) {
+        if (textbeltKey == null || textbeltKey.isBlank()) {
+            throw new IllegalStateException("TEXTBELT_KEY_MISSING");
+        }
+
+        Map<String, Object> response = WebClient.builder()
+                .baseUrl("https://textbelt.com")
+                .build()
+                .post()
+                .uri("/text")
+                .body(BodyInserters.fromFormData("phone", phoneNumber)
+                        .with("message", message)
+                        .with("key", textbeltKey))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+
+        Object successValue = response != null ? response.get("success") : null;
+        boolean success = Boolean.TRUE.equals(successValue);
+        if (!success) {
+            String error = response != null && response.get("error") != null
+                    ? response.get("error").toString()
+                    : "unknown error";
+            throw new RuntimeException("TEXTBELT_SEND_FAILED: " + error);
+        }
     }
 
     /**

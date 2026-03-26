@@ -13,9 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,26 +45,32 @@ public class NotificationService {
     public NotificationDto sendNotification(SendNotificationRequest request) {
         log.info("Sending notification to user: {}", request.getUserId());
 
-        // Check user preferences
-        NotificationPreferences preferences = preferencesRepository.findByUserId(request.getUserId())
-                .orElse(createDefaultPreferences(request.getUserId()));
-
-        if (!shouldSend(preferences, request.getNotificationType(), request.getChannel())) {
-            log.info("Notification not sent due to user preferences");
-            return null;
-        }
-
         Notification notification = Notification.builder()
                 .userId(request.getUserId())
                 .notificationType(request.getNotificationType())
                 .channel(request.getChannel())
                 .title(request.getTitle())
                 .message(request.getMessage())
+            .recipientEmail(request.getEmail())
+            .recipientPhone(request.getPhone())
                 .data(request.getData())
                 .status(Notification.Status.PENDING)
                 .build();
 
         notification = notificationRepository.save(notification);
+
+        // Check user preferences after persisting for auditability.
+        NotificationPreferences preferences = preferencesRepository.findByUserId(request.getUserId())
+            .orElse(createDefaultPreferences(request.getUserId()));
+
+        if (!shouldSend(preferences, request.getNotificationType(), request.getChannel())) {
+            notification.setStatus(Notification.Status.CANCELLED);
+            notification.setFailedAt(LocalDateTime.now());
+            notification.setFailureReason("DISABLED_BY_PREFERENCES");
+            notification = notificationRepository.save(notification);
+            log.info("Notification {} cancelled due to user preferences", notification.getId());
+            return mapToDto(notification);
+        }
 
         // Send via appropriate channel
         sendViaChannel(notification, request.getEmail(), request.getPhone());
@@ -95,6 +101,18 @@ public class NotificationService {
         } catch (Exception e) {
             log.warn("Failed to send notification to user {}: {}", userId, e.getMessage());
         }
+    }
+
+    @Transactional
+    public void retryNotification(UUID notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", notificationId));
+
+        if (notification.getStatus() != Notification.Status.FAILED) {
+            return;
+        }
+
+        sendViaChannel(notification, notification.getRecipientEmail(), notification.getRecipientPhone());
     }
 
     /**
@@ -216,7 +234,6 @@ public class NotificationService {
         return mapPreferencesToDto(preferences);
     }
 
-    @Async
     protected void sendViaChannel(Notification notification, String email, String phone) {
         try {
             notification.setStatus(Notification.Status.SENDING);
@@ -224,14 +241,16 @@ public class NotificationService {
 
             switch (notification.getChannel()) {
                 case EMAIL -> {
-                    if (email != null) {
-                        emailService.sendEmail(email, notification.getTitle(), notification.getMessage());
+                    if (!StringUtils.hasText(email)) {
+                        throw new IllegalArgumentException("DESTINATION_MISSING: email");
                     }
+                    emailService.sendEmailOrThrow(email, notification.getTitle(), notification.getMessage());
                 }
                 case SMS -> {
-                    if (phone != null) {
-                        smsService.sendSms(phone, notification.getMessage());
+                    if (!StringUtils.hasText(phone)) {
+                        throw new IllegalArgumentException("DESTINATION_MISSING: phone");
                     }
+                    smsService.sendSmsOrThrow(phone, notification.getMessage());
                 }
                 case PUSH, IN_APP -> {
                     // Push notifications would integrate with Firebase/APNs
@@ -241,8 +260,9 @@ public class NotificationService {
 
             notification.setStatus(Notification.Status.SENT);
             notification.setSentAt(LocalDateTime.now());
+            notification.setFailureReason(null);
         } catch (Exception e) {
-            log.error("Failed to send notification: {}", e.getMessage());
+            log.error("Failed to send notification {}: {}", notification.getId(), e.getMessage());
             notification.setStatus(Notification.Status.FAILED);
             notification.setFailedAt(LocalDateTime.now());
             notification.setFailureReason(e.getMessage());

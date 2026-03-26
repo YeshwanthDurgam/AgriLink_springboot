@@ -1,5 +1,6 @@
 package com.agrilink.notification.websocket;
 
+import com.agrilink.notification.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper;
+    private final JwtTokenProvider jwtTokenProvider;
     
     // Map of userId to WebSocket sessions (supports multiple sessions per user)
     private final Map<UUID, ConcurrentHashMap<String, WebSocketSession>> userSessions = new ConcurrentHashMap<>();
@@ -164,26 +166,18 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     private UUID extractUserIdFromToken(String token) {
         try {
-            // Simple extraction - in production, validate the JWT properly
-            if (token != null && !token.isEmpty()) {
-                // Extract userId from JWT claims (preferred) or fallback to email-based UUID
-                String[] parts = token.split("\\.");
-                if (parts.length == 3) {
-                    String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-                    Map<String, Object> claims = objectMapper.readValue(payload, Map.class);
-                    
-                    // Try to get userId from claims first
-                    String userId = (String) claims.get("userId");
-                    if (userId != null && !userId.isEmpty()) {
-                        return UUID.fromString(userId);
-                    }
-                    
-                    // Fallback to email-based UUID for backward compatibility
-                    String email = (String) claims.get("sub");
-                    if (email != null) {
-                        return UUID.nameUUIDFromBytes(email.getBytes());
-                    }
-                }
+            if (token == null || token.isEmpty() || !jwtTokenProvider.validateToken(token)) {
+                return null;
+            }
+
+            String userId = jwtTokenProvider.getUserIdFromToken(token);
+            if (userId != null && !userId.isBlank()) {
+                return UUID.fromString(userId);
+            }
+
+            String email = jwtTokenProvider.getEmailFromToken(token);
+            if (email != null && !email.isBlank()) {
+                return UUID.nameUUIDFromBytes(email.getBytes());
             }
         } catch (Exception e) {
             log.error("Failed to extract userId from token: {}", e.getMessage());

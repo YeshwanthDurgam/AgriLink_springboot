@@ -11,10 +11,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,29 +44,19 @@ public class EmailService {
     @Value("${notification.email.base-url:http://localhost:3000}")
     private String baseUrl;
 
+    @Value("${notification.email.provider:smtp}")
+    private String emailProvider;
+
+    @Value("${notification.email.brevo.api-key:}")
+    private String brevoApiKey;
+
     /**
      * Send a plain text email asynchronously.
      */
     @Async
     public void sendEmail(String to, String subject, String body) {
-        if (!emailEnabled) {
-            log.info("Email sending disabled. Would have sent email to {} with subject: {}", to, subject);
-            return;
-        }
-
         try {
-            log.info("Sending plain text email to {} with subject: {}", to, subject);
-
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom(fromAddress, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(body, false); // false = plain text
-
-            mailSender.send(mimeMessage);
-            log.info("✅ Email sent successfully to {}", to);
+            sendEmailOrThrow(to, subject, body);
 
         } catch (Exception e) {
             log.error("❌ Failed to send email to {}: {}", to, e.getMessage(), e);
@@ -77,11 +69,6 @@ public class EmailService {
      */
     @Async
     public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables) {
-        if (!emailEnabled) {
-            log.info("Email sending disabled. Would have sent HTML email to {} with subject: {}", to, subject);
-            return;
-        }
-
         try {
             log.info("Sending HTML email to {} with subject: {} using template: {}", to, subject, templateName);
 
@@ -97,23 +84,104 @@ public class EmailService {
             context.setVariables(templateVariables);
             String htmlContent = templateEngine.process("email/" + templateName, context);
 
-            // Create and send email
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom(fromAddress, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true); // true = HTML
-
-            mailSender.send(mimeMessage);
-            log.info("✅ HTML email sent successfully to {}", to);
+            sendEmailContentOrThrow(to, subject, htmlContent, true);
+            log.info("Email sent successfully to {}", to);
 
         } catch (Exception e) {
             log.error("❌ Failed to send HTML email to {}: {}", to, e.getMessage(), e);
             // Build a helpful plain text fallback based on the template type and variables
             String fallbackBody = buildPlainTextFallback(templateName, variables);
             sendEmail(to, subject, fallbackBody);
+        }
+    }
+
+    /**
+     * Delivery method for notification pipeline. Throws if delivery fails.
+     */
+    public void sendEmailOrThrow(String to, String subject, String body) {
+        sendEmailContentOrThrow(to, subject, body, false);
+    }
+
+    private void sendEmailContentOrThrow(String to, String subject, String body, boolean html) {
+        if (!emailEnabled) {
+            throw new IllegalStateException("EMAIL_DISABLED");
+        }
+
+        if ("brevo".equalsIgnoreCase(emailProvider)) {
+            sendViaBrevo(to, subject, body, html);
+            return;
+        }
+
+        sendViaSmtp(to, subject, body, html);
+    }
+
+    private void sendViaSmtp(String to, String subject, String body, boolean html) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, html);
+
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new RuntimeException("SMTP_SEND_FAILED: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("SMTP_SEND_FAILED: " + e.getMessage(), e);
+        }
+    }
+
+    private void sendViaBrevo(String to, String subject, String body, boolean html) {
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            throw new IllegalStateException("BREVO_API_KEY_MISSING");
+        }
+
+        Map<String, Object> sender = Map.of(
+                "name", fromName,
+                "email", fromAddress
+        );
+
+        Map<String, Object> recipient = Map.of("email", to);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("sender", sender);
+        payload.put("to", List.of(recipient));
+        payload.put("subject", subject);
+        if (html) {
+            payload.put("htmlContent", body);
+        } else {
+            payload.put("textContent", body);
+        }
+
+        try {
+            Integer statusCode = WebClient.builder()
+                    .baseUrl("https://api.brevo.com")
+                    .defaultHeader("api-key", brevoApiKey)
+                    .build()
+                    .post()
+                    .uri("/v3/smtp/email")
+                    .bodyValue(payload)
+                    .exchangeToMono(response -> response.bodyToMono(String.class)
+                            .defaultIfEmpty("")
+                            .map(bodyText -> {
+                                int code = response.statusCode().value();
+                                if (code < 200 || code >= 300) {
+                                    throw new RuntimeException("BREVO_SEND_FAILED: status=" + code + ", body=" + bodyText);
+                                }
+                                return code;
+                            }))
+                    .block();
+
+            if (statusCode == null || statusCode < 200 || statusCode >= 300) {
+                throw new RuntimeException("BREVO_SEND_FAILED: no response status");
+            }
+        } catch (Exception e) {
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException("BREVO_SEND_FAILED: " + e.getMessage(), e);
         }
     }
 
