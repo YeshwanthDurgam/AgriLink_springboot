@@ -51,4 +51,4 @@ docker-compose.override.yml
 # Node
 node_modules/
 .npm
-package-lock.json
+package-lock.json.env
