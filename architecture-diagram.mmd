@@ -1,0 +1,59 @@
+flowchart TB
+    U[Users\nFarmer | Buyer | Manager | Admin]
+    FE[Frontend\nReact App :3000]
+
+    subgraph BE[Spring Boot Microservices]
+      AUTH[auth-service :8081\nJWT/Auth]
+      USER[user-service :8082\nProfiles/KYC/Admin User Mgmt]
+      FARM[farm-service :8083\nFarms/Fields/Crop Plans]
+      MKT[marketplace-service :8084\nListings/Reviews/Wishlist/Forecast]
+      ORD[order-service :8085\nCart/Checkout/Orders/Fraud]
+      NOTI[notification-service :8087\nNotifications/Messaging]
+    end
+
+    subgraph DB[PostgreSQL]
+      DBA[(agrilink_auth)]
+      DBU[(agrilink_user)]
+      DBF[(agrilink_farm)]
+      DBM[(agrilink_marketplace)]
+      DBO[(agrilink_order)]
+      DBN[(agrilink_notification)]
+    end
+
+    subgraph EXT[External Services]
+      RZ[Razorpay\nPayment Gateway]
+      DG[DataGov API\nMarket Data]
+      EM[Email Provider\nSMTP/Brevo]
+      NDB[Neon PostgreSQL\nOptional Deployment Profile]
+    end
+
+    U --> FE
+
+    FE --> AUTH
+    FE --> USER
+    FE --> FARM
+    FE --> MKT
+    FE --> ORD
+    FE --> NOTI
+
+    MKT --> USER
+    MKT --> NOTI
+    NOTI --> USER
+
+    AUTH --> DBA
+    USER --> DBU
+    FARM --> DBF
+    MKT --> DBM
+    ORD --> DBO
+    NOTI --> DBN
+
+    ORD --> RZ
+    MKT --> DG
+    NOTI --> EM
+
+    AUTH -. neon profile .-> NDB
+    USER -. neon profile .-> NDB
+    FARM -. neon profile .-> NDB
+    MKT -. neon profile .-> NDB
+    ORD -. neon profile .-> NDB
+    NOTI -. neon profile .-> NDB

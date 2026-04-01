@@ -321,7 +321,6 @@ java -version  # Must show version 17.x.x
 ```bash
 docker-compose logs -f user-service
 ```
-
 **Common causes:**
 
 - Database not ready yet (wait 30 seconds)

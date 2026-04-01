@@ -1,0 +1,59 @@
+flowchart TB
+    U[Users\nGuest | Buyer | Farmer | Manager | Admin]
+    FE[Frontend\nReact App :3000]
+
+    subgraph MS[Spring Boot Microservices]
+        AUTH[Auth Service :8081\nAuthentication + JWT]
+        USER[User Service :8082\nProfiles + KYC + Role Data]
+        FARM[Farm Service :8083\nFarm Operations + Analytics]
+        MKT[Marketplace Service :8084\nListings + Search + Reviews]
+        ORD[Order Service :8085\nCart + Checkout + Orders + Payments]
+        NOTI[Notification Service :8087\nNotifications + Messaging + WebSocket]
+    end
+
+    subgraph DB[PostgreSQL]
+        DBA[(agrilink_auth)]
+        DBU[(agrilink_user)]
+        DBF[(agrilink_farm)]
+        DBM[(agrilink_marketplace)]
+        DBO[(agrilink_order)]
+        DBN[(agrilink_notification)]
+    end
+
+    subgraph EXT[External Systems]
+        RZ[Razorpay\nPayment Gateway]
+        DG[Data.gov.in\nMarket Data API]
+        WM[Open-Meteo\nWeather API]
+        EM[Email Providers\nGmail SMTP / Brevo]
+        SMS[Textbelt\nSMS API]
+    end
+
+    U --> FE
+
+    FE --> AUTH
+    FE --> USER
+    FE --> FARM
+    FE --> MKT
+    FE --> ORD
+    FE --> NOTI
+    FE <-->|Real-time updates| NOTI
+
+    MKT --> USER
+    MKT --> NOTI
+    ORD --> NOTI
+    NOTI --> USER
+    USER --> AUTH
+    AUTH --> NOTI
+
+    AUTH --> DBA
+    USER --> DBU
+    FARM --> DBF
+    MKT --> DBM
+    ORD --> DBO
+    NOTI --> DBN
+
+    ORD --> RZ
+    MKT --> DG
+    FARM --> WM
+    NOTI --> EM
+    NOTI --> SMS
