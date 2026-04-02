@@ -1,22 +1,20 @@
 package com.agrilink.notification.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Entity representing a conversation between two users.
  */
-@Entity
-@Table(name = "conversations", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"participant1_id", "participant2_id", "listing_id"})
-})
+@Document(collection = "conversations")
+@CompoundIndex(name = "uk_conversation_participants_listing", def = "{'participant1Id': 1, 'participant2Id': 1, 'listingId': 1}", unique = true)
 @Getter
 @Setter
 @Builder
@@ -25,45 +23,31 @@ import java.util.UUID;
 public class Conversation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
-    @Column(name = "participant1_id", nullable = false)
     private UUID participant1Id;
 
-    @Column(name = "participant2_id", nullable = false)
     private UUID participant2Id;
 
-    @Column(name = "listing_id")
     private UUID listingId;
 
-    @Column(name = "listing_title")
     private String listingTitle;
 
-    @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
-    @Column(name = "last_message_preview")
     private String lastMessagePreview;
 
-    @Column(name = "participant1_unread_count")
     @Builder.Default
     private Integer participant1UnreadCount = 0;
 
-    @Column(name = "participant2_unread_count")
     @Builder.Default
     private Integer participant2UnreadCount = 0;
 
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Message> messages = new ArrayList<>();
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
     public boolean isParticipant(UUID userId) {
@@ -75,13 +59,20 @@ public class Conversation {
     }
 
     public int getUnreadCount(UUID userId) {
-        return participant1Id.equals(userId) ? participant1UnreadCount : participant2UnreadCount;
+        return participant1Id.equals(userId) ? (participant1UnreadCount == null ? 0 : participant1UnreadCount)
+                : (participant2UnreadCount == null ? 0 : participant2UnreadCount);
     }
 
     public void incrementUnreadCount(UUID recipientId) {
         if (participant1Id.equals(recipientId)) {
+            if (participant1UnreadCount == null) {
+                participant1UnreadCount = 0;
+            }
             participant1UnreadCount++;
         } else {
+            if (participant2UnreadCount == null) {
+                participant2UnreadCount = 0;
+            }
             participant2UnreadCount++;
         }
     }

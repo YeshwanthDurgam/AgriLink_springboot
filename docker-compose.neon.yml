@@ -14,8 +14,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: neon
       NEON_DATASOURCE_URL: ${AUTH_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_auth?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NEON_DATASOURCE_USERNAME: ${AUTH_DB_USER:-neondb_owner}
+      NEON_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
     ports:
@@ -33,8 +33,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: neon
       NEON_DATASOURCE_URL: ${USER_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_user?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NEON_DATASOURCE_USERNAME: ${USER_DB_USER:-neondb_owner}
+      NEON_DATASOURCE_PASSWORD: ${USER_DB_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
     ports:
       - "8082:8082"
@@ -51,8 +51,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: neon
       NEON_DATASOURCE_URL: ${FARM_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_farm?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NEON_DATASOURCE_USERNAME: ${FARM_DB_USER:-neondb_owner}
+      NEON_DATASOURCE_PASSWORD: ${FARM_DB_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
     ports:
       - "8083:8083"
@@ -69,8 +69,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: neon
       NEON_DATASOURCE_URL: ${MARKETPLACE_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_marketplace?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NEON_DATASOURCE_USERNAME: ${MARKETPLACE_DB_USER:-neondb_owner}
+      NEON_DATASOURCE_PASSWORD: ${MARKETPLACE_DB_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
       USER_SERVICE_URL: http://user-service:8082
     ports:
@@ -90,8 +90,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: neon
       NEON_DATASOURCE_URL: ${ORDER_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_order?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NEON_DATASOURCE_USERNAME: ${ORDER_DB_USER:-neondb_owner}
+      NEON_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
@@ -110,9 +110,8 @@ services:
     container_name: agrilink-notification-service
     environment:
       SPRING_PROFILES_ACTIVE: neon
-      NEON_DATASOURCE_URL: ${NOTIFICATION_DB_URL:-jdbc:postgresql://your-endpoint.neon.tech/agrilink_notification?sslmode=require}
-      NEON_DATASOURCE_USERNAME: ${NEON_USERNAME}
-      NEON_DATASOURCE_PASSWORD: ${NEON_PASSWORD}
+      NOTIFICATION_MONGODB_URI: ${NOTIFICATION_MONGODB_URI:-mongodb+srv://<user>:<password>@<cluster>/agrilink_notification?retryWrites=true&w=majority}
+      NOTIFICATION_MONGODB_DATABASE: ${NOTIFICATION_MONGODB_DATABASE:-agrilink_notification}
       JWT_SECRET: ${JWT_SECRET:-myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256Bits}
     ports:
       - "8087:8087"

@@ -1,7 +1,11 @@
 package com.agrilink.notification.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -9,8 +13,8 @@ import java.util.UUID;
 /**
  * Notification Template entity.
  */
-@Entity
-@Table(name = "notification_templates")
+@Document(collection = "notification_templates")
+@CompoundIndex(name = "idx_notification_templates_code", def = "{'templateCode': 1}", unique = true)
 @Getter
 @Setter
 @Builder
@@ -19,47 +23,27 @@ import java.util.UUID;
 public class NotificationTemplate {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
-    @Column(name = "template_code", nullable = false, unique = true)
     private String templateCode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "notification_type", nullable = false)
     private Notification.NotificationType notificationType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Notification.Channel channel;
 
-    @Column(name = "title_template", nullable = false)
     private String titleTemplate;
 
-    @Column(name = "body_template", nullable = false, columnDefinition = "TEXT")
     private String bodyTemplate;
 
-    @Column
     private String description;
 
-    @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @LastModifiedDate
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

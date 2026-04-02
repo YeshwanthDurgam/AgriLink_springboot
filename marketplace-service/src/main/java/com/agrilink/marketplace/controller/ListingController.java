@@ -6,6 +6,7 @@ import com.agrilink.marketplace.dto.CreateListingRequest;
 import com.agrilink.marketplace.dto.ListingDto;
 import com.agrilink.marketplace.dto.ListingSearchCriteria;
 import com.agrilink.marketplace.dto.PriceUpdateProposalDto;
+import com.agrilink.marketplace.entity.Listing;
 import com.agrilink.marketplace.service.ListingService;
 import com.agrilink.marketplace.service.PriceUpdateApprovalService;
 import jakarta.servlet.http.HttpServletRequest;

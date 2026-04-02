@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -42,7 +41,6 @@ public class MessagingService {
      * - MANAGER can only message FARMER
      * - ADMIN can message FARMER or MANAGER
      */
-    @Transactional
     public MessageDto sendMessage(UUID senderId, String senderRole, SendMessageRequest request) {
         log.info("User {} (role: {}) sending message to {}", senderId, senderRole, request.getRecipientId());
 
@@ -67,7 +65,7 @@ public class MessagingService {
 
         // Create message
         Message message = Message.builder()
-                .conversation(conversation)
+            .conversationId(conversation.getId())
                 .senderId(senderId)
                 .recipientId(request.getRecipientId())
                 .content(request.getContent())
@@ -133,7 +131,6 @@ public class MessagingService {
     /**
      * Send a message (legacy method for backward compatibility).
      */
-    @Transactional
     public MessageDto sendMessage(UUID senderId, SendMessageRequest request) {
         // Default to CUSTOMER role if not provided (maintains backward compatibility)
         return sendMessage(senderId, "CUSTOMER", request);
@@ -142,7 +139,6 @@ public class MessagingService {
     /**
      * Get user's conversations.
      */
-    @Transactional(readOnly = true)
     public Page<ConversationDto> getConversations(UUID userId, Pageable pageable) {
         return conversationRepository.findByParticipant(userId, pageable)
                 .map(conv -> mapToConversationDto(conv, userId));
@@ -151,7 +147,6 @@ public class MessagingService {
     /**
      * Get messages in a conversation.
      */
-    @Transactional(readOnly = true)
     public Page<MessageDto> getMessages(UUID userId, UUID conversationId, Pageable pageable) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation", "id", conversationId));
@@ -167,7 +162,6 @@ public class MessagingService {
     /**
      * Get or create a conversation with another user.
      */
-    @Transactional
     public ConversationDto getOrCreateConversation(UUID userId, UUID otherUserId, UUID listingId, String listingTitle) {
         Conversation conversation = findOrCreateConversation(userId, otherUserId, listingId, listingTitle);
         return mapToConversationDto(conversation, userId);
@@ -176,7 +170,6 @@ public class MessagingService {
     /**
      * Mark conversation as read.
      */
-    @Transactional
     public void markConversationAsRead(UUID userId, UUID conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation", "id", conversationId));
@@ -193,7 +186,6 @@ public class MessagingService {
     /**
      * Get total unread message count.
      */
-    @Transactional(readOnly = true)
     public int getUnreadCount(UUID userId) {
         return conversationRepository.getTotalUnreadCount(userId);
     }
@@ -201,7 +193,6 @@ public class MessagingService {
     /**
      * Get conversation by ID.
      */
-    @Transactional(readOnly = true)
     public ConversationDto getConversation(UUID userId, UUID conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation", "id", conversationId));
@@ -257,7 +248,7 @@ public class MessagingService {
     private MessageDto mapToMessageDto(Message message, UUID currentUserId) {
         return MessageDto.builder()
                 .id(message.getId())
-                .conversationId(message.getConversation().getId())
+                .conversationId(message.getConversationId())
                 .senderId(message.getSenderId())
                 .recipientId(message.getRecipientId())
                 .content(message.getContent())

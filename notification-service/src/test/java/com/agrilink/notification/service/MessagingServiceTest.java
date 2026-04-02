@@ -80,7 +80,7 @@ class MessagingServiceTest {
 
         message = Message.builder()
                 .id(UUID.randomUUID())
-                .conversation(conversation)
+            .conversationId(conversationId)
                 .senderId(senderId)
                 .recipientId(recipientId)
                 .content("Hello, I'm interested in your product!")

@@ -1,8 +1,11 @@
 package com.agrilink.notification.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -10,8 +13,11 @@ import java.util.UUID;
 /**
  * Entity representing a message in a conversation.
  */
-@Entity
-@Table(name = "messages")
+@Document(collection = "messages")
+@CompoundIndexes({
+        @CompoundIndex(name = "idx_messages_conversation_created", def = "{'conversationId': 1, 'createdAt': -1}"),
+        @CompoundIndex(name = "idx_messages_recipient_read", def = "{'recipientId': 1, 'isRead': 1}")
+})
 @Getter
 @Setter
 @Builder
@@ -20,36 +26,26 @@ import java.util.UUID;
 public class Message {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @Builder.Default
+    private UUID id = UUID.randomUUID();
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversation_id", nullable = false)
-    private Conversation conversation;
+    private UUID conversationId;
 
-    @Column(name = "sender_id", nullable = false)
     private UUID senderId;
 
-    @Column(name = "recipient_id", nullable = false)
     private UUID recipientId;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "message_type", length = 20)
     @Builder.Default
     private MessageType messageType = MessageType.TEXT;
 
-    @Column(name = "is_read")
     @Builder.Default
     private Boolean isRead = false;
 
-    @Column(name = "read_at")
     private LocalDateTime readAt;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
     public enum MessageType {

@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -41,7 +40,6 @@ public class NotificationService {
     /**
      * Send a notification.
      */
-    @Transactional
     public NotificationDto sendNotification(SendNotificationRequest request) {
         log.info("Sending notification to user: {}", request.getUserId());
 
@@ -86,7 +84,6 @@ public class NotificationService {
      * Send a simple in-app notification.
      * Convenience method for sending MESSAGE type notifications.
      */
-    @Transactional
     public void sendNotification(UUID userId, String title, String message, String type, String referenceId) {
         try {
             SendNotificationRequest request = SendNotificationRequest.builder()
@@ -103,7 +100,6 @@ public class NotificationService {
         }
     }
 
-    @Transactional
     public void retryNotification(UUID notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", notificationId));
@@ -118,7 +114,6 @@ public class NotificationService {
     /**
      * Send notification using a template.
      */
-    @Transactional
     public NotificationDto sendTemplateNotification(SendTemplateNotificationRequest request) {
         log.info("Sending template notification {} to user: {}", request.getTemplateCode(), request.getUserId());
 
@@ -144,7 +139,6 @@ public class NotificationService {
     /**
      * Get user notifications.
      */
-    @Transactional(readOnly = true)
     public Page<NotificationDto> getUserNotifications(UUID userId, Pageable pageable) {
         return notificationRepository.findByUserId(userId, pageable).map(this::mapToDto);
     }
@@ -152,7 +146,6 @@ public class NotificationService {
     /**
      * Get unread notifications.
      */
-    @Transactional(readOnly = true)
     public List<NotificationDto> getUnreadNotifications(UUID userId) {
         return notificationRepository.findByUserIdAndReadFalse(userId).stream()
                 .map(this::mapToDto)
@@ -162,7 +155,6 @@ public class NotificationService {
     /**
      * Get unread count.
      */
-    @Transactional(readOnly = true)
     public long getUnreadCount(UUID userId) {
         return notificationRepository.countUnreadByUserId(userId);
     }
@@ -170,7 +162,6 @@ public class NotificationService {
     /**
      * Mark notification as read.
      */
-    @Transactional
     public NotificationDto markAsRead(UUID notificationId, UUID userId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", notificationId));
@@ -189,7 +180,6 @@ public class NotificationService {
     /**
      * Mark all notifications as read.
      */
-    @Transactional
     public void markAllAsRead(UUID userId) {
         List<Notification> unread = notificationRepository.findByUserIdAndReadFalse(userId);
         LocalDateTime now = LocalDateTime.now();
@@ -205,7 +195,6 @@ public class NotificationService {
     /**
      * Get user notification preferences.
      */
-    @Transactional(readOnly = true)
     public NotificationPreferencesDto getPreferences(UUID userId) {
         NotificationPreferences preferences = preferencesRepository.findByUserId(userId)
                 .orElse(createDefaultPreferences(userId));
@@ -215,7 +204,6 @@ public class NotificationService {
     /**
      * Update notification preferences.
      */
-    @Transactional
     public NotificationPreferencesDto updatePreferences(UUID userId, UpdatePreferencesRequest request) {
         NotificationPreferences preferences = preferencesRepository.findByUserId(userId)
                 .orElse(createDefaultPreferences(userId));

@@ -2,7 +2,7 @@
 # =====================================================
 # AgriLink - Run Services with Neon Database (Unix/Mac)
 # =====================================================
-# Usage: ./run-with-neon.sh [service-name]
+# Usage: ./run-with-neon.sh [service-name|docker]
 # Example: ./run-with-neon.sh auth-service
 
 set -e
@@ -29,6 +29,18 @@ export $(grep -v '^#' .env | xargs)
 
 # Set Spring profile to neon
 export SPRING_PROFILES_ACTIVE=neon
+
+# Docker mode: rebuild jars before compose to avoid stale packaged configs
+if [ "${1:-}" = "docker" ]; then
+    echo -e "${YELLOW}[INFO] Building backend jars for Docker...${NC}"
+    mvn -pl common-lib,auth-service,user-service,farm-service,marketplace-service,order-service -am clean package -DskipTests
+
+    echo -e "${YELLOW}[INFO] Rebuilding and starting Neon containers...${NC}"
+    docker compose -f docker-compose.neon.yml up -d --build --force-recreate
+
+    echo -e "${GREEN}[SUCCESS] Neon containers are up with freshly packaged jars.${NC}"
+    exit 0
+fi
 
 # Function to start a service
 start_service() {

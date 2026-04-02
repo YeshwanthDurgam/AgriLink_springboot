@@ -186,6 +186,16 @@ docker-compose -f docker-compose.neon.yml up -d
 docker-compose -f docker-compose.neon.yml logs -f
 ```
 
+Recommended startup wrapper (rebuilds backend jars before compose):
+
+```bash
+# Unix/Mac
+./run-with-neon.sh docker
+
+# Windows
+run-with-neon.bat docker
+```
+
 ### Step 3: Stop Services
 
 ```bash

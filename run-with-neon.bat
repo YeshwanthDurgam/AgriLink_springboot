@@ -2,7 +2,7 @@
 REM =====================================================
 REM AgriLink - Run Services with Neon Database (Windows)
 REM =====================================================
-REM Usage: run-with-neon.bat [service-name]
+REM Usage: run-with-neon.bat [service-name|docker]
 REM Example: run-with-neon.bat auth-service
 
 setlocal enabledelayedexpansion
@@ -25,6 +25,26 @@ for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
 
 REM Set Spring profile to neon
 set SPRING_PROFILES_ACTIVE=neon
+
+REM Docker mode: rebuild jars before compose to avoid stale packaged configs
+if /I "%1"=="docker" (
+    echo [INFO] Building backend jars for Docker...
+    mvn -pl common-lib,auth-service,user-service,farm-service,marketplace-service,order-service -am clean package -DskipTests
+    if errorlevel 1 (
+        echo [ERROR] Maven package failed. Docker startup aborted.
+        exit /b 1
+    )
+
+    echo [INFO] Rebuilding and starting Neon containers...
+    docker compose -f docker-compose.neon.yml up -d --build --force-recreate
+    if errorlevel 1 (
+        echo [ERROR] Docker compose failed.
+        exit /b 1
+    )
+
+    echo [SUCCESS] Neon containers are up with freshly packaged jars.
+    exit /b 0
+)
 
 REM Check if service name is provided
 if "%1"=="" (

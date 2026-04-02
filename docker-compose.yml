@@ -20,6 +20,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # MongoDB for notification service
+  mongodb:
+    image: mongo:7
+    container_name: agrilink-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - agrilink-network
+
   # Auth Service
   auth-service:
     build:
@@ -134,21 +150,20 @@ services:
       dockerfile: Dockerfile
     container_name: agrilink-notification-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agrilink_notification
-      SPRING_DATASOURCE_USERNAME: agrilink
-      SPRING_DATASOURCE_PASSWORD: agrilink123
+      MONGO_URI: mongodb://mongodb:27017/agrilink_notification
+      MONGO_DATABASE: agrilink_notification
       JWT_SECRET: myVeryLongAndSecureSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong
     ports:
       - "8087:8087"
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
     networks:
       - agrilink-network
 
 volumes:
   postgres_data:
+  mongodb_data:
 
 networks:
   agrilink-network:

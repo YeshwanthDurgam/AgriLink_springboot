@@ -13,9 +13,9 @@ spring:
 
   datasource:
     # Neon Database Connection URL
-    url: jdbc:postgresql://ep-withered-wave-ah6absff-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&currentSchema=marketplace_schema
-    username: neondb_owner
-    password: npg_0aWqleYJP1nw
+    url: ${NEON_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agrilink_marketplace?sslmode=require&currentSchema=marketplace_schema}
+    username: ${NEON_DATASOURCE_USERNAME:neondb_owner}
+    password: ${NEON_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
     # HikariCP Connection Pool Configuration (optimized for serverless)

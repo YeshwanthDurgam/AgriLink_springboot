@@ -494,7 +494,7 @@ public class ListingService {
     public Page<ListingDto> getPendingListings(Pageable pageable) {
         log.info("Fetching pending listings for admin approval");
         Page<Listing> listings = listingRepository.findByStatus(Listing.ListingStatus.DRAFT, pageable);
-        return listings.map(this::mapToListingDto);
+        return listings.map(this::mapToDto);
     }
 
     /**
@@ -511,7 +511,7 @@ public class ListingService {
         Listing updated = listingRepository.save(listing);
         
         log.info("Listing {} status updated to {}", listingId, newStatus);
-        return mapToListingDto(updated);
+        return mapToDto(updated);
     }
 
     /**
@@ -529,6 +529,6 @@ public class ListingService {
         Listing updated = listingRepository.save(listing);
         
         log.info("Listing {} suspended with reason: {}", listingId, reason);
-        return mapToListingDto(updated);
+        return mapToDto(updated);
     }
 }
