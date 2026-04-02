@@ -38,6 +38,18 @@ Thumbs.db
 # .env.local
 # *.env
 
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+
 # Build
 build/
 out/
@@ -52,3 +64,32 @@ docker-compose.override.yml
 node_modules/
 .npm
 package-lock.json.env
+
+# Frontend build/cache
+frontend/build/
+frontend/.cache/
+frontend/.eslintcache
+frontend/.parcel-cache/
+frontend/coverage/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Migration and local backup artifacts
+migration-backups/
+
+# Test reports
+**/surefire-reports/
+**/failsafe-reports/
+
+# Temporary files
+*.tmp
+*.temp
